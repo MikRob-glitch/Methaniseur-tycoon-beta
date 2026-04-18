@@ -3373,28 +3373,43 @@ function TractorParticlesOverlay({ overlayRef }) {
 }
 
 // Met à jour la transformation (position + orientation) d'un tracteur via getPointAtLength
+// v23.11 : 4 orientations cardinales (pas de pivotement diagonal bizarre)
+// Le sprite de base est un tracteur horizontal cabine-à-gauche. Donc :
+//   - direction → droite : scaleX(-1), rotate 0  (on flip horizontalement)
+//   - direction → gauche : scaleX(1),  rotate 0  (état naturel du sprite)
+//   - direction → bas    : rotate(+90°) appliqué AVANT scaleX : on veut cabine en bas
+//   - direction → haut   : rotate(-90°) : cabine en haut
 function updateTractorTransform(el, path, progress) {
   if (!el || !path || !path.getTotalLength) return;
   const L = path.getTotalLength();
   if (L === 0) return;
   const p = path.getPointAtLength(progress * L);
-  // Tangente pour l'orientation (petite avance)
-  const pNext = path.getPointAtLength(Math.min(L, progress * L + 1));
+  // Tangente — petite avance, avec fallback si on est en fin de path
+  const lookahead = Math.min(L, progress * L + 2);
+  const pNext = path.getPointAtLength(lookahead);
   const dx = pNext.x - p.x, dy = pNext.y - p.y;
-  // Angle en degrés ; on flip le tracteur si direction est (dx>0) pour garder cabine devant
-  let angle = 0;
-  let scaleX = 1;
-  if (Math.abs(dx) > Math.abs(dy)) {
+
+  let transform;
+  if (Math.abs(dx) >= Math.abs(dy)) {
     // déplacement horizontal dominant
-    scaleX = dx >= 0 ? -1 : 1;  // scaleX -1 = tracteur va vers la droite (sprite dessiné vers la gauche à la base)
-    angle = 0;
+    if (dx >= 0) {
+      // vers la droite : miroir horizontal
+      transform = `translate(${p.x} ${p.y}) scale(-1 1)`;
+    } else {
+      // vers la gauche : orientation naturelle du sprite
+      transform = `translate(${p.x} ${p.y})`;
+    }
   } else {
-    // déplacement vertical dominant : on oriente le tracteur selon la tangente
-    angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    // garder cabine vers l'avant
-    if (dy > 0) { angle -= 180; scaleX = -1; }
+    // déplacement vertical dominant
+    if (dy >= 0) {
+      // vers le bas : rotation +90° (cabine en bas, remorque en haut)
+      transform = `translate(${p.x} ${p.y}) rotate(90)`;
+    } else {
+      // vers le haut : rotation -90° (cabine en haut, remorque en bas)
+      transform = `translate(${p.x} ${p.y}) rotate(-90)`;
+    }
   }
-  el.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${angle}) scale(${scaleX} 1)`);
+  el.setAttribute('transform', transform);
 }
 
 // ─── GAS METER ────────────────────────────────────────────────────────────────
@@ -4391,7 +4406,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.10
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.11
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5490,6 +5505,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
