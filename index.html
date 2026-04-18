@@ -3089,31 +3089,28 @@ function computeZoneProgress(zIdx) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, overlayRef }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
-  const pathRefs    = useRef([null, null, null]);
-  const tractorRefs = useRef([null, null, null]);
-  const rafRef      = useRef(null);
+  const pathRefs      = useRef([null, null, null]);
+  const tractorRefs   = useRef([null, null, null]);
+  const rafRef        = useRef(null);
   // Compteur round-robin pour les pins
   const rrCounter = useRef(0);
 
   // État par tracteur — volatile, lu/écrit dans le rAF loop
   const tractorsRef = useRef(
     [0,1,2].map(i => ({
-      phase: 'idle',          // 'idle' | 'travelOut' | 'loading' | 'travelBack' | 'dumping'
-      zoneIdx: null,           // index dans CITY_ZONES
-      icon: null,              // emoji du chargement
-      pathD: '',               // dernière chaîne de path (pour régler l'attribut d du <path>)
-      progress: 0,             // 0..1 sur le path
-      phaseStart: 0,           // timestamp ms
-      startDelay: i * 2500,    // décalage initial entre tracteurs
-      spawnedAt: 0,            // quand le tracteur est devenu actif
+      phase: 'idle',
+      zoneIdx: null,
+      icon: null,
+      pathD: '',
+      progress: 0,
+      phaseStart: 0,
+      startDelay: i * 2500,
+      spawnedAt: 0,
     }))
   );
-  // État "léger" pour rerender quand icon/pathD changent (pas pour position)
   const [tick, setTick] = useState(0);
-  const [parts, setParts] = useState([]);  // particules de load/dump (géré en setState car peu fréquent)
-  const partId = useRef(0);
 
   // Refs miroir pour accès depuis rAF sans re-créer l'effet
   const ownedRef       = useRef(owned);       useEffect(()=>{ownedRef.current=owned;},[owned]);
@@ -3137,6 +3134,44 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
     return choice;
   }, []);
 
+  // v23.9 : Spawn d'une particule HTML directement dans le DOM (pas via React)
+  // Position calculée en pixels écran RÉELS à partir du rect du tracteur.
+  // Animation CSS pure → tombe de 50px vers le bas, fade out en 700ms.
+  const spawnLoadParticle = useCallback((tractorEl, icon) => {
+    if (!tractorEl || !overlayRef.current) return;
+    const tractorRect = tractorEl.getBoundingClientRect();
+    const overlayRect = overlayRef.current.getBoundingClientRect();
+    // Position du tracteur relativement à l'overlay
+    const tractorCx = tractorRect.left + tractorRect.width / 2 - overlayRect.left;
+    const tractorCy = tractorRect.top + tractorRect.height / 2 - overlayRect.top;
+    // Créer un <div> particule — positionné au-dessus de la remorque
+    // La remorque est à +12 px à droite du centre du tracteur (~1/4 de sa largeur)
+    const el = document.createElement('div');
+    el.textContent = icon;
+    const jitter = (Math.random() - 0.5) * 14;
+    el.style.cssText = `
+      position:absolute;
+      left:${tractorCx + 12 + jitter}px;
+      top:${tractorCy - 36}px;
+      font-size:16px;
+      pointer-events:none;
+      transform:translate(-50%,-50%) scale(1.2);
+      opacity:1;
+      transition:transform .65s cubic-bezier(.4,0,.6,1), opacity .65s linear;
+      will-change:transform,opacity;
+      z-index:10;
+    `;
+    overlayRef.current.appendChild(el);
+    // Double RAF pour laisser le navigateur appliquer le state initial avant la transition
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.transform = `translate(-50%,-50%) translateY(44px) scale(.4)`;
+        el.style.opacity = '0';
+      });
+    });
+    setTimeout(() => el.remove(), 720);
+  }, []);
+
   // rAF loop principal — unique pour tous les tracteurs
   useEffect(() => {
     const loop = (now) => {
@@ -3151,18 +3186,15 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         if (!active) continue;
 
         if (t.phase === 'idle') {
-          // Attente initiale pour décaler les tracteurs
           if (t.spawnedAt === 0) t.spawnedAt = now;
           if (now - t.spawnedAt < t.startDelay) continue;
-          if (fr <= 0) continue;  // aucun intrant acheté → rien à faire
+          if (fr <= 0) continue;
           const zIdx = pickNextZone();
           if (zIdx === null) continue;
           t.zoneIdx = zIdx;
           t.icon = UPGRADES[CITY_ZONES[zIdx].upgradeId].icon;
           t.pathD = buildMissionPath(zIdx);
           t.progress = 0;
-          // Calcul mathématique de zoneProgress : fraction du path où le tracteur
-          // atteint la zone (fin du 6e segment sur 10, cf. buildMissionPath)
           t.zoneProgress = computeZoneProgress(zIdx);
           t.phase = 'travelOut';
           t.phaseStart = now;
@@ -3174,43 +3206,24 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         if (!path || !path.getTotalLength) continue;
 
         if (t.phase === 'travelOut') {
-          // Durée dépend de fillRate : plus il y a d'activité, plus ça va vite
           const baseDur = Math.max(1600, 5000 - fr * 200);
           const dur = baseDur / boost;
           const p = Math.min(1, (now - t.phaseStart) / dur);
-          // Fin de l'aller : le tracteur arrive EXACTEMENT à la zone (progress = t.zoneProgress)
           t.progress = p * t.zoneProgress;
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
           if (p >= 1) {
             t.phase = 'loading';
             t.phaseStart = now;
             t.lastPart = 0;
-            // Mémoriser position exacte du tracteur à l'arrêt (pour les particules)
-            const L = path.getTotalLength();
-            const pt = path.getPointAtLength(L * t.zoneProgress);
-            t.loadPos = { x: pt.x, y: pt.y };
           }
         }
         else if (t.phase === 'loading') {
           const dur = 1800 / boost;
           const p = (now - t.phaseStart) / dur;
-          // Particules de chargement — tombent depuis le haut vers la remorque du tracteur
-          // Utilise la position MÉMORISÉE (pas un calcul approximatif)
-          if (p < 0.85 && now - (t.lastPart || 0) > 180 && t.loadPos) {
+          // v23.9 : spawn particule HTML depuis la position réelle du tracteur
+          if (p < 0.85 && now - (t.lastPart || 0) > 220) {
             t.lastPart = now;
-            partId.current++;
-            setParts(prev => [...prev.slice(-10), {
-              id: partId.current,
-              // Remorque centrée à x=loadPos.x + 24 dans l'espace SVG (tracteur fait 96 de large,
-              // origine déportée de -48, donc remorque est à +24 du centre)
-              // Départ bien au-dessus pour que la chute se voie
-              x: t.loadPos.x + 24 + (Math.random()-.5)*12,
-              y: t.loadPos.y - 48,
-              icon: t.icon,
-              type: 'load',
-            }]);
-            const pid = partId.current;
-            setTimeout(()=>setParts(prev => prev.filter(x => x.id !== pid)), 700);
+            spawnLoadParticle(tractorRefs.current[i], t.icon);
           }
           if (p >= 1) {
             t.phase = 'travelBack';
@@ -3221,7 +3234,6 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
           const baseDur = Math.max(1600, 5000 - fr * 200);
           const dur = baseDur / boost;
           const p = Math.min(1, (now - t.phaseStart) / dur);
-          // Retour : de t.zoneProgress à 1
           t.progress = t.zoneProgress + p * (1 - t.zoneProgress);
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
           if (p >= 1) {
@@ -3233,23 +3245,19 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         else if (t.phase === 'dumping') {
           const dur = 1800 / boost;
           const p = (now - t.phaseStart) / dur;
-          // Animation de basculement (gérée via t.trailerTilt lu dans updateTractorTransform)
           const tiltIn  = Math.max(0, Math.min(1, (p - 0.08) / 0.38));
           const tiltOut = Math.max(0, Math.min(1, (p - 0.62) / 0.32));
           const tilt = tiltIn * 42 - tiltOut * 42;
           t.trailerTilt = tilt;
-          // Rafraîchir le visuel (isLoaded dépend de la phase)
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
-          // v23.7 : dump particles désactivées (animation CSS mal calibrée — à refaire proprement
-          // plus tard avec une approche position-aware pour que les intrants partent du tracteur
-          // et tombent dans le bac HTML de la vue 1)
+          // v23.9 : dump particles désactivées (à refaire proprement avec overlay HTML)
           if (p >= 1) {
             t.trailerTilt = 0;
             t.phase = 'idle';
             t.zoneIdx = null;
             t.icon = null;
-            t.spawnedAt = now;  // reset délai pour prochain tour
-            t.startDelay = 400 + i * 300;  // petit décalage pour éviter collision retour
+            t.spawnedAt = now;
+            t.startDelay = 400 + i * 300;
             needRerender = true;
           }
         }
@@ -3259,7 +3267,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [pickNextZone]);
+  }, [pickNextZone, spawnLoadParticle]);
 
   return (
     <>
@@ -3275,19 +3283,6 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         />
       ))}
 
-      {/* Particules load/dump */}
-      {parts.map(p => (
-        <text key={p.id}
-          x={p.x} y={p.y}
-          fontSize="13"
-          textAnchor="middle"
-          style={{
-            animation: p.type === 'load' ? 'loadFall .7s cubic-bezier(.4,0,.6,1) forwards' : 'dumpFly .82s cubic-bezier(.4,0,.6,1) forwards',
-            pointerEvents: 'none',
-          }}
-        >{p.icon}</text>
-      ))}
-
       {/* Tracteurs — rendus via ref pour animation 60fps sans rerender React */}
       {[0,1,2].map(i => {
         const t = tractorsRef.current[i];
@@ -3299,8 +3294,6 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
             visibility={active && t.phase !== 'idle' ? 'visible' : 'hidden'}
             style={{ pointerEvents: 'none' }}
           >
-            {/* Le transform (translate + rotate) est appliqué directement sur ce <g>
-                dans updateTractorTransform ; le contenu est un tracteur complet */}
             <g transform="translate(-48,-24)">
               <TractorSvgInner
                 isLoaded={t.phase === 'travelBack' || t.phase === 'dumping'}
@@ -3312,6 +3305,24 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         );
       })}
     </>
+  );
+}
+
+// v23.9 : TractorOverlay — overlay HTML pour les particules de chargement
+// Positionné en position:absolute par-dessus la scène, capture les refs DOM
+// pour y injecter les <div> de particules. Export via window.__tractorOverlayRef.
+function TractorParticlesOverlay({ overlayRef }) {
+  return (
+    <div
+      ref={overlayRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'visible',
+        zIndex: 20,
+      }}
+    />
   );
 }
 
@@ -4072,6 +4083,7 @@ function DigesteurScene({
   // ─── SWIPE LOGIC ──────────────────────────────────────────────────────────
   const viewportRef = useRef(null);
   const sceneRef    = useRef(null);
+  const tractorOverlayRef = useRef(null);  // v23.9 : overlay pour particules de chargement
   const dragRef     = useRef(null); // { x0, y0, axis }
 
   const applyTransform = useCallback((v, withTransition) => {
@@ -4333,7 +4345,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.8
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.9
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -4414,8 +4426,14 @@ function DigesteurScene({
               tractorCount={tractorCount}
               speedBoost={tractorSpeedBoost}
               pinnedZones={pinnedZones}
+              overlayRef={tractorOverlayRef}
             />
           </svg>
+
+          {/* v23.9 : Overlay HTML pour les particules de chargement (positionné
+              sur toute la scène monde, les particules sont créées en JS pur avec
+              des coordonnées pixels réelles via getBoundingClientRect). */}
+          <TractorParticlesOverlay overlayRef={tractorOverlayRef} />
         </div>
 
         {/* ─── FLÈCHE HINT DE SWIPE ─── */}
@@ -5426,6 +5444,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
