@@ -3025,25 +3025,26 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 //            longe le bas, ressort par bas-droit.
 // En vue 2 : 2 lanes horizontales (haut y=15, bas y=250) + embranchements
 //            verticaux vers chaque zone. Les zones sont au milieu (y=65 et y=215).
+// v23.10 : le tracteur ne fait plus de détour vers le bac. Il s'arrête sur la
+// lane verticale gauche (x=LANE_LEFT) à la hauteur y=DUMP_Y pour décharger.
+// Plus de segment horizontal qui traversait le bac HTML.
 const WORLD = {
   W: 800, H: 280,
-  BAC:       { x: 120, y: 145 },  // point de dump visuel (à droite du bac HTML)
   LANE_LEFT: 10,                   // x de la route gauche en vue 1 (dans le padding)
   LANE_TOP:  15,                   // y lane retour (tracteur chargé)
   LANE_BOT:  253,                  // y lane aller (tracteur vide)
+  DUMP_Y:    140,                  // y où le tracteur s'arrête sur la lane gauche pour décharger
   V1_V2:     400,                  // frontière vue 1 / vue 2
 };
-// Path complet : bac → lane gauche → lane bas → route de colonne → hauteur de
-// zone → détour horizontal vers la zone (charge) → retour sur route → lane
-// retour → vue 1 → bac
+// Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
+// zone → charge → remonte → lane haut → retour lane gauche → DUMP point
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;       // coord scène monde (x>400 = vue 2)
   const routeX = WORLD.V1_V2 + z.routeX;  // route verticale de la parcelle
-  const { BAC, LANE_LEFT, LANE_TOP, LANE_BOT } = WORLD;
+  const { LANE_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
   return `
-    M ${BAC.x} ${BAC.y}
-    L ${LANE_LEFT} ${BAC.y}
+    M ${LANE_LEFT} ${DUMP_Y}
     L ${LANE_LEFT} ${LANE_BOT}
     L ${routeX} ${LANE_BOT}
     L ${routeX} ${z.y}
@@ -3051,32 +3052,29 @@ function buildMissionPath(zIdx) {
     L ${routeX} ${z.y}
     L ${routeX} ${LANE_TOP}
     L ${LANE_LEFT} ${LANE_TOP}
-    L ${LANE_LEFT} ${BAC.y}
-    L ${BAC.x} ${BAC.y}
+    L ${LANE_LEFT} ${DUMP_Y}
   `.trim().replace(/\s+/g,' ');
 }
 
 // Calcule la fraction du path (0..1) à laquelle le tracteur atteint la zone
-// (fin du segment 5 sur 9 = après le détour horizontal vers la zone).
+// (fin du segment 4 dans le nouveau path v23.10).
 // Utilisé pour que t.progress s'arrête pile sur le bâtiment pendant "loading".
 function computeZoneProgress(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { BAC, LANE_LEFT, LANE_TOP, LANE_BOT } = WORLD;
-  // Mêmes waypoints que buildMissionPath (dans le même ordre)
+  const { LANE_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  // Mêmes waypoints que buildMissionPath v23.10 (9 points, 8 segments)
   const pts = [
-    [BAC.x, BAC.y],
-    [LANE_LEFT, BAC.y],
-    [LANE_LEFT, LANE_BOT],
-    [routeX, LANE_BOT],
-    [routeX, z.y],
-    [zoneX, z.y],       // ← le tracteur s'arrête ICI pour charger (index 5)
-    [routeX, z.y],
-    [routeX, LANE_TOP],
-    [LANE_LEFT, LANE_TOP],
-    [LANE_LEFT, BAC.y],
-    [BAC.x, BAC.y],
+    [LANE_LEFT, DUMP_Y],     // 0 : départ DUMP
+    [LANE_LEFT, LANE_BOT],   // 1
+    [routeX, LANE_BOT],      // 2
+    [routeX, z.y],           // 3
+    [zoneX, z.y],            // 4 ← CHARGE ici (fin du segment 4)
+    [routeX, z.y],           // 5
+    [routeX, LANE_TOP],      // 6
+    [LANE_LEFT, LANE_TOP],   // 7
+    [LANE_LEFT, DUMP_Y],     // 8 ← DUMP ici (fin du segment 8 = fin du path)
   ];
   let totalL = 0, loadL = 0;
   for (let i = 1; i < pts.length; i++) {
@@ -3084,7 +3082,7 @@ function computeZoneProgress(zIdx) {
     const dy = pts[i][1] - pts[i-1][1];
     const segL = Math.sqrt(dx*dx + dy*dy);
     totalL += segL;
-    if (i === 5) loadL = totalL;  // fin du segment 5 = position de chargement
+    if (i === 4) loadL = totalL;  // fin segment 4 = position zone
   }
   return totalL > 0 ? loadL / totalL : 0.5;
 }
@@ -3172,6 +3170,49 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
     setTimeout(() => el.remove(), 720);
   }, []);
 
+  // v23.10 : spawn particule de DÉCHARGEMENT — part de la remorque du tracteur,
+  // vole en arc vers la GAUCHE (vers le bac HTML de vue 1) et disparaît.
+  const spawnDumpParticle = useCallback((tractorEl, icon) => {
+    if (!tractorEl || !overlayRef.current) return;
+    const tractorRect = tractorEl.getBoundingClientRect();
+    const overlayRect = overlayRef.current.getBoundingClientRect();
+    const tractorCx = tractorRect.left + tractorRect.width / 2 - overlayRect.left;
+    const tractorCy = tractorRect.top + tractorRect.height / 2 - overlayRect.top;
+    const el = document.createElement('div');
+    el.textContent = icon;
+    // Départ : remorque côté haut (le tracteur est sur la lane verticale gauche, donc
+    // orienté verticalement — sa remorque est côté haut ou bas selon la direction)
+    // Comme à progress=1 il remonte depuis LANE_TOP vers DUMP_Y, il va vers le bas :
+    // remorque = partie haute du tracteur (où la flèche pointe côté cabine)
+    // On vise donc le haut du tracteur, puis on envoie la particule vers la droite (vers le bac)
+    const jitter = (Math.random() - 0.5) * 10;
+    el.style.cssText = `
+      position:absolute;
+      left:${tractorCx + jitter}px;
+      top:${tractorCy + jitter - 5}px;
+      font-size:16px;
+      pointer-events:none;
+      transform:translate(-50%,-50%) scale(1);
+      opacity:1;
+      transition:transform .85s cubic-bezier(.5,0,.5,1), opacity .85s linear;
+      will-change:transform,opacity;
+      z-index:10;
+    `;
+    overlayRef.current.appendChild(el);
+    // Le tracteur est sur la route gauche (vue 1), le bac HTML est immédiatement à droite
+    // du tracteur. On envoie la particule de ~50px vers la droite + rotation
+    const dx = 55 + Math.random() * 10;  // vers la droite (vers le bac)
+    const dy = Math.random() * 20 + 10;  // légèrement vers le bas
+    const rot = 180 + Math.random() * 90;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(.35) rotate(${rot}deg)`;
+        el.style.opacity = '0';
+      });
+    });
+    setTimeout(() => el.remove(), 900);
+  }, []);
+
   // rAF loop principal — unique pour tous les tracteurs
   useEffect(() => {
     const loop = (now) => {
@@ -3250,7 +3291,12 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
           const tilt = tiltIn * 42 - tiltOut * 42;
           t.trailerTilt = tilt;
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
-          // v23.9 : dump particles désactivées (à refaire proprement avec overlay HTML)
+          // v23.10 : particules de déchargement — volent de la remorque vers le bac
+          // Déclenché pendant la période où la benne est basculée (milieu de la phase)
+          if (p > 0.15 && p < 0.7 && now - (t.lastPart || 0) > 220) {
+            t.lastPart = now;
+            spawnDumpParticle(tractorRefs.current[i], t.icon);
+          }
           if (p >= 1) {
             t.trailerTilt = 0;
             t.phase = 'idle';
@@ -3267,7 +3313,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [pickNextZone, spawnLoadParticle]);
+  }, [pickNextZone, spawnLoadParticle, spawnDumpParticle]);
 
   return (
     <>
@@ -4345,7 +4391,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.9
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.10
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -4384,10 +4430,10 @@ function DigesteurScene({
           >
             {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
             <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              {/* VUE 1 — périmètre en U ouvert à droite (entrée haut, sortie bas) */}
+              {/* VUE 1 — périmètre en U ouvert à droite (pas de crochet horizontal vers le bac,
+                  le tracteur s'arrête directement SUR la route verticale gauche à y=DUMP_Y) */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.BAC.y} L ${WORLD.BAC.x} ${WORLD.BAC.y}`}/>
               <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
 
               {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
@@ -5444,6 +5490,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
