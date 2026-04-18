@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-v23-12';
+const CACHE_NAME = 'methaniseur-v23-13';
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

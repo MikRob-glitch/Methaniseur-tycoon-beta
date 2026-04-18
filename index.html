@@ -3373,20 +3373,26 @@ function TractorParticlesOverlay({ overlayRef }) {
 }
 
 // Met à jour la transformation (position + orientation) d'un tracteur via getPointAtLength
-// v23.12 : 4 orientations cardinales avec logique corrigée.
-// Le sprite de base : cabine à gauche (x=18-39), remorque à droite (x=55-89).
-// Donc "avant" = côté gauche du sprite. En rotation :
-//   - rotate(-90°) : ce qui était à gauche (cabine) va en BAS → bon pour descendre
-//   - rotate(+90°) : ce qui était à gauche (cabine) va en HAUT → bon pour monter
+// v23.13 : fix orientation au point de DUMP (progress=1).
+// En fin de path, lookahead retourne le même point → tangente nulle → bug.
+// Solution : si on est au bout, utiliser la tangente ARRIÈRE (look backward).
 function updateTractorTransform(el, path, progress) {
   if (!el || !path || !path.getTotalLength) return;
   const L = path.getTotalLength();
   if (L === 0) return;
-  const p = path.getPointAtLength(progress * L);
-  // Tangente — petite avance, avec fallback si on est en fin de path
-  const lookahead = Math.min(L, progress * L + 2);
-  const pNext = path.getPointAtLength(lookahead);
-  const dx = pNext.x - p.x, dy = pNext.y - p.y;
+  const curDist = progress * L;
+  const p = path.getPointAtLength(curDist);
+  // Calcul de la tangente : si pas au bout, on regarde en avant ;
+  // sinon (progress >= 1) on regarde en arrière pour garder l'orientation d'arrivée.
+  let dx, dy;
+  if (curDist + 2 < L) {
+    const pNext = path.getPointAtLength(curDist + 2);
+    dx = pNext.x - p.x; dy = pNext.y - p.y;
+  } else {
+    // Au bout du path : direction = celle d'arrivée (p - pPrev)
+    const pPrev = path.getPointAtLength(Math.max(0, curDist - 2));
+    dx = p.x - pPrev.x; dy = p.y - pPrev.y;
+  }
 
   let transform;
   if (Math.abs(dx) >= Math.abs(dy)) {
@@ -4405,7 +4411,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.12
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.13
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5504,6 +5510,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
