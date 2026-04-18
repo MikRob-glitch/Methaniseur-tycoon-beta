@@ -390,18 +390,19 @@ const EQUIPMENT = [
 ];
 
 // ─── CITY ZONES — positions des 7 zones d'intrants sur la vue ville ──────────
-// Coordonnées dans le repère SVG (0..400 x 0..280) d'UNE SEULE vue.
-// Le tracteur évolue dans la "scène monde" large (2×) et le path est construit
-// en absolu pour traverser vue1 (bac) → route → vue2 (zone sélectionnée) → retour.
+// Coordonnées dans le repère SVG 400×280 de la vue 2 (converties en scène
+// monde par +WORLD.V1_V2 dans buildMissionPath).
+// v23.2 : zones haut y=65, bas y=215 — espacées des lanes (y=15 et y=250).
 const CITY_ZONES = [
-  // upgradeId = index dans UPGRADES (même ordre que pour la cohérence pédago)
-  { upgradeId:0, label:"FERME",   x:60,  y:85,  laneY:85  }, // 🐄 Lisier
-  { upgradeId:1, label:"VERT",    x:140, y:85,  laneY:85  }, // 🌿 Déchets verts
-  { upgradeId:2, label:"RESTAU",  x:220, y:85,  laneY:85  }, // 🍽️ Biodéchets restau
-  { upgradeId:3, label:"STEP",    x:300, y:85,  laneY:85  }, // 🏭 Boues STEP
-  { upgradeId:4, label:"INDUS",   x:300, y:205, laneY:205 }, // ⚙️ Déchets industriels
-  { upgradeId:5, label:"CIVE",    x:180, y:205, laneY:205 }, // 🌾 Cultures CIVE
-  { upgradeId:6, label:"BIOGAZ+", x:60,  y:205, laneY:205 }, // 💨 Parc biogaz+
+  // 4 zones du haut (y=65)
+  { upgradeId:0, label:"FERME",   x:95,  y:65 },  // 🐄 Lisier
+  { upgradeId:1, label:"VERT",    x:170, y:65 },  // 🌿 Déchets verts
+  { upgradeId:2, label:"RESTAU",  x:245, y:65 },  // 🍽️ Biodéchets restau
+  { upgradeId:3, label:"STEP",    x:320, y:65 },  // 🏭 Boues STEP
+  // 3 zones du bas (y=215)
+  { upgradeId:4, label:"INDUS",   x:320, y:215 }, // ⚙️ Déchets industriels
+  { upgradeId:5, label:"CIVE",    x:245, y:215 }, // 🌾 Cultures CIVE
+  { upgradeId:6, label:"BIOGAZ+", x:95,  y:215 }, // 💨 Parc biogaz+
 ];
 
 // ─── TRACTOR UPGRADES ────────────────────────────────────────────────────────
@@ -3001,35 +3002,36 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 // - Animation via path.getPointAtLength(progress × totalLength) — haute précision
 // - Phases par tracteur : idle → travelOut → loading → travelBack → dumping → idle
 // - Priorité : round-robin parmi zones épinglées, fallback sur toutes les zones possédées
+// v23.2 : architecture "périmètre" — le tracteur traverse les 2 vues.
+// En vue 1 : routes au périmètre (padding du container), ne chevauchent ni le bac
+//            ni le digesteur. Le tracteur entre par haut-droit, longe le haut,
+//            descend à gauche, se gare devant le bac (déchargement), redescend,
+//            longe le bas, ressort par bas-droit.
+// En vue 2 : 2 lanes horizontales (haut y=15, bas y=250) + embranchements
+//            verticaux vers chaque zone. Les zones sont au milieu (y=65 et y=215).
 const WORLD = {
   W: 800, H: 280,
-  BAC: { x: 75,  y: 155 },   // point de déchargement (vue 1)
-  LANE_OUT:  215,             // y de la lane aller (tracteur vide, direction est)
-  LANE_IN:   105,             // y de la lane retour (tracteur chargé, direction ouest)
-  JUNCTION_X: 150,            // x en vue 1 où les lanes rejoignent le bac
-  V1_V2:     400,             // frontière entre vue 1 et vue 2
+  BAC:       { x: 120, y: 145 },  // point de dump visuel (à droite du bac HTML)
+  LANE_LEFT: 10,                   // x de la route gauche en vue 1 (dans le padding)
+  LANE_TOP:  15,                   // y lane retour (tracteur chargé)
+  LANE_BOT:  253,                  // y lane aller (tracteur vide)
+  V1_V2:     400,                  // frontière vue 1 / vue 2
 };
-// Construit un path complet pour une mission vers la zone zIdx (index dans CITY_ZONES)
-// Commence au bac (vide) → va à la zone → revient au bac (chargé)
+// Path complet : dump → lane gauche → descend → lane bas → vue 2 → zone → charge
+//              → remonte → lane retour → retour vue 1 → descend vers dump
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
-  const zoneX_world = WORLD.V1_V2 + z.x;   // coords scène monde
-  const zoneY_world = z.y;
-  const isTopZone = z.y < WORLD.H/2;        // y=85 pour zones du haut, y=205 pour zones du bas
-  const { BAC, LANE_OUT, LANE_IN, JUNCTION_X } = WORLD;
-  // ── Aller (vide, lane basse) ──
-  // bac → descend vers lane_out → part à l'est → arrive à l'x de la zone → remonte/descend vers zone
-  // ── Retour (chargé, lane haute) ──
-  // zone → descend/remonte vers lane_in → part à l'ouest → arrive au x du bac → remonte/descend au bac
+  const zoneX = WORLD.V1_V2 + z.x;  // coord scène monde (x>400 = vue 2)
+  const { BAC, LANE_LEFT, LANE_TOP, LANE_BOT } = WORLD;
   return `
     M ${BAC.x} ${BAC.y}
-    L ${BAC.x} ${LANE_OUT}
-    L ${JUNCTION_X} ${LANE_OUT}
-    L ${zoneX_world} ${LANE_OUT}
-    L ${zoneX_world} ${zoneY_world}
-    L ${zoneX_world} ${LANE_IN}
-    L ${JUNCTION_X} ${LANE_IN}
-    L ${BAC.x} ${LANE_IN}
+    L ${LANE_LEFT} ${BAC.y}
+    L ${LANE_LEFT} ${LANE_BOT}
+    L ${zoneX} ${LANE_BOT}
+    L ${zoneX} ${z.y}
+    L ${zoneX} ${LANE_TOP}
+    L ${LANE_LEFT} ${LANE_TOP}
+    L ${LANE_LEFT} ${BAC.y}
     L ${BAC.x} ${BAC.y}
   `.trim().replace(/\s+/g,' ');
 }
@@ -4278,15 +4280,15 @@ function DigesteurScene({
 
           {/* ════════ VUE 2 : VILLE ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
-            <div style={{position:"absolute", top:8, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
+            <div style={{position:"absolute", top:8, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones
             </div>
+            {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
               viewBox="0 0 400 280"
               preserveAspectRatio="none"
               style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none"}}
             >
-              {/* Zones (avec pins cliquables via pointerEvents:all sur les pins) */}
               <g style={{pointerEvents:"auto"}}>
                 {CITY_ZONES.map(z => {
                   const m = zoneMeta(z);
@@ -4308,32 +4310,35 @@ function DigesteurScene({
           </div>
 
           {/* ════════ SVG MONDE (superposé aux 2 vues) ════════ */}
-          {/* Routes jaunes + tracteurs. viewBox 800×280 = 2 vues collées. */}
+          {/* Routes jaunes + tracteurs. viewBox 800×280 = 2 vues collées.
+              v23.2 : routes AU PÉRIMÈTRE en vue 1 (pas de chevauchement avec
+              bac/digesteur) + lanes centrales en vue 2. */}
           <svg
             viewBox="0 0 800 280"
             preserveAspectRatio="none"
             style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none"}}
           >
             {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
-            {/* Lane aller (basse y=215) : bac → vue 2 → toutes zones par le bas */}
-            <g stroke="#E8A020" strokeWidth="2.4" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              {/* Vue 1 : depuis bac vers sortie */}
-              <path d={`M ${WORLD.BAC.x} ${WORLD.BAC.y} L ${WORLD.BAC.x} ${WORLD.LANE_OUT} L 400 ${WORLD.LANE_OUT}`}/>
-              {/* Vue 2 : lane aller traverse horizontalement */}
-              <path d={`M 400 ${WORLD.LANE_OUT} L 780 ${WORLD.LANE_OUT}`}/>
-              {/* Embranchements vers zones (verticaux depuis lane_out) */}
+            <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
+              {/* VUE 1 — périmètre en U ouvert à droite (entrée haut, sortie bas) */}
+              {/* Lane haute : du bord droit vers le bord gauche */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP}`}/>
+              {/* Lane verticale gauche : du haut vers le bas (passe devant le bac) */}
+              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT}`}/>
+              {/* Crochet vers le bac (point de dump) */}
+              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.BAC.y} L ${WORLD.BAC.x} ${WORLD.BAC.y}`}/>
+              {/* Lane basse : du bord gauche vers le bord droit (sortie vers vue 2) */}
+              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+
+              {/* VUE 2 — 2 lanes horizontales qui connectent les routes de vue 1 */}
+              {/* Lane retour (haute, tracteur chargé) */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 785 ${WORLD.LANE_TOP}`}/>
+              {/* Lane aller (basse, tracteur vide) */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 785 ${WORLD.LANE_BOT}`}/>
+              {/* Embranchements verticaux vers chaque zone (connectent les 2 lanes) */}
               {CITY_ZONES.map(z => (
-                <path key={`branch-out-${z.upgradeId}`}
-                  d={`M ${WORLD.V1_V2 + z.x} ${WORLD.LANE_OUT} L ${WORLD.V1_V2 + z.x} ${z.y}`}/>
-              ))}
-            </g>
-            {/* Lane retour (haute y=105) : zones → vue 1 → bac */}
-            <g stroke="#E8A020" strokeWidth="2.4" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              <path d={`M ${WORLD.BAC.x} ${WORLD.BAC.y} L ${WORLD.BAC.x} ${WORLD.LANE_IN} L 400 ${WORLD.LANE_IN}`}/>
-              <path d={`M 400 ${WORLD.LANE_IN} L 780 ${WORLD.LANE_IN}`}/>
-              {CITY_ZONES.map(z => (
-                <path key={`branch-in-${z.upgradeId}`}
-                  d={`M ${WORLD.V1_V2 + z.x} ${z.y} L ${WORLD.V1_V2 + z.x} ${WORLD.LANE_IN}`}/>
+                <path key={`branch-${z.upgradeId}`}
+                  d={`M ${WORLD.V1_V2 + z.x} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + z.x} ${WORLD.LANE_BOT}`}/>
               ))}
             </g>
 
@@ -5356,6 +5361,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   </script>
   <script>
