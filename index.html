@@ -399,24 +399,26 @@ const EQUIPMENT = [
 // des parcelles (pas à travers). Le tracteur fait un détour horizontal pour
 // accéder à la zone spécifique au sein d'une parcelle.
 const CITY_ZONES = [
-  // NIVEAU 1 — parcelle haut-gauche (route à x=175)
-  { upgradeId:0, label:"FERME",   level:1, x:80,  y:70,  routeX:175 },  // 🐄 Lisier
-  { upgradeId:1, label:"VERT",    level:1, x:140, y:70,  routeX:175 },  // 🌿 Déchets verts
-  // NIVEAU 2 — parcelle haut-droite (route à x=345)
-  { upgradeId:2, label:"RESTAU",  level:2, x:250, y:70,  routeX:345 },  // 🍽 Biodéchets restau
-  { upgradeId:3, label:"STEP",    level:2, x:310, y:70,  routeX:345 },  // 🏭 Boues STEP
-  // NIVEAU 3 — parcelle bas-gauche (route à x=175)
-  { upgradeId:4, label:"INDUS",   level:3, x:110, y:195, routeX:175 },  // ⚙ Déchets industriels
+  // NIVEAU 1 — parcelle haut-gauche (route à x=175) → bâtiments à GAUCHE de la route
+  // ZoneBuilding dessine de x-26 à x+26 (52 px de large). On veut x+26 < 175-10 = 165
+  // → x max = 139. On met 2 bâtiments à x=55 et x=115.
+  { upgradeId:0, label:"FERME",   level:1, x:55,  y:70,  routeX:175 },  // 🐄 Lisier
+  { upgradeId:1, label:"VERT",    level:1, x:115, y:70,  routeX:175 },  // 🌿 Déchets verts
+  // NIVEAU 2 — parcelle haut-droite (route à x=345) → bâtiments à GAUCHE de la route
+  { upgradeId:2, label:"RESTAU",  level:2, x:225, y:70,  routeX:345 },  // 🍽 Biodéchets restau
+  { upgradeId:3, label:"STEP",    level:2, x:285, y:70,  routeX:345 },  // 🏭 Boues STEP
+  // NIVEAU 3 — parcelle bas-gauche (route à x=175, 1 seul bâtiment)
+  { upgradeId:4, label:"INDUS",   level:3, x:115, y:195, routeX:175 },  // ⚙ Déchets industriels
   // NIVEAU 4 — parcelle bas-droite (route à x=345)
-  { upgradeId:5, label:"CIVE",    level:4, x:250, y:195, routeX:345 },  // 🌾 Cultures CIVE
-  { upgradeId:6, label:"BIOGAZ+", level:4, x:310, y:195, routeX:345 },  // 💨 Parc biogaz+
+  { upgradeId:5, label:"CIVE",    level:4, x:225, y:195, routeX:345 },  // 🌾 Cultures CIVE
+  { upgradeId:6, label:"BIOGAZ+", level:4, x:285, y:195, routeX:345 },  // 💨 Parc biogaz+
 ];
-// Définition des parcelles (pour dessiner un cadre de fond + label niveau)
+// Définition des parcelles (cadres discrets autour des zones)
 const PARCELLES = [
-  { level:1, x:85,  y:70,  w:125, title:"NIVEAU 1" },  // haut-gauche
-  { level:2, x:255, y:70,  w:125, title:"NIVEAU 2" },  // haut-droite
-  { level:3, x:110, y:195, w:70,  title:"NIVEAU 3" },  // bas-gauche (Indus seul)
-  { level:4, x:255, y:195, w:125, title:"NIVEAU 4" },  // bas-droite
+  { level:1, x:55,  y:70,  w:60,  title:"NIVEAU 1" },  // haut-gauche (2 bât. : 55..115)
+  { level:2, x:225, y:70,  w:60,  title:"NIVEAU 2" },  // haut-droite (2 bât. : 225..285)
+  { level:3, x:115, y:195, w:0,   title:"NIVEAU 3" },  // bas-gauche (1 bât.)
+  { level:4, x:225, y:195, w:60,  title:"NIVEAU 4" },  // bas-droite (2 bât.)
 ];
 
 // ─── TRACTOR UPGRADES ────────────────────────────────────────────────────────
@@ -3238,22 +3240,9 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
           t.trailerTilt = tilt;
           // Rafraîchir le visuel (isLoaded dépend de la phase)
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
-          // Particules de déchargement
-          if (p > 0.12 && p < 0.7 && now - (t.lastPart || 0) > 180) {
-            t.lastPart = now;
-            partId.current++;
-            setParts(prev => [...prev.slice(-10), {
-              id: partId.current,
-              x: WORLD.BAC.x + 30,
-              y: WORLD.BAC.y - 10,
-              tx: WORLD.BAC.x - 5,
-              ty: WORLD.BAC.y + 20,
-              icon: t.icon,
-              type: 'dump',
-            }]);
-            const pid = partId.current;
-            setTimeout(()=>setParts(prev => prev.filter(x => x.id !== pid)), 800);
-          }
+          // v23.7 : dump particles désactivées (animation CSS mal calibrée — à refaire proprement
+          // plus tard avec une approche position-aware pour que les intrants partent du tracteur
+          // et tombent dans le bac HTML de la vue 1)
           if (p >= 1) {
             t.trailerTilt = 0;
             t.phase = 'idle';
@@ -4341,7 +4330,7 @@ function DigesteurScene({
           {/* ════════ VUE 2 : VILLE ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             <div style={{position:"absolute", top:8, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.6
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.7
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5442,6 +5431,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
