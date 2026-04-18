@@ -3054,6 +3054,39 @@ function buildMissionPath(zIdx) {
   `.trim().replace(/\s+/g,' ');
 }
 
+// Calcule la fraction du path (0..1) à laquelle le tracteur atteint la zone
+// (fin du segment 5 sur 9 = après le détour horizontal vers la zone).
+// Utilisé pour que t.progress s'arrête pile sur le bâtiment pendant "loading".
+function computeZoneProgress(zIdx) {
+  const z = CITY_ZONES[zIdx];
+  const zoneX  = WORLD.V1_V2 + z.x;
+  const routeX = WORLD.V1_V2 + z.routeX;
+  const { BAC, LANE_LEFT, LANE_TOP, LANE_BOT } = WORLD;
+  // Mêmes waypoints que buildMissionPath (dans le même ordre)
+  const pts = [
+    [BAC.x, BAC.y],
+    [LANE_LEFT, BAC.y],
+    [LANE_LEFT, LANE_BOT],
+    [routeX, LANE_BOT],
+    [routeX, z.y],
+    [zoneX, z.y],       // ← le tracteur s'arrête ICI pour charger (index 5)
+    [routeX, z.y],
+    [routeX, LANE_TOP],
+    [LANE_LEFT, LANE_TOP],
+    [LANE_LEFT, BAC.y],
+    [BAC.x, BAC.y],
+  ];
+  let totalL = 0, loadL = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i-1][0];
+    const dy = pts[i][1] - pts[i-1][1];
+    const segL = Math.sqrt(dx*dx + dy*dy);
+    totalL += segL;
+    if (i === 5) loadL = totalL;  // fin du segment 5 = position de chargement
+  }
+  return totalL > 0 ? loadL / totalL : 0.5;
+}
+
 function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs    = useRef([null, null, null]);
@@ -3126,6 +3159,9 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
           t.icon = UPGRADES[CITY_ZONES[zIdx].upgradeId].icon;
           t.pathD = buildMissionPath(zIdx);
           t.progress = 0;
+          // Calcul mathématique de zoneProgress : fraction du path où le tracteur
+          // atteint la zone (fin du 6e segment sur 10, cf. buildMissionPath)
+          t.zoneProgress = computeZoneProgress(zIdx);
           t.phase = 'travelOut';
           t.phaseStart = now;
           needRerender = true;
@@ -3137,36 +3173,35 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
 
         if (t.phase === 'travelOut') {
           // Durée dépend de fillRate : plus il y a d'activité, plus ça va vite
-          // Vitesse de base : ~4s pour l'aller à fr=5, descend à 2s à fr=15, min 1.6s
           const baseDur = Math.max(1600, 5000 - fr * 200);
           const dur = baseDur / boost;
           const p = Math.min(1, (now - t.phaseStart) / dur);
-          t.progress = p * 0.5;  // aller = première moitié du path
-          // Update DOM transform
+          // Fin de l'aller : le tracteur arrive EXACTEMENT à la zone (progress = t.zoneProgress)
+          t.progress = p * t.zoneProgress;
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
           if (p >= 1) {
             t.phase = 'loading';
             t.phaseStart = now;
             t.lastPart = 0;
+            // Mémoriser position exacte du tracteur à l'arrêt (pour les particules)
+            const L = path.getTotalLength();
+            const pt = path.getPointAtLength(L * t.zoneProgress);
+            t.loadPos = { x: pt.x, y: pt.y };
           }
         }
         else if (t.phase === 'loading') {
           const dur = 1800 / boost;
           const p = (now - t.phaseStart) / dur;
-          // Particules de chargement — tombent dans la remorque du tracteur
-          // (tracteur immobile à t.progress = 0.5, qui est la position "zone chargement")
-          if (p < 0.85 && now - (t.lastPart || 0) > 180) {
+          // Particules de chargement — tombent depuis le haut vers la remorque du tracteur
+          // Utilise la position MÉMORISÉE (pas un calcul approximatif)
+          if (p < 0.85 && now - (t.lastPart || 0) > 180 && t.loadPos) {
             t.lastPart = now;
-            const pt = path.getPointAtLength(path.getTotalLength() * 0.5);
             partId.current++;
             setParts(prev => [...prev.slice(-10), {
               id: partId.current,
-              // Départ : ~35 px au-dessus du tracteur, léger jitter X pour varier
-              x: pt.x + (Math.random()-.5)*18,
-              y: pt.y - 42,
-              // Arrivée : dans la remorque (côté droit du tracteur, ~12 px à droite du centre)
-              tx: pt.x + 10,
-              ty: pt.y - 6,
+              // Départ : au-dessus du tracteur, légèrement vers la remorque (côté droit)
+              x: t.loadPos.x + 8 + (Math.random()-.5)*14,
+              y: t.loadPos.y - 38,
               icon: t.icon,
               type: 'load',
             }]);
@@ -3182,7 +3217,8 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
           const baseDur = Math.max(1600, 5000 - fr * 200);
           const dur = baseDur / boost;
           const p = Math.min(1, (now - t.phaseStart) / dur);
-          t.progress = 0.5 + p * 0.5;  // retour = seconde moitié du path
+          // Retour : de t.zoneProgress à 1
+          t.progress = t.zoneProgress + p * (1 - t.zoneProgress);
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
           if (p >= 1) {
             t.phase = 'dumping';
@@ -5404,6 +5440,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
