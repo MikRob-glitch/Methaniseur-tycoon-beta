@@ -4231,7 +4231,7 @@ function DigesteurScene({
       borderRadius:"20px",
       padding:"22px 14px 18px",
       position:"relative",
-      minHeight:"290px",
+      minHeight:"370px",
       animation: sceneZoomAnim ? "dezoom 1.1s cubic-bezier(.22,.68,0,1.2), sceneFlash 1.1s ease" : "none",
     }}>
       {/* Viewport qui clip les 2 vues */}
@@ -4244,7 +4244,7 @@ function DigesteurScene({
           touchAction:"pan-y",
           userSelect:"none",
           WebkitUserSelect:"none",
-          minHeight:"260px",
+          minHeight:"340px",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -4262,10 +4262,11 @@ function DigesteurScene({
           }}
         >
           {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
-            {/* v23.8 : padding haut+bas pour que les routes (y=15 et y=253 en SVG)
-                passent dans la marge SANS chevaucher le contenu HTML */}
-            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"28px 6px 26px"}}>
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
+            {/* v23.14 : vue agrandie (340px) + padding plus généreux pour que
+                les routes (y=15 et y=253 en SVG 280) aient plus de marge avec le HTML.
+                Ratio 340/280 ≈ 1.21 → y=15 ≈ 18px (haut), y=253 ≈ 307px (bas). */}
+            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px"}}>
               {/* ── BAC D'INTRANTS ── */}
               <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
@@ -4408,10 +4409,10 @@ function DigesteurScene({
           </div>
 
           {/* ════════ VUE 2 : VILLE ════════ */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
-            <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.13
+            <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.14
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5510,6 +5511,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
