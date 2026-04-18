@@ -1719,7 +1719,7 @@ function Game({ username, region, maia }) {
         @keyframes scoreFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.2)}}
         @keyframes blinkBorder{0%,100%{border-color:rgba(224,88,88,.35)}50%{border-color:rgba(224,88,88,.9);box-shadow:0 0 18px rgba(224,88,88,.4)}}
         @keyframes dumpFly{0%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1}60%{opacity:.8}100%{transform:translate(-28px,32px) rotate(200deg) scale(.3);opacity:0}}
-        @keyframes loadFall{0%{transform:translate(0,0) scale(1.1);opacity:1}60%{opacity:.9}100%{transform:translate(0,42px) scale(.4);opacity:0}}
+        @keyframes loadFall{0%{transform:translate(0,0) scale(1.2);opacity:1}60%{opacity:.95}100%{transform:translate(0,50px) scale(.3);opacity:0}}
         @keyframes chargePulse{0%,100%{opacity:.7}50%{opacity:1}}
         @keyframes eqActivate{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
         @keyframes connectGlow{0%,100%{box-shadow:0 0 10px rgba(74,158,219,.32)}50%{box-shadow:0 0 30px rgba(74,158,219,.95)}}
@@ -3199,9 +3199,11 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
             partId.current++;
             setParts(prev => [...prev.slice(-10), {
               id: partId.current,
-              // Départ : au-dessus du tracteur, légèrement vers la remorque (côté droit)
-              x: t.loadPos.x + 8 + (Math.random()-.5)*14,
-              y: t.loadPos.y - 38,
+              // Remorque centrée à x=loadPos.x + 24 dans l'espace SVG (tracteur fait 96 de large,
+              // origine déportée de -48, donc remorque est à +24 du centre)
+              // Départ bien au-dessus pour que la chute se voie
+              x: t.loadPos.x + 24 + (Math.random()-.5)*12,
+              y: t.loadPos.y - 48,
               icon: t.icon,
               type: 'load',
             }]);
@@ -4339,7 +4341,7 @@ function DigesteurScene({
           {/* ════════ VUE 2 : VILLE ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             <div style={{position:"absolute", top:8, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.6
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5440,6 +5442,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
