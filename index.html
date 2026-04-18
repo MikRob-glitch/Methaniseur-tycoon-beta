@@ -3028,9 +3028,11 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 // v23.10 : le tracteur ne fait plus de détour vers le bac. Il s'arrête sur la
 // lane verticale gauche (x=LANE_LEFT) à la hauteur y=DUMP_Y pour décharger.
 // Plus de segment horizontal qui traversait le bac HTML.
+// v23.15 : LANE_LEFT décalée de 10 → 30 pour que le tracteur pivoté à 90° soit
+//          entièrement visible (le tracteur fait 48 de large après rotation).
 const WORLD = {
   W: 800, H: 280,
-  LANE_LEFT: 10,                   // x de la route gauche en vue 1 (dans le padding)
+  LANE_LEFT: 30,                   // x de la route gauche en vue 1 (dans le padding)
   LANE_TOP:  15,                   // y lane retour (tracteur chargé)
   LANE_BOT:  253,                  // y lane aller (tracteur vide)
   DUMP_Y:    140,                  // y où le tracteur s'arrête sur la lane gauche pour décharger
@@ -4263,10 +4265,11 @@ function DigesteurScene({
         >
           {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
-            {/* v23.14 : vue agrandie (340px) + padding plus généreux pour que
+            {/* v23.14/15 : vue agrandie (340px) + padding plus généreux pour que
                 les routes (y=15 et y=253 en SVG 280) aient plus de marge avec le HTML.
-                Ratio 340/280 ≈ 1.21 → y=15 ≈ 18px (haut), y=253 ≈ 307px (bas). */}
-            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px"}}>
+                Ratio 340/280 ≈ 1.21 → y=15 ≈ 18px (haut), y=253 ≈ 307px (bas).
+                padding-left augmenté (30px) pour laisser place à la route verticale à x=30. */}
+            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px 30px"}}>
               {/* ── BAC D'INTRANTS ── */}
               <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
@@ -4412,7 +4415,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.14
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.15
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5511,6 +5514,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
