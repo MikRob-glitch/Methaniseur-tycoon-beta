@@ -517,7 +517,7 @@ const AUTH_LABEL = {
 };
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
-export default function App() {
+function App() {
   const savedLogin = (() => { try { const s = localStorage.getItem('mt_login_v2'); return s ? JSON.parse(s) : null; } catch { return null; } })();
   // "verifying" = on a un localStorage mais on doit valider en Supabase avant d'ouvrir le jeu
   const [screen,   setScreen]  = useState(savedLogin ? "verifying" : "login");
