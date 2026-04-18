@@ -1,0 +1,21 @@
+{
+  "name": "Méthaniseur Tycoon — GRDF",
+  "short_name": "Méthaniseur",
+  "description": "Challenge interne GRDF — apprends la méthanisation en produisant du biométhane pour injecter dans le réseau gaz",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1623",
+  "theme_color": "#0B1623",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "education", "utilities"]
+}

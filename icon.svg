@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Safe zone circulaire pour mask adaptive Android (80% du viewport) -->
+  <rect width="512" height="512" fill="#0B1623"/>
+
+  <!-- Anneau de fond -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="rgba(74,158,219,.14)" stroke-width="3"/>
+
+  <!-- Cuve du digesteur (rectangle avec hublot) -->
+  <rect x="152" y="240" width="208" height="156" rx="8"
+        fill="url(#tankGrad)" stroke="#4b5563" stroke-width="3"/>
+
+  <!-- Bandes horizontales de la cuve (stabilisateurs) -->
+  <line x1="152" y1="290" x2="360" y2="290" stroke="#2a3647" stroke-width="2"/>
+  <line x1="152" y1="340" x2="360" y2="340" stroke="#2a3647" stroke-width="2"/>
+
+  <!-- Agitateurs visibles -->
+  <line x1="200" y1="320" x2="312" y2="320" stroke="#4A9EDB" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="256" cy="320" r="10" fill="#3A8ECB"/>
+
+  <!-- Hublot -->
+  <circle cx="256" cy="370" r="14" fill="#0a1220" stroke="#3A8ECB" stroke-width="2"/>
+
+  <!-- Dôme de biogaz vert (membrane gonflée) -->
+  <ellipse cx="256" cy="240" rx="120" ry="78"
+           fill="url(#domeGrad)" stroke="rgba(80,180,90,.9)" stroke-width="3"/>
+
+  <!-- Reflet sur le dôme -->
+  <ellipse cx="220" cy="215" rx="38" ry="20" fill="rgba(255,255,255,.28)"/>
+
+  <!-- Tuyau de sortie biométhane en haut à droite -->
+  <path d="M 330 210 L 360 160 L 420 160" fill="none" stroke="#2A7DBB" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="420" cy="160" r="6" fill="#6DB5EC"/>
+
+  <!-- Pastille GRDF en bas -->
+  <rect x="196" y="430" width="120" height="34" rx="17" fill="#E8A020"/>
+  <text x="256" y="454" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
+        font-weight="800" font-size="20" fill="#0B1623" letter-spacing="2">GRDF</text>
+
+  <defs>
+    <linearGradient id="tankGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2a3647"/>
+      <stop offset="0.5" stop-color="#3a4557"/>
+      <stop offset="1" stop-color="#2a3647"/>
+    </linearGradient>
+    <radialGradient id="domeGrad" cx="0.35" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#86ef9e"/>
+      <stop offset="0.5" stop-color="#5fce7a"/>
+      <stop offset="1" stop-color="#2a9a4a"/>
+    </radialGradient>
+  </defs>
+</svg>
