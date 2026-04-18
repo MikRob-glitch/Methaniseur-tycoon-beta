@@ -400,23 +400,23 @@ const EQUIPMENT = [
 // accéder à la zone spécifique au sein d'une parcelle.
 const CITY_ZONES = [
   // NIVEAU 1 — parcelle haut-gauche (route à x=175)
-  { upgradeId:0, label:"FERME",   level:1, x:80,  y:60,  routeX:175 },  // 🐄 Lisier
-  { upgradeId:1, label:"VERT",    level:1, x:140, y:60,  routeX:175 },  // 🌿 Déchets verts
+  { upgradeId:0, label:"FERME",   level:1, x:80,  y:70,  routeX:175 },  // 🐄 Lisier
+  { upgradeId:1, label:"VERT",    level:1, x:140, y:70,  routeX:175 },  // 🌿 Déchets verts
   // NIVEAU 2 — parcelle haut-droite (route à x=345)
-  { upgradeId:2, label:"RESTAU",  level:2, x:250, y:60,  routeX:345 },  // 🍽 Biodéchets restau
-  { upgradeId:3, label:"STEP",    level:2, x:310, y:60,  routeX:345 },  // 🏭 Boues STEP
+  { upgradeId:2, label:"RESTAU",  level:2, x:250, y:70,  routeX:345 },  // 🍽 Biodéchets restau
+  { upgradeId:3, label:"STEP",    level:2, x:310, y:70,  routeX:345 },  // 🏭 Boues STEP
   // NIVEAU 3 — parcelle bas-gauche (route à x=175)
-  { upgradeId:4, label:"INDUS",   level:3, x:110, y:220, routeX:175 },  // ⚙ Déchets industriels
+  { upgradeId:4, label:"INDUS",   level:3, x:110, y:195, routeX:175 },  // ⚙ Déchets industriels
   // NIVEAU 4 — parcelle bas-droite (route à x=345)
-  { upgradeId:5, label:"CIVE",    level:4, x:250, y:220, routeX:345 },  // 🌾 Cultures CIVE
-  { upgradeId:6, label:"BIOGAZ+", level:4, x:310, y:220, routeX:345 },  // 💨 Parc biogaz+
+  { upgradeId:5, label:"CIVE",    level:4, x:250, y:195, routeX:345 },  // 🌾 Cultures CIVE
+  { upgradeId:6, label:"BIOGAZ+", level:4, x:310, y:195, routeX:345 },  // 💨 Parc biogaz+
 ];
 // Définition des parcelles (pour dessiner un cadre de fond + label niveau)
 const PARCELLES = [
-  { level:1, x:85,  y:60,  w:125, title:"NIVEAU 1" },  // haut-gauche — englobe x=80..140
-  { level:2, x:255, y:60,  w:125, title:"NIVEAU 2" },  // haut-droite — englobe x=250..310
-  { level:3, x:110, y:220, w:70,  title:"NIVEAU 3" },  // bas-gauche — Indus seul
-  { level:4, x:255, y:220, w:125, title:"NIVEAU 4" },  // bas-droite — englobe x=250..310
+  { level:1, x:85,  y:70,  w:125, title:"NIVEAU 1" },  // haut-gauche
+  { level:2, x:255, y:70,  w:125, title:"NIVEAU 2" },  // haut-droite
+  { level:3, x:110, y:195, w:70,  title:"NIVEAU 3" },  // bas-gauche (Indus seul)
+  { level:4, x:255, y:195, w:125, title:"NIVEAU 4" },  // bas-droite
 ];
 
 // ─── TRACTOR UPGRADES ────────────────────────────────────────────────────────
@@ -1719,7 +1719,7 @@ function Game({ username, region, maia }) {
         @keyframes scoreFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.2)}}
         @keyframes blinkBorder{0%,100%{border-color:rgba(224,88,88,.35)}50%{border-color:rgba(224,88,88,.9);box-shadow:0 0 18px rgba(224,88,88,.4)}}
         @keyframes dumpFly{0%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1}60%{opacity:.8}100%{transform:translate(-28px,32px) rotate(200deg) scale(.3);opacity:0}}
-        @keyframes loadFall{0%{transform:translateY(0) scale(1.1);opacity:1}70%{opacity:.7}100%{transform:translateY(52px) scale(.5);opacity:0}}
+        @keyframes loadFall{0%{transform:translate(0,0) scale(1.1);opacity:1}60%{opacity:.9}100%{transform:translate(0,42px) scale(.4);opacity:0}}
         @keyframes chargePulse{0%,100%{opacity:.7}50%{opacity:1}}
         @keyframes eqActivate{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
         @keyframes connectGlow{0%,100%{box-shadow:0 0 10px rgba(74,158,219,.32)}50%{box-shadow:0 0 30px rgba(74,158,219,.95)}}
@@ -3153,16 +3153,20 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones }
         else if (t.phase === 'loading') {
           const dur = 1800 / boost;
           const p = (now - t.phaseStart) / dur;
-          // Particules de chargement
+          // Particules de chargement — tombent dans la remorque du tracteur
+          // (tracteur immobile à t.progress = 0.5, qui est la position "zone chargement")
           if (p < 0.85 && now - (t.lastPart || 0) > 180) {
             t.lastPart = now;
             const pt = path.getPointAtLength(path.getTotalLength() * 0.5);
             partId.current++;
             setParts(prev => [...prev.slice(-10), {
               id: partId.current,
-              x: pt.x + (Math.random()-.5)*24,
-              y: pt.y - 28,
-              tx: pt.x, ty: pt.y,
+              // Départ : ~35 px au-dessus du tracteur, léger jitter X pour varier
+              x: pt.x + (Math.random()-.5)*18,
+              y: pt.y - 42,
+              // Arrivée : dans la remorque (côté droit du tracteur, ~12 px à droite du centre)
+              tx: pt.x + 10,
+              ty: pt.y - 6,
               icon: t.icon,
               type: 'load',
             }]);
@@ -4368,7 +4372,7 @@ function DigesteurScene({
             {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
             <g fill="rgba(232,160,32,.04)" stroke="rgba(232,160,32,.18)" strokeWidth="1" strokeDasharray="2 3">
               {PARCELLES.map(p => {
-                const padX = 32, padY = 24;
+                const padX = 30, padY = 18;
                 return (
                   <rect key={`parc-${p.level}`}
                     x={WORLD.V1_V2 + p.x - padX}
@@ -5400,6 +5404,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
