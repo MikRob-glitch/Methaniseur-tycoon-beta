@@ -389,20 +389,34 @@ const EQUIPMENT = [
   { id:"injection", name:"Poste d'injection",  icon:"🏗️", desc:"Raccordement officiel au réseau GRDF",                detail:"Odorisation · Comptage · Qualité gaz",                    color:"#2A7DBB" },
 ];
 
-// ─── CITY ZONES — positions des 7 zones d'intrants sur la vue ville ──────────
-// Coordonnées dans le repère SVG 400×280 de la vue 2 (converties en scène
-// monde par +WORLD.V1_V2 dans buildMissionPath).
-// v23.2 : zones haut y=65, bas y=215 — espacées des lanes (y=15 et y=250).
+// ─── CITY ZONES — 4 parcelles par niveau pédagogique ─────────────────────────
+// v23.3 : zones regroupées CÔTE-À-CÔTE par niveau de progression.
+//   - Niveau 1 (haut-gauche)  : Lisier + Verts
+//   - Niveau 2 (haut-droite)  : Restau + STEP
+//   - Niveau 3 (bas-gauche)   : Indus (seul)
+//   - Niveau 4 (bas-droite)   : CIVE + Biogaz+
+// Routes verticales à x=175 (col. gauche) et x=345 (col. droite) — passent À DROITE
+// des parcelles (pas à travers). Le tracteur fait un détour horizontal pour
+// accéder à la zone spécifique au sein d'une parcelle.
 const CITY_ZONES = [
-  // 4 zones du haut (y=65)
-  { upgradeId:0, label:"FERME",   x:95,  y:65 },  // 🐄 Lisier
-  { upgradeId:1, label:"VERT",    x:170, y:65 },  // 🌿 Déchets verts
-  { upgradeId:2, label:"RESTAU",  x:245, y:65 },  // 🍽️ Biodéchets restau
-  { upgradeId:3, label:"STEP",    x:320, y:65 },  // 🏭 Boues STEP
-  // 3 zones du bas (y=215)
-  { upgradeId:4, label:"INDUS",   x:320, y:215 }, // ⚙️ Déchets industriels
-  { upgradeId:5, label:"CIVE",    x:245, y:215 }, // 🌾 Cultures CIVE
-  { upgradeId:6, label:"BIOGAZ+", x:95,  y:215 }, // 💨 Parc biogaz+
+  // NIVEAU 1 — parcelle haut-gauche (route à x=175)
+  { upgradeId:0, label:"FERME",   level:1, x:80,  y:60,  routeX:175 },  // 🐄 Lisier
+  { upgradeId:1, label:"VERT",    level:1, x:140, y:60,  routeX:175 },  // 🌿 Déchets verts
+  // NIVEAU 2 — parcelle haut-droite (route à x=345)
+  { upgradeId:2, label:"RESTAU",  level:2, x:250, y:60,  routeX:345 },  // 🍽 Biodéchets restau
+  { upgradeId:3, label:"STEP",    level:2, x:310, y:60,  routeX:345 },  // 🏭 Boues STEP
+  // NIVEAU 3 — parcelle bas-gauche (route à x=175)
+  { upgradeId:4, label:"INDUS",   level:3, x:110, y:220, routeX:175 },  // ⚙ Déchets industriels
+  // NIVEAU 4 — parcelle bas-droite (route à x=345)
+  { upgradeId:5, label:"CIVE",    level:4, x:250, y:220, routeX:345 },  // 🌾 Cultures CIVE
+  { upgradeId:6, label:"BIOGAZ+", level:4, x:310, y:220, routeX:345 },  // 💨 Parc biogaz+
+];
+// Définition des parcelles (pour dessiner un cadre de fond + label niveau)
+const PARCELLES = [
+  { level:1, x:85,  y:60,  w:125, title:"NIVEAU 1" },  // haut-gauche — englobe x=80..140
+  { level:2, x:255, y:60,  w:125, title:"NIVEAU 2" },  // haut-droite — englobe x=250..310
+  { level:3, x:110, y:220, w:70,  title:"NIVEAU 3" },  // bas-gauche — Indus seul
+  { level:4, x:255, y:220, w:125, title:"NIVEAU 4" },  // bas-droite — englobe x=250..310
 ];
 
 // ─── TRACTOR UPGRADES ────────────────────────────────────────────────────────
@@ -3017,19 +3031,23 @@ const WORLD = {
   LANE_BOT:  253,                  // y lane aller (tracteur vide)
   V1_V2:     400,                  // frontière vue 1 / vue 2
 };
-// Path complet : dump → lane gauche → descend → lane bas → vue 2 → zone → charge
-//              → remonte → lane retour → retour vue 1 → descend vers dump
+// Path complet : bac → lane gauche → lane bas → route de colonne → hauteur de
+// zone → détour horizontal vers la zone (charge) → retour sur route → lane
+// retour → vue 1 → bac
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
-  const zoneX = WORLD.V1_V2 + z.x;  // coord scène monde (x>400 = vue 2)
+  const zoneX  = WORLD.V1_V2 + z.x;       // coord scène monde (x>400 = vue 2)
+  const routeX = WORLD.V1_V2 + z.routeX;  // route verticale de la parcelle
   const { BAC, LANE_LEFT, LANE_TOP, LANE_BOT } = WORLD;
   return `
     M ${BAC.x} ${BAC.y}
     L ${LANE_LEFT} ${BAC.y}
     L ${LANE_LEFT} ${LANE_BOT}
-    L ${zoneX} ${LANE_BOT}
+    L ${routeX} ${LANE_BOT}
+    L ${routeX} ${z.y}
     L ${zoneX} ${z.y}
-    L ${zoneX} ${LANE_TOP}
+    L ${routeX} ${z.y}
+    L ${routeX} ${LANE_TOP}
     L ${LANE_LEFT} ${LANE_TOP}
     L ${LANE_LEFT} ${BAC.y}
     L ${BAC.x} ${BAC.y}
@@ -4321,25 +4339,46 @@ function DigesteurScene({
             {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
             <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
               {/* VUE 1 — périmètre en U ouvert à droite (entrée haut, sortie bas) */}
-              {/* Lane haute : du bord droit vers le bord gauche */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP}`}/>
-              {/* Lane verticale gauche : du haut vers le bas (passe devant le bac) */}
               <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT}`}/>
-              {/* Crochet vers le bac (point de dump) */}
               <path d={`M ${WORLD.LANE_LEFT} ${WORLD.BAC.y} L ${WORLD.BAC.x} ${WORLD.BAC.y}`}/>
-              {/* Lane basse : du bord gauche vers le bord droit (sortie vers vue 2) */}
               <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
 
-              {/* VUE 2 — 2 lanes horizontales qui connectent les routes de vue 1 */}
-              {/* Lane retour (haute, tracteur chargé) */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 785 ${WORLD.LANE_TOP}`}/>
-              {/* Lane aller (basse, tracteur vide) */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 785 ${WORLD.LANE_BOT}`}/>
-              {/* Embranchements verticaux vers chaque zone (connectent les 2 lanes) */}
-              {CITY_ZONES.map(z => (
-                <path key={`branch-${z.upgradeId}`}
-                  d={`M ${WORLD.V1_V2 + z.x} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + z.x} ${WORLD.LANE_BOT}`}/>
-              ))}
+              {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
+              {/* Route verticale colonne gauche (x=175 en vue 2 = 575 monde) */}
+              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
+              {/* Route verticale colonne droite (x=345 en vue 2 = 745 monde) */}
+              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
+
+              {/* Accès horizontaux de chaque parcelle (route → zones) */}
+              {PARCELLES.map(p => {
+                // Segment horizontal de la zone la plus à gauche jusqu'à la route de colonne
+                const routeX_world = WORLD.V1_V2 + (p.level % 2 === 1 ? 175 : 345);
+                const zonesLvl = CITY_ZONES.filter(z => z.level === p.level);
+                const minX = Math.min(...zonesLvl.map(z => z.x));
+                return (
+                  <path key={`access-${p.level}`}
+                    d={`M ${WORLD.V1_V2 + minX} ${p.y} L ${routeX_world} ${p.y}`}/>
+                );
+              })}
+            </g>
+
+            {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
+            <g fill="rgba(232,160,32,.04)" stroke="rgba(232,160,32,.18)" strokeWidth="1" strokeDasharray="2 3">
+              {PARCELLES.map(p => {
+                const padX = 32, padY = 24;
+                return (
+                  <rect key={`parc-${p.level}`}
+                    x={WORLD.V1_V2 + p.x - padX}
+                    y={p.y - padY}
+                    width={p.w + padX + 12}
+                    height={padY * 2}
+                    rx={8}
+                  />
+                );
+              })}
             </g>
 
             {/* ── TRACTEURS ── */}
@@ -5361,6 +5400,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   </script>
