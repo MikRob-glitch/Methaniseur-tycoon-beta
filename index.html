@@ -4185,7 +4185,9 @@ function DigesteurScene({
         >
           {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
-            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"4px 6px"}}>
+            {/* v23.8 : padding haut+bas pour que les routes (y=15 et y=253 en SVG)
+                passent dans la marge SANS chevaucher le contenu HTML */}
+            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"28px 6px 26px"}}>
               {/* ── BAC D'INTRANTS ── */}
               <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
@@ -4329,8 +4331,9 @@ function DigesteurScene({
 
           {/* ════════ VUE 2 : VILLE ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
-            <div style={{position:"absolute", top:8, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.7
+            {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
+            <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.8
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -4383,17 +4386,9 @@ function DigesteurScene({
               {/* Route verticale colonne droite (x=345 en vue 2 = 745 monde) */}
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
 
-              {/* Accès horizontaux de chaque parcelle (route → zones) */}
-              {PARCELLES.map(p => {
-                // Segment horizontal de la zone la plus à gauche jusqu'à la route de colonne
-                const routeX_world = WORLD.V1_V2 + (p.level % 2 === 1 ? 175 : 345);
-                const zonesLvl = CITY_ZONES.filter(z => z.level === p.level);
-                const minX = Math.min(...zonesLvl.map(z => z.x));
-                return (
-                  <path key={`access-${p.level}`}
-                    d={`M ${WORLD.V1_V2 + minX} ${p.y} L ${routeX_world} ${p.y}`}/>
-                );
-              })}
+              {/* v23.8 : PAS d'embranchement horizontal dans la parcelle — ça coupait les
+                  bâtiments visuellement. Le tracteur fait toujours le détour dans le path,
+                  mais on ne dessine pas ce détour en jaune. */}
             </g>
 
             {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
@@ -5431,6 +5426,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
