@@ -3373,12 +3373,11 @@ function TractorParticlesOverlay({ overlayRef }) {
 }
 
 // Met à jour la transformation (position + orientation) d'un tracteur via getPointAtLength
-// v23.11 : 4 orientations cardinales (pas de pivotement diagonal bizarre)
-// Le sprite de base est un tracteur horizontal cabine-à-gauche. Donc :
-//   - direction → droite : scaleX(-1), rotate 0  (on flip horizontalement)
-//   - direction → gauche : scaleX(1),  rotate 0  (état naturel du sprite)
-//   - direction → bas    : rotate(+90°) appliqué AVANT scaleX : on veut cabine en bas
-//   - direction → haut   : rotate(-90°) : cabine en haut
+// v23.12 : 4 orientations cardinales avec logique corrigée.
+// Le sprite de base : cabine à gauche (x=18-39), remorque à droite (x=55-89).
+// Donc "avant" = côté gauche du sprite. En rotation :
+//   - rotate(-90°) : ce qui était à gauche (cabine) va en BAS → bon pour descendre
+//   - rotate(+90°) : ce qui était à gauche (cabine) va en HAUT → bon pour monter
 function updateTractorTransform(el, path, progress) {
   if (!el || !path || !path.getTotalLength) return;
   const L = path.getTotalLength();
@@ -3393,7 +3392,7 @@ function updateTractorTransform(el, path, progress) {
   if (Math.abs(dx) >= Math.abs(dy)) {
     // déplacement horizontal dominant
     if (dx >= 0) {
-      // vers la droite : miroir horizontal
+      // vers la droite : miroir horizontal (cabine qui était à gauche passe à droite)
       transform = `translate(${p.x} ${p.y}) scale(-1 1)`;
     } else {
       // vers la gauche : orientation naturelle du sprite
@@ -3402,11 +3401,11 @@ function updateTractorTransform(el, path, progress) {
   } else {
     // déplacement vertical dominant
     if (dy >= 0) {
-      // vers le bas : rotation +90° (cabine en bas, remorque en haut)
-      transform = `translate(${p.x} ${p.y}) rotate(90)`;
-    } else {
-      // vers le haut : rotation -90° (cabine en haut, remorque en bas)
+      // vers le BAS : cabine doit pointer en bas → rotate(-90°)
       transform = `translate(${p.x} ${p.y}) rotate(-90)`;
+    } else {
+      // vers le HAUT : cabine doit pointer en haut → rotate(90°)
+      transform = `translate(${p.x} ${p.y}) rotate(90)`;
     }
   }
   el.setAttribute('transform', transform);
@@ -4406,7 +4405,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"260px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:32, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.11
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.12
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5505,6 +5504,7 @@ function RankingTab({
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
+  
   
   
   
