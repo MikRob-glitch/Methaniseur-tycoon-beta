@@ -312,9 +312,11 @@ function useSupabaseRealtime(onPlayerChange, active) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ⚙️  PARAMÈTRE CLÉ — seuil de raccordement GRDF
+// ⚙️  PARAMÈTRES CLÉS — seuils chaîne d'injection GRDF (m³ dans la cuve tampon)
 // ─────────────────────────────────────────────────────────────────────────────
-const INJECTION_THRESHOLD = 500;
+const EPURATEUR_THRESHOLD   = 50;
+const COMPRESSEUR_THRESHOLD = 250;
+const INJECTION_THRESHOLD   = 500;
 const GNV_STATION_COSTS   = [5000, 50000, 500000];
 const DIGESTEUR_COSTS     = [10000, 100000];        // digesteur 2 et 3
 const DIGESTEUR_LABELS    = ["x2 capacité","x3 capacité","x4 capacité"];
@@ -1495,8 +1497,8 @@ function Game({ username, region, maia }) {
   const chargePct     = charge/chargeMaxEff;
   const bufferPct   = Math.min(1, buffer/INJECTION_THRESHOLD);
 
-  const canUnlockEpurateur   = !epurateurOk  && buffer>=200;
-  const canUnlockCompresseur = !compresseurOk && epurateurOk && buffer>=350;
+  const canUnlockEpurateur   = !epurateurOk  && buffer>=EPURATEUR_THRESHOLD;
+  const canUnlockCompresseur = !compresseurOk && epurateurOk && buffer>=COMPRESSEUR_THRESHOLD;
   const canConnect           = !injected && compresseurOk && epurateurOk && buffer>=INJECTION_THRESHOLD && owned[4]>=1;
 
   const stockColor = stockPct>=1?"#E05858":stockPct>=.8?"#E07820":stockPct>=.5?"#eab308":"#4A9EDB";
@@ -2536,7 +2538,7 @@ function Game({ username, region, maia }) {
                 {/* ÉTAPE 1 — Épurateur */}
                 {(() => {
                   const done = epurateurOk;
-                  const pct = done ? 100 : Math.min(100, buffer/200*100);
+                  const pct = done ? 100 : Math.min(100, buffer/EPURATEUR_THRESHOLD*100);
                   const ready = canUnlockEpurateur;
                   return (
                     <div style={{padding:"12px 14px",borderRadius:"12px",
@@ -2552,7 +2554,7 @@ function Game({ username, region, maia }) {
                       {!done && (
                         <>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}>
-                            <span style={{fontSize:"10px",color:"rgba(255,255,255,.45)"}}>Condition : <strong style={{color:"#a78bfa"}}>{fmt(200)}</strong> dans la cuve</span>
+                            <span style={{fontSize:"10px",color:"rgba(255,255,255,.45)"}}>Condition : <strong style={{color:"#a78bfa"}}>{fmt(EPURATEUR_THRESHOLD)}</strong> dans la cuve</span>
                             <span style={{fontSize:"11px",fontWeight:800,color:ready?"#a78bfa":"rgba(255,255,255,.5)"}}>{Math.round(pct)}%</span>
                           </div>
                           <div style={{height:"8px",borderRadius:"4px",background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
@@ -2571,7 +2573,7 @@ function Game({ username, region, maia }) {
                 {(() => {
                   const done = compresseurOk;
                   const blocked = !epurateurOk;
-                  const pct = done ? 100 : blocked ? 0 : Math.min(100, buffer/350*100);
+                  const pct = done ? 100 : blocked ? 0 : Math.min(100, buffer/COMPRESSEUR_THRESHOLD*100);
                   const ready = canUnlockCompresseur;
                   return (
                     <div style={{padding:"12px 14px",borderRadius:"12px",
@@ -2589,7 +2591,7 @@ function Game({ username, region, maia }) {
                         <>
                           <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
                             <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(85,68,204,.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"#E05858",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
-                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=350?"rgba(204,119,0,.2)":"rgba(255,255,255,.06)",color:buffer>=350?"#E8A020":"rgba(255,255,255,.4)",fontWeight:700}}>{buffer>=350?"✅":"⏳"} {fmt(350)} dans la cuve</span>
+                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=COMPRESSEUR_THRESHOLD?"rgba(204,119,0,.2)":"rgba(255,255,255,.06)",color:buffer>=COMPRESSEUR_THRESHOLD?"#E8A020":"rgba(255,255,255,.4)",fontWeight:700}}>{buffer>=COMPRESSEUR_THRESHOLD?"✅":"⏳"} {fmt(COMPRESSEUR_THRESHOLD)} dans la cuve</span>
                           </div>
                           {!blocked && (
                             <div style={{height:"8px",borderRadius:"4px",background:"rgba(255,255,255,.06)",overflow:"hidden",marginBottom:"4px"}}>
