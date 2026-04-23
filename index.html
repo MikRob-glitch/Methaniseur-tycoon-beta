@@ -37,6 +37,7 @@
   <script type="text/babel" data-presets="react">
 // Source de vérité — Méthaniseur Tycoon v23
 // Workflow : modifier ce fichier → envoyer à Claude → Claude génère index.html compilé
+// v24 : gisements locaux par zone avec saturation, panne et relance — les pins servent vraiment
 // v23 : swipe viewport 2 vues, ville 7 zones animées, flotte multi-tracteurs, pins de priorité
 const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
 
@@ -462,6 +463,25 @@ const fmtEuro = n => {
 };
 const BM_TO_EUR = 1.0; // Tarif GRDF : 1 €/m³ (~100 €/MWh)
 
+// ─── v24 : SYSTÈME GISEMENTS LOCAUX ──────────────────────────────────────────
+// Chaque zone possédée a un tampon local qui se remplit passivement. Si plein,
+// escalade en 2 temps : saturation (N1+N3) → panne (+ perte €). Les pins servent
+// à prioriser les tracteurs vers les zones qui risquent la saturation.
+const LOCAL_CAP_MULT    = 3;              // capacité locale = bagCap × qty × 3 (ajuste le temps de saturation ≈ 90-120s sans tracteur)
+const WARN_THRESHOLD    = 0.8;            // seuil d'alerte visuelle (pin pulse rouge)
+const SAT_GRACE_MS      = 3 * 60 * 1000;  // 3 min de grâce après saturation 100%
+const SAT_PANNE_MS      = 5 * 60 * 1000;  // 5 min total → déclenche la panne
+const PANNE_DURATION_MS = 15 * 60 * 1000; // 15 min de panne forcée
+const RELIABILITY_DROP_PER_SEC_SAT   = 0.5;  // -0,5 pt/s pendant saturation
+const RELIABILITY_DROP_ON_PANNE      = 15;   // -15 pts lors d'une panne
+const RELIABILITY_RECOVER_PER_SEC    = 0.1;  // +0,1 pt/s quand tout va bien
+const RELIABILITY_RESET_ON_RELAUNCH  = 50;   // après relance, fiabilité min. 50%
+// Coût de relance d'une zone en panne : 1× baseCost actuel (qty +1 virtuel)
+const getRelaunchCost = (upgradeIdx, qty) => {
+  const u = UPGRADES[upgradeIdx];
+  return u.baseCost * Math.pow(1.15, Math.max(0, qty - 1));
+};
+
 const fmtT = n => {
   if (n >= 1e6) return (n/1e6).toLocaleString("fr-FR",{maximumFractionDigits:1})+"M t";
   if (n >= 1e3) return (n/1e3).toLocaleString("fr-FR",{maximumFractionDigits:1})+"k t";
@@ -884,8 +904,6 @@ function Game({ username, region, maia }) {
   const calcOffline = (sv) => {
     if (!sv?.lastSaved) return null;
     const elapsedSec = Math.min((Date.now() - sv.lastSaved) / 1000, 86400);
-    // Seuil bas (5s) : avec fillRate élevé, un bac peut se remplir en quelques dizaines
-    // de secondes, donc tout délai > quelques secondes mérite catch-up.
     if (elapsedSec < 5) return null;
 
     const ownedArr   = sv.owned || [0,0,0,0,0,0,0];
@@ -895,54 +913,67 @@ function Game({ username, region, maia }) {
     const stockMaxOff    = ownedArr.reduce((a,q,i) => a + UPGRADES[i].bagCap * q, 0);
     const nDig           = sv.digesteurs || 1;
     const burnRateEff    = fr * nDig;
-    const dynamicCME     = Math.max(CHARGE_MAX, Math.ceil(fr * 90)) * nDig;
 
-    // ── Stock : accumulation offline avec régulation 80% (cohérence live) ────
-    // En live, dès que stock >= 80% du cap, le débit chute à 40% (fillPenalty).
-    // On reproduit exactement ce comportement ici pour éviter le remplissage trop
-    // rapide hors ligne.
-    const savedStock     = sv.stock || 0;
-    const stockGained    = (() => {
-      if (stockMaxOff <= 0 || savedStock >= stockMaxOff) return 0;
-      const threshold80 = stockMaxOff * 0.8;
-      let s = savedStock;
-      let remaining = elapsedSec;
-      // Phase 1 : remplissage plein débit jusqu'à 80%
-      if (s < threshold80) {
-        const toThreshold = threshold80 - s;
-        const tFull       = toThreshold / fr;
-        if (tFull >= remaining) return Math.min(stockMaxOff - savedStock, fr * remaining);
-        s = threshold80;
-        remaining -= tFull;
+    // ── v24 : REMPLISSAGE DES TAMPONS LOCAUX ────────────────────────────────
+    // Règle idle-friendly : offline, les tampons se remplissent jusqu'à 100 %
+    // mais NE DÉCLENCHENT PAS les pannes. Aucune escalation, aucune pénalité.
+    // L'état zone est forcé à 'ok' au retour pour repartir d'une base propre.
+    const savedLocal = Array.isArray(sv.localStock) && sv.localStock.length === 7
+                       ? sv.localStock : [0,0,0,0,0,0,0];
+    const newLocal   = [...savedLocal];
+    const newZoneState     = ['ok','ok','ok','ok','ok','ok','ok'];
+    const newSatSince      = [null,null,null,null,null,null,null];
+    const newOfflineUntil  = [null,null,null,null,null,null,null];
+    let totalLocalStockGained = 0;
+    for (let i = 0; i < 7; i++) {
+      if (ownedArr[i] === 0) { newLocal[i] = 0; continue; }
+      const cap   = UPGRADES[i].bagCap * ownedArr[i] * LOCAL_CAP_MULT;
+      const baseI = UPGRADES[i].baseFill * ownedArr[i];
+      const wasOffline = (Array.isArray(sv.zoneState) && sv.zoneState[i] === 'offline');
+      // Si la zone était offline ET que le timer n'est pas écoulé, on garde la panne
+      const offUntil = Array.isArray(sv.offlineUntil) ? sv.offlineUntil[i] : null;
+      if (wasOffline && offUntil && Date.now() < offUntil) {
+        newZoneState[i]    = 'offline';
+        newOfflineUntil[i] = offUntil;
+        newLocal[i]        = 0; // zone arrêtée
+        continue;
       }
-      // Phase 2 : remplissage régulé à 40% jusqu'au cap
-      const toCap     = stockMaxOff - s;
-      const tRegulated = toCap / (fr * 0.4);
-      const filledReg  = remaining >= tRegulated ? toCap : fr * 0.4 * remaining;
-      return (s - savedStock) + filledReg;
-    })();
-    const stockAfterFill = savedStock + stockGained;
+      // Sinon remplissage standard, plafonné à 100 %
+      const target = Math.min(cap, savedLocal[i] + baseI * elapsedSec);
+      const gain   = Math.max(0, target - savedLocal[i]);
+      newLocal[i]  = target;
+      totalLocalStockGained += gain;
+    }
 
-    // ── Digesteur : matière disponible à brûler ───────────────────────────────
+    // ── v24 : STOCK GLOBAL VIA "TRACTEURS IDÉAUX" ────────────────────────────
+    // Hypothèse simplificatrice : pendant l'absence, les tracteurs vidaient
+    // les tampons en continu. Au retour, le stock global a donc absorbé tout
+    // ce qui aurait été produit (clamp stockMax). Ça respecte la promesse idle :
+    // "rentrer = trouver le stock plein, prêt à digérer".
+    const savedStock     = sv.stock || 0;
+    // Production théorique pendant l'absence = somme des baseFill × dt, plafonnée
+    // par la capacité globale (stockMax) ET par ce qui se trouvait déjà dans les
+    // tampons locaux (on ne crée pas de matière à partir de rien).
+    const idealProduction = fr * elapsedSec;
+    const totalAvailable  = idealProduction + savedLocal.reduce((a,v,i) => a + (ownedArr[i]>0?v:0), 0);
+    const stockGained     = Math.max(0, Math.min(stockMaxOff - savedStock, idealProduction));
+    const stockAfterFill  = savedStock + stockGained;
+
+    // ── Digesteur : matière brûlable (logique préservée) ────────────────────
     let savedCharge = sv.charge || 0;
     let availableToDigest, stockConsumed = 0;
 
     if (sv.autoDump && stockAfterFill > 0) {
-      // Le stock alimente le digesteur en continu — matière totale brûlable
       const maxBurnable = Math.min(burnRateEff * elapsedSec, savedCharge + stockAfterFill);
       availableToDigest = maxBurnable;
       const fromCharge  = Math.min(savedCharge, maxBurnable);
       stockConsumed     = Math.max(0, maxBurnable - fromCharge);
     } else {
-      // Sans autoDump : on brûle uniquement ce qui était dans le digesteur
       availableToDigest = Math.min(savedCharge, burnRateEff * elapsedSec);
     }
 
     const produced = availableToDigest * 0.006;
-    // On retourne un résultat même si la production est nulle, du moment qu'il y a
-    // eu un gain de stock → évite de perdre le remplissage offline quand le digesteur
-    // était vide au moment de la fermeture.
-    if (produced < 0.01 && stockGained < 1) return null;
+    if (produced < 0.01 && stockGained < 1 && totalLocalStockGained < 1) return null;
 
     // ── Gains par filière ─────────────────────────────────────────────────────
     const inj        = sv.injected || false;
@@ -969,6 +1000,12 @@ function Game({ username, region, maia }) {
       elapsedSec, produced, injected: inj,
       stockGained, stockConsumed, remainingCharge, remainingStock,
       bmGained, gnvBmGained, eurosGained,
+      // v24 — état des tampons locaux à appliquer au retour
+      remainingLocalStock: newLocal,
+      resetZoneState:      newZoneState,
+      resetSaturatedSince: newSatSince,
+      resetOfflineUntil:   newOfflineUntil,
+      localStockGained:    totalLocalStockGained,
     };
   };
   const offlineGains = saved ? calcOffline(saved) : null;
@@ -1027,6 +1064,16 @@ function Game({ username, region, maia }) {
   const [tractorSpeedBoost, setTractorSpeedBoost] = useState(saved?.tractorSpeedBoost ?? false);
   const [pinnedZones,       setPinnedZones]       = useState(() => Array.isArray(saved?.pinnedZones) ? saved.pinnedZones : []);
   const [cityView,          setCityView]          = useState(0); // 0 = digesteur, 1 = ville — non persisté (UI state)
+
+  // ── v24 : SYSTÈME GISEMENTS LOCAUX ──
+  // Chaque array est indexé par upgradeId (0..6). Migration safe pour saves antérieures.
+  // Si offlineGains est présent, on applique les valeurs offline (tampons remplis,
+  // états reset à 'ok' sauf zones encore en panne).
+  const [localStock,     setLocalStock]     = useState(() => offlineGains?.remainingLocalStock ?? (Array.isArray(saved?.localStock)     && saved.localStock.length === 7     ? saved.localStock     : [0,0,0,0,0,0,0]));
+  const [zoneState,      setZoneState]      = useState(() => offlineGains?.resetZoneState      ?? (Array.isArray(saved?.zoneState)      && saved.zoneState.length === 7      ? saved.zoneState      : ["ok","ok","ok","ok","ok","ok","ok"]));
+  const [saturatedSince, setSaturatedSince] = useState(() => offlineGains?.resetSaturatedSince ?? (Array.isArray(saved?.saturatedSince) && saved.saturatedSince.length === 7 ? saved.saturatedSince : [null,null,null,null,null,null,null]));
+  const [offlineUntil,   setOfflineUntil]   = useState(() => offlineGains?.resetOfflineUntil   ?? (Array.isArray(saved?.offlineUntil)   && saved.offlineUntil.length === 7   ? saved.offlineUntil   : [null,null,null,null,null,null,null]));
+  const [reliability,    setReliability]    = useState(() => typeof saved?.reliability === 'number' ? saved.reliability : 100);
   // Migration v16 : pré-remplir seenRewards pour sauvegardes existantes
   const [seenRewards, setSeenRewards] = useState(() => {
     if (saved?.seenRewards) return saved.seenRewards;
@@ -1104,6 +1151,16 @@ function Game({ username, region, maia }) {
           const pz = Array.isArray(d.pinned_zones) ? d.pinned_zones : (typeof d.pinned_zones === 'string' ? (()=>{try{return JSON.parse(d.pinned_zones);}catch{return [];}})() : []);
           setPinnedZones(pz);
         }
+        // v24 — gisements locaux
+        const parseArr7 = v => {
+          const arr = Array.isArray(v) ? v : (typeof v === 'string' ? (()=>{try{return JSON.parse(v);}catch{return null;}})() : null);
+          return Array.isArray(arr) && arr.length === 7 ? arr : null;
+        };
+        if (d.local_stock     != null) { const a = parseArr7(d.local_stock);     if (a) setLocalStock(a); }
+        if (d.zone_state      != null) { const a = parseArr7(d.zone_state);      if (a) setZoneState(a); }
+        if (d.saturated_since != null) { const a = parseArr7(d.saturated_since); if (a) setSaturatedSince(a); }
+        if (d.offline_until   != null) { const a = parseArr7(d.offline_until);   if (a) setOfflineUntil(a); }
+        if (typeof d.reliability === 'number') setReliability(d.reliability);
 
         // Si localStorage n'avait pas de gains mais le cloud en a (cross-device) →
         // afficher le modal avec les gains cloud (uniquement si absence notable)
@@ -1194,7 +1251,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1235,6 +1292,12 @@ function Game({ username, region, maia }) {
       tractor_count:       stateRef.current.tractorCount,
       tractor_speed_boost: stateRef.current.tractorSpeedBoost,
       pinned_zones:        stateRef.current.pinnedZones,
+      // v24 — gisements locaux
+      local_stock:         stateRef.current.localStock,
+      zone_state:          stateRef.current.zoneState,
+      saturated_since:     stateRef.current.saturatedSince,
+      offline_until:       stateRef.current.offlineUntil,
+      reliability:         stateRef.current.reliability,
       last_saved:   new Date().toISOString(),
     });
   }, [SAVE_KEY, username, region, maia]);
@@ -1282,9 +1345,20 @@ function Game({ username, region, maia }) {
   useEffect(() => { chargeRef.current = charge; }, [charge]);
 
   // ── CATCH-UP : appliqué au retour d'arrière-plan ──────────────────────────
-  // Important : on se base sur le dernier tick EFFECTIF (stockTickRef / chargeTickRef)
-  // et pas sur hiddenAt, car les ticks live continuent à tourner pendant ~30s
-  // avant que le navigateur ne suspende l'onglet (=> sinon double-comptage).
+  // v24 : on n'utilise PLUS fillRate → stock direct. À la place :
+  //   1) On remplit les tampons locaux jusqu'à 100 % (pas d'escalation offline)
+  //   2) On déverse au stock global ce qui aurait été produit (logique tracteur idéal)
+  //   3) On reset zoneState aux zones non offline → 'ok'
+  //   4) Digestion classique (inchangée)
+  // Refs miroirs v24 (déclarées AVANT applyCatchUp pour respecter l'ordre lexical)
+  const ownedRefV24        = useRef(owned);           useEffect(()=>{ownedRefV24.current=owned;},[owned]);
+  const localStockRef      = useRef(localStock);      useEffect(()=>{localStockRef.current=localStock;},[localStock]);
+  const zoneStateRef       = useRef(zoneState);       useEffect(()=>{zoneStateRef.current=zoneState;},[zoneState]);
+  const satSinceRef        = useRef(saturatedSince);  useEffect(()=>{satSinceRef.current=saturatedSince;},[saturatedSince]);
+  const offlineUntilRef    = useRef(offlineUntil);    useEffect(()=>{offlineUntilRef.current=offlineUntil;},[offlineUntil]);
+  const gnvBonusRefV24     = useRef(gnvBonus);        useEffect(()=>{gnvBonusRefV24.current=gnvBonus;},[gnvBonus]);
+  const injectedRefV24     = useRef(injected);        useEffect(()=>{injectedRefV24.current=injected;},[injected]);
+
   const applyCatchUp = useCallback(() => {
     const fr  = fillRateRef.current;
     const sm  = stockMaxRef.current;
@@ -1293,28 +1367,56 @@ function Game({ username, region, maia }) {
     const st  = stateRef.current;
     const now = Date.now();
 
-    // Stock : delta depuis le dernier tick effectif, avec régulation 80% (cohérence live)
-    if (fr > 0 && sm > 0) {
+    // 1+2) Tampons locaux + stock global (même delta : dernier tick effectif)
+    if (fr > 0) {
       const dtStock = Math.min((now - stockTickRef.current) / 1000, 86400);
       if (dtStock >= 1) {
         stockTickRef.current = now;
-        setStock(s => {
-          if (s >= sm) return sm;
-          const threshold80 = sm * 0.8;
-          let cur = s;
-          let remaining = dtStock;
-          if (cur < threshold80) {
-            const toThreshold = threshold80 - cur;
-            const tFull = toThreshold / fr;
-            if (tFull >= remaining) return Math.min(sm, cur + fr * remaining);
-            cur = threshold80;
-            remaining -= tFull;
+        const ownedNow = ownedRefV24.current;
+        const locNow   = localStockRef.current;
+        const stNow    = zoneStateRef.current;
+        const offNow   = offlineUntilRef.current;
+
+        // Remplir tampons (sans escalation)
+        const newLocal = [...locNow];
+        const newZone  = [...stNow];
+        const newOff   = [...offNow];
+        const newSat   = [...satSinceRef.current];
+        let zoneChanged = false;
+        for (let i = 0; i < 7; i++) {
+          if (ownedNow[i] === 0) { newLocal[i] = 0; continue; }
+          // Une zone offline reste offline tant que le timer n'est pas écoulé
+          if (newZone[i] === 'offline') {
+            if (newOff[i] && now >= newOff[i]) {
+              newZone[i] = 'ok'; newOff[i] = null; newSat[i] = null;
+              zoneChanged = true;
+            }
+            continue;
           }
-          const toCap = sm - cur;
-          const tRegulated = toCap / (fr * 0.4);
-          if (remaining >= tRegulated) return sm;
-          return cur + fr * 0.4 * remaining;
-        });
+          // Reset toute zone saturée vers 'ok' (politique idle-friendly)
+          if (newZone[i] === 'saturated' || newZone[i] === 'warn') {
+            newZone[i] = 'ok'; newSat[i] = null;
+            zoneChanged = true;
+          }
+          const cap = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
+          const baseI = UPGRADES[i].baseFill * ownedNow[i];
+          newLocal[i] = Math.min(cap, newLocal[i] + baseI * dtStock);
+        }
+        setLocalStock(newLocal);
+        if (zoneChanged) {
+          setZoneState(newZone);
+          setOfflineUntil(newOff);
+          setSaturatedSince(newSat);
+        }
+
+        // Stock global : production idéale clampée au stockMax
+        if (sm > 0) {
+          setStock(s => {
+            if (s >= sm) return sm;
+            const idealProd = fr * dtStock;
+            return Math.min(sm, s + idealProd);
+          });
+        }
       }
     }
 
@@ -1430,17 +1532,162 @@ function Game({ username, region, maia }) {
   const showCinematic = (key, data={}) => setCinematic({ key, data });
 
   // ── TICKS (timestamp-based for sleep/background catch-up) ────────────────
+  //
+  // v24 : GISEMENTS LOCAUX — machine à états + remplissage par zone.
+  // Le stock GLOBAL n'est plus alimenté par fillRate direct : ce sont les
+  // tracteurs qui transfèrent localStock[i] → stock lors de leur dumping
+  // (cf. TractorWorld). La boucle ci-dessous fait 3 choses :
+  //   1) Remplit les tampons locaux (baseFill × qty × dt) → clamp localCap
+  //   2) Gère les transitions d'état ok → warn → saturated → offline
+  //   3) Déclenche pannes (pénalité €, reliability--, notif)
+  //
+  // Les refs miroirs (ownedRefV24, localStockRef, etc.) sont déclarées plus haut,
+  // avant applyCatchUp, pour respecter l'ordre lexical.
+
+  // ── TICK gisements (50ms) ──
   useEffect(()=>{
-    if (fillRate<=0) return;
     stockTickRef.current = Date.now();
     const id=setInterval(()=>{
       const now = Date.now();
-      const dt = Math.min((now - stockTickRef.current) / 1000, 2); // cap 2s — le catch-up long est dans visibilitychange
+      const dt = Math.min((now - stockTickRef.current) / 1000, 2);
       stockTickRef.current = now;
-      setStock(s=>Math.min(stockMax, s + fillRate * fillPenalty * dt));
+
+      const ownedNow   = ownedRefV24.current;
+      const locNow     = localStockRef.current;
+      const stNow      = zoneStateRef.current;
+      const satSinceNow= satSinceRef.current;
+      const offNow     = offlineUntilRef.current;
+      const gnvBonusNow= gnvBonusRefV24.current;
+
+      // 1) Remplissage des tampons locaux
+      const newLocal = [...locNow];
+      for (let i = 0; i < 7; i++) {
+        if (ownedNow[i] === 0) { newLocal[i] = 0; continue; }
+        const st = stNow[i];
+        if (st === 'offline' || st === 'saturated') continue;
+        const localCap = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
+        const baseFill = UPGRADES[i].baseFill * ownedNow[i] * gnvBonusNow;
+        newLocal[i] = Math.min(localCap, newLocal[i] + baseFill * dt);
+      }
+
+      // 2) Machine à états
+      let newZoneState   = stNow;
+      let newSatSince    = satSinceNow;
+      let newOfflineUntil= offNow;
+      let stateChanged   = false;
+      const ensureCopy = () => {
+        if (!stateChanged) {
+          newZoneState    = [...stNow];
+          newSatSince     = [...satSinceNow];
+          newOfflineUntil = [...offNow];
+          stateChanged = true;
+        }
+      };
+      const panneTriggered = [];
+
+      for (let i = 0; i < 7; i++) {
+        const cur = stNow[i];
+
+        if (ownedNow[i] === 0) {
+          if (cur !== 'ok' || satSinceNow[i] !== null || offNow[i] !== null) {
+            ensureCopy();
+            newZoneState[i]    = 'ok';
+            newSatSince[i]     = null;
+            newOfflineUntil[i] = null;
+          }
+          continue;
+        }
+
+        const localCap  = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
+        const fillRatio = localCap > 0 ? newLocal[i] / localCap : 0;
+
+        // Zone offline : vérifier expiration de la panne
+        if (cur === 'offline') {
+          if (offNow[i] && now >= offNow[i]) {
+            ensureCopy();
+            newZoneState[i]    = 'ok';
+            newSatSince[i]     = null;
+            newOfflineUntil[i] = null;
+          }
+          continue;
+        }
+
+        // Zone saturée
+        if (fillRatio >= 1) {
+          if (cur !== 'saturated') {
+            ensureCopy();
+            newZoneState[i] = 'saturated';
+            newSatSince[i]  = now;
+          } else {
+            const sTs = satSinceNow[i] || now;
+            if (now - sTs >= SAT_PANNE_MS) {
+              ensureCopy();
+              newZoneState[i]    = 'offline';
+              newSatSince[i]     = null;
+              newOfflineUntil[i] = now + PANNE_DURATION_MS;
+              newLocal[i]        = 0;
+              panneTriggered.push(i);
+            }
+          }
+          continue;
+        }
+
+        // Zone en warn (≥ 80 %)
+        if (fillRatio >= WARN_THRESHOLD) {
+          if (cur !== 'warn') {
+            ensureCopy();
+            newZoneState[i] = 'warn';
+            newSatSince[i]  = null;
+          }
+          continue;
+        }
+
+        // Zone OK
+        if (cur !== 'ok') {
+          ensureCopy();
+          newZoneState[i] = 'ok';
+          newSatSince[i]  = null;
+        }
+      }
+
+      // 3) Application
+      setLocalStock(newLocal);
+      if (stateChanged) {
+        setZoneState(newZoneState);
+        setSaturatedSince(newSatSince);
+        setOfflineUntil(newOfflineUntil);
+      }
+
+      // 4) Traitement des pannes déclenchées : pénalité + notif + fiabilité
+      if (panneTriggered.length > 0) {
+        panneTriggered.forEach(i => {
+          const cost = getRelaunchCost(i, ownedNow[i]);
+          if (injectedRefV24.current) {
+            setEuros(e => Math.max(0, e - cost));
+          } else {
+            setBuffer(b => Math.max(0, b - cost));
+          }
+          setReliability(r => Math.max(0, r - RELIABILITY_DROP_ON_PANNE));
+          const u = UPGRADES[i];
+          const costStr = injectedRefV24.current ? fmtEuro(cost) : fmt(cost);
+          showNotif(
+            `⚠ PANNE : ${u.name}`,
+            'warning',
+            `Gisement saturé trop longtemps — ${costStr} de frais d'urgence. Relance manuelle requise.`
+          );
+        });
+      }
+
+      // 5) Fiabilité en continu
+      const hasSatNow = (stateChanged ? newZoneState : stNow).some(s => s === 'saturated');
+      if (hasSatNow) {
+        setReliability(r => Math.max(0, r - RELIABILITY_DROP_PER_SEC_SAT * dt));
+      } else {
+        setReliability(r => Math.min(100, r + RELIABILITY_RECOVER_PER_SEC * dt));
+      }
     },50);
     return ()=>clearInterval(id);
-  },[fillRate,fillPenalty]);
+  },[]);
 
   useEffect(()=>{
     if (burnRateEff<=0) return;
@@ -1671,6 +1918,27 @@ function Game({ username, region, maia }) {
     setPinnedZones(prev => prev.includes(upgradeId) ? prev.filter(x=>x!==upgradeId) : [...prev, upgradeId]);
   };
 
+  // v24 — Relance manuelle d'une zone en panne
+  const handleRelaunchZone = (upgradeId) => {
+    if (zoneState[upgradeId] !== 'offline') return;
+    const qty = owned[upgradeId] || 0;
+    if (qty === 0) return;
+    const cost = getRelaunchCost(upgradeId, qty);
+    const canPay = injected ? euros >= cost : buffer >= cost;
+    if (!canPay) {
+      showNotif("Fonds insuffisants", 'warning', `Il faut ${injected ? fmtEuro(cost) : fmt(cost)} pour relancer ce gisement.`);
+      return;
+    }
+    if (injected) setEuros(e => e - cost);
+    else          setBuffer(b => b - cost);
+    setZoneState(prev => { const n = [...prev]; n[upgradeId] = 'ok'; return n; });
+    setOfflineUntil(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
+    setSaturatedSince(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
+    setLocalStock(prev => { const n = [...prev]; n[upgradeId] = 0; return n; });
+    setReliability(r => Math.max(RELIABILITY_RESET_ON_RELAUNCH, r));
+    showNotif(`✓ ${UPGRADES[upgradeId].name} relancé`, 'success', `Production reprise · Fiabilité restaurée`);
+  };
+
   // ── ACHATS ─────────────────────────────────────────────────────────────────
   const buyUpgrade = i => {
     if (!isUpgradeAvailable(i)) return;
@@ -1731,6 +1999,7 @@ function Game({ username, region, maia }) {
         @keyframes pipeFlow{0%{stroke-dashoffset:120}100%{stroke-dashoffset:0}}
         /* ── v23 : animations zones ville + hints swipe ── */
         @keyframes zonePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+        @keyframes satPulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes treeSway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
         @keyframes windowBlink{0%,100%{opacity:.7}50%{opacity:1}}
         @keyframes basinSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
@@ -2157,10 +2426,17 @@ function Game({ username, region, maia }) {
               {icon:"🐄",label:"Remplissage",val:fillRate>0?fmtT(fillRate*fillPenalty)+"/s":"—"},
               {icon:"⚗️",label:"m³/heure",   val:isDigesting?fmt(bmPerHour):"—"},
               {icon:"💧",label:injected?"€ dispos":"m³ dispos",  val:injected?fmtEuro(euros):fmt(wallet)},
+              // v24 : Fiabilité (affichée dès qu'on possède au moins une zone)
+              ...(owned.some(q=>q>0) ? [{
+                icon: reliability >= 80 ? "🟢" : reliability >= 50 ? "🟡" : "🔴",
+                label: "Fiabilité",
+                val: `${Math.round(reliability)}%`,
+                customColor: reliability >= 80 ? "#6DB5EC" : reliability >= 50 ? "#E8A020" : "#E05858"
+              }] : []),
             ].map(s=>(
               <div key={s.label} style={{flex:1,background:"rgba(74,158,219,.06)",border:"1px solid rgba(74,158,219,.12)",borderRadius:"10px",padding:"8px 6px",textAlign:"center"}}>
                 <div style={{fontSize:"16px"}}>{s.icon}</div>
-                <div style={{fontSize:"11px",fontWeight:700,color:"#6DB5EC",marginTop:"2px"}}>{s.val}</div>
+                <div style={{fontSize:"11px",fontWeight:700,color:s.customColor||"#6DB5EC",marginTop:"2px"}}>{s.val}</div>
                 <div style={{fontSize:"9px",color:"rgba(255,255,255,.45)",marginTop:"1px"}}>{s.label}</div>
               </div>
             ))}
@@ -2194,6 +2470,16 @@ function Game({ username, region, maia }) {
             injected={injected}
             epurateurOk={epurateurOk}
             compresseurOk={compresseurOk}
+            zoneState={zoneState}
+            localStock={localStock}
+            setLocalStock={setLocalStock}
+            setStock={setStock}
+            stockMaxRef={stockMaxRef}
+            offlineUntil={offlineUntil}
+            handleRelaunchZone={handleRelaunchZone}
+            euros={euros}
+            buffer={buffer}
+            reliability={reliability}
           />
 
           <GasMeter value={injected?bm:buffer} isActive={isDigesting}/>
@@ -3089,7 +3375,7 @@ function computeZoneProgress(zIdx) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, overlayRef }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -3118,12 +3404,18 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
   const countRef       = useRef(tractorCount);useEffect(()=>{countRef.current=tractorCount;},[tractorCount]);
   const boostRef       = useRef(speedBoost);  useEffect(()=>{boostRef.current=speedBoost;},[speedBoost]);
   const fillRateRef    = useRef(fillRate);    useEffect(()=>{fillRateRef.current=fillRate;},[fillRate]);
+  // v24 : refs pour les gisements
+  const zoneStateRefT  = useRef(zoneState);   useEffect(()=>{zoneStateRefT.current=zoneState;},[zoneState]);
+  const localStockRefT = useRef(localStock);  useEffect(()=>{localStockRefT.current=localStock;},[localStock]);
 
   // Choix de la prochaine zone : round-robin pins > round-robin possédés
+  // v24 : exclure les zones en panne (offline) — les tracteurs contournent
   const pickNextZone = useCallback(() => {
+    const zs = zoneStateRefT.current || [];
     const ownedIdxs = CITY_ZONES
       .map((z, i) => ({ z, i }))
       .filter(({z}) => (ownedRef.current[z.upgradeId] || 0) > 0)
+      .filter(({z}) => zs[z.upgradeId] !== 'offline')
       .map(({i}) => i);
     if (!ownedIdxs.length) return null;
     const pinned = pinnedRef.current || [];
@@ -3269,6 +3561,22 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
             spawnLoadParticle(tractorRefs.current[i], t.icon);
           }
           if (p >= 1) {
+            // v24 : charge le tracteur avec le contenu du gisement local
+            const zIdx = t.zoneIdx;
+            if (zIdx !== null) {
+              const upgId = CITY_ZONES[zIdx].upgradeId;
+              const cur = localStockRefT.current[upgId] || 0;
+              t.payload = cur;
+              if (cur > 0) {
+                setLocalStock(prev => {
+                  const next = [...prev];
+                  next[upgId] = 0;
+                  return next;
+                });
+              }
+            } else {
+              t.payload = 0;
+            }
             t.phase = 'travelBack';
             t.phaseStart = now;
           }
@@ -3301,6 +3609,13 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
           }
           if (p >= 1) {
             t.trailerTilt = 0;
+            // v24 : verser le payload dans le stock global
+            if (t.payload && t.payload > 0) {
+              const sm = (stockMaxRef && stockMaxRef.current) || Infinity;
+              const payload = t.payload;
+              setStock(s => Math.min(sm, s + payload));
+              t.payload = 0;
+            }
             t.phase = 'idle';
             t.zoneIdx = null;
             t.icon = null;
@@ -3992,28 +4307,88 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
 // ─── CITY ZONE — une zone d'intrant sur la vue ville (SVG) ───────────────────
 // Rend une zone stylisée + pin de priorité. Les animations sont des CSS
 // transform/opacity (légères, OK sur mobile).
-function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabel, iconEmoji }) {
+function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabel, iconEmoji, zoneState, fillPct, offlineUntil, onRelaunch, relaunchCost, relaunchAffordable, canPayLabel }) {
   const { x, y, label } = zone;
   const locked = !upgradeUnlocked;
   const activeBuilding = !locked && owned > 0;
+  // v24 : état visuel dérivé
+  const isWarn      = activeBuilding && zoneState === 'warn';
+  const isSaturated = activeBuilding && zoneState === 'saturated';
+  const isOffline   = activeBuilding && zoneState === 'offline';
+  // Couleurs de jauge selon l'état
+  const gaugeColor = isOffline ? '#E05858'
+                   : isSaturated ? '#E05858'
+                   : isWarn ? '#E07820'
+                   : fillPct > 0.5 ? '#E8A020'
+                   : '#4A9EDB';
+  // Countdown de panne (mm:ss restantes)
+  const [nowTs, setNowTs] = useState(Date.now());
+  useEffect(() => {
+    if (!isOffline) return;
+    const id = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isOffline]);
+  const panneRemain = isOffline && offlineUntil ? Math.max(0, offlineUntil - nowTs) : 0;
+  const mm = Math.floor(panneRemain / 60000);
+  const ss = Math.floor((panneRemain % 60000) / 1000);
+  const panneTimeStr = `${mm}:${String(ss).padStart(2, '0')}`;
+
   return (
     <g>
       {/* Socle / carré stylisé qui abrite la zone (couleur selon type) */}
-      <g transform={`translate(${x} ${y})`} style={{opacity: locked ? 0.38 : 1, transition:"opacity .4s"}}>
-        <ZoneBuilding label={label} locked={locked} active={activeBuilding} icon={iconEmoji}/>
+      <g transform={`translate(${x} ${y})`} style={{opacity: locked ? 0.38 : (isOffline ? 0.55 : 1), transition:"opacity .4s"}}>
+        <ZoneBuilding label={label} locked={locked} active={activeBuilding && !isOffline} icon={iconEmoji}/>
         {/* Label sous la zone */}
         <text y={24} textAnchor="middle" fontSize="7" fill={locked ? "rgba(232,160,32,.7)" : "rgba(255,255,255,.78)"} style={{letterSpacing:".04em",fontWeight:700,textTransform:"uppercase"}}>
           {locked ? `🔒 ${priceLabel}` : label}
         </text>
+        {/* v24 : jauge de remplissage du gisement local (barre verticale à droite du bâtiment) */}
+        {activeBuilding && (
+          <g>
+            {/* Cadre */}
+            <rect x={29} y={-16} width={4} height={32} rx={1} fill="rgba(11,22,35,.78)" stroke="rgba(255,255,255,.18)" strokeWidth="0.5"/>
+            {/* Remplissage */}
+            <rect
+              x={29.5}
+              y={16 - Math.max(0, Math.min(1, fillPct)) * 31}
+              width={3}
+              height={Math.max(0, Math.min(1, fillPct)) * 31}
+              fill={gaugeColor}
+              style={isSaturated ? { animation: 'satPulse 1s ease-in-out infinite' } : {}}
+            />
+            {/* Halo rouge pulsant quand saturé */}
+            {isSaturated && (
+              <rect x={26} y={-19} width={10} height={38} rx={2} fill="none" stroke="#E05858" strokeWidth="1" opacity=".7" style={{animation:'satPulse 1s ease-in-out infinite'}}/>
+            )}
+          </g>
+        )}
+        {/* v24 : overlay panne + bouton relance */}
+        {isOffline && (
+          <g style={{pointerEvents:"all", cursor: relaunchAffordable ? "pointer" : "not-allowed"}} onClick={(e) => { e.stopPropagation(); if (relaunchAffordable) onRelaunch(zone.upgradeId); }}>
+            <rect x={-28} y={-20} width={56} height={40} rx={5} fill="rgba(224,88,88,.22)" stroke="#E05858" strokeWidth="1.2" strokeDasharray="3 2"/>
+            <text y={-6} textAnchor="middle" fontSize="7" fill="#E05858" fontWeight={700}>⚠ PANNE</text>
+            <text y={3} textAnchor="middle" fontSize="6" fill="rgba(255,255,255,.85)">{panneTimeStr}</text>
+            <text y={12} textAnchor="middle" fontSize="5.5" fill={relaunchAffordable ? "#E8A020" : "rgba(255,255,255,.4)"} fontWeight={700}>
+              RELANCE {canPayLabel}
+            </text>
+          </g>
+        )}
       </g>
       {/* Pin de priorité — visible UNIQUEMENT si zone possédée */}
       {activeBuilding && (
         <g
+          className="zone-pin-interactive"
           transform={`translate(${x + 22} ${y - 18})`}
           style={{cursor:"pointer", pointerEvents:"all"}}
           onClick={(e)=>{ e.stopPropagation(); onTogglePin(zone.upgradeId); }}
         >
-          <circle r="8" fill={pinned ? "#E8A020" : "#0B1623"} stroke={pinned ? "#E8A020" : "rgba(232,160,32,.6)"} strokeWidth="1.4"/>
+          <circle
+            r="8"
+            fill={pinned ? "#E8A020" : "#0B1623"}
+            stroke={isSaturated ? "#E05858" : (pinned ? "#E8A020" : "rgba(232,160,32,.6)")}
+            strokeWidth={isSaturated ? "2" : "1.4"}
+            style={isSaturated ? {animation:'satPulse 1s ease-in-out infinite'} : {}}
+          />
           <text textAnchor="middle" dy="3" fontSize="9">📌</text>
         </g>
       )}
@@ -4140,7 +4515,10 @@ function DigesteurScene({
   binRotate, binTransX, pouring, handlePour,
   // v23 — flotte & ville
   tractorCount, tractorSpeedBoost, pinnedZones, onTogglePin,
-  cityView, setCityView, injected, epurateurOk, compresseurOk
+  cityView, setCityView, injected, epurateurOk, compresseurOk,
+  // v24 — gisements
+  zoneState, localStock, setLocalStock, setStock, stockMaxRef,
+  offlineUntil, handleRelaunchZone, euros, buffer, reliability
 }) {
   // Taille des digesteurs selon le nombre (inchangé)
   const dSize  = digesteurs === 1 ? 115 : digesteurs === 2 ? 90 : 72;
@@ -4415,7 +4793,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v23.15
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v24.0
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -4426,16 +4804,32 @@ function DigesteurScene({
               <g style={{pointerEvents:"auto"}}>
                 {CITY_ZONES.map(z => {
                   const m = zoneMeta(z);
+                  const upgId = z.upgradeId;
+                  const qty = owned[upgId] || 0;
+                  const localCap = UPGRADES[upgId].bagCap * qty * LOCAL_CAP_MULT;
+                  const fillPct = localCap > 0 ? (localStock[upgId] || 0) / localCap : 0;
+                  const zs = zoneState[upgId] || 'ok';
+                  const offUntil = offlineUntil[upgId];
+                  const cost = zs === 'offline' ? getRelaunchCost(upgId, qty) : 0;
+                  const affordable = zs === 'offline' ? (injected ? euros >= cost : buffer >= cost) : false;
+                  const costLbl = zs === 'offline' ? (injected ? fmtEuro(cost) : fmt(cost)) : '';
                   return (
                     <CityZone
                       key={z.upgradeId}
                       zone={z}
-                      owned={owned[z.upgradeId] || 0}
+                      owned={qty}
                       pinned={pinnedZones.includes(z.upgradeId)}
                       onTogglePin={onTogglePin}
                       upgradeUnlocked={m.unlocked}
                       priceLabel={m.price}
                       iconEmoji={m.icon}
+                      zoneState={zs}
+                      fillPct={fillPct}
+                      offlineUntil={offUntil}
+                      onRelaunch={handleRelaunchZone}
+                      relaunchCost={cost}
+                      relaunchAffordable={affordable}
+                      canPayLabel={costLbl}
                     />
                   );
                 })}
@@ -4496,6 +4890,11 @@ function DigesteurScene({
               tractorCount={tractorCount}
               speedBoost={tractorSpeedBoost}
               pinnedZones={pinnedZones}
+              zoneState={zoneState}
+              localStock={localStock}
+              setLocalStock={setLocalStock}
+              setStock={setStock}
+              stockMaxRef={stockMaxRef}
               overlayRef={tractorOverlayRef}
             />
           </svg>
