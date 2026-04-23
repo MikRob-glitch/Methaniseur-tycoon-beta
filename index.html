@@ -1356,8 +1356,9 @@ function Game({ username, region, maia }) {
   const zoneStateRef       = useRef(zoneState);       useEffect(()=>{zoneStateRef.current=zoneState;},[zoneState]);
   const satSinceRef        = useRef(saturatedSince);  useEffect(()=>{satSinceRef.current=saturatedSince;},[saturatedSince]);
   const offlineUntilRef    = useRef(offlineUntil);    useEffect(()=>{offlineUntilRef.current=offlineUntil;},[offlineUntil]);
-  const gnvBonusRefV24     = useRef(1);               useEffect(()=>{gnvBonusRefV24.current=gnvBonus;},[gnvBonus]);
-  const injectedRefV24     = useRef(false);            useEffect(()=>{injectedRefV24.current=injected;},[injected]);
+  // Les refs gnvBonusRefV24 / injectedRefV24 sont déclarées APRÈS gnvBonus/injected (plus bas) pour éviter le TDZ.
+  const gnvBonusRefV24     = useRef(1);
+  const injectedRefV24     = useRef(false);
 
   const applyCatchUp = useCallback(() => {
     const fr  = fillRateRef.current;
@@ -1473,6 +1474,8 @@ function Game({ username, region, maia }) {
 
   // ── Dérivés ────────────────────────────────────────────────────────────────
   const gnvBonus      = tractorGnv ? 1.15 : 1;
+  gnvBonusRefV24.current = gnvBonus;       // sync immédiat — pas de TDZ
+  injectedRefV24.current = injected;       // sync immédiat — pas de TDZ
   const fillRate      = owned.reduce((a,q,i) => a+UPGRADES[i].baseFill*q, 0) * gnvBonus;
   const burnRate      = fillRate;
   // chargeMaxEff dynamique : cible ~90s de digestion à tout niveau d'intrant
