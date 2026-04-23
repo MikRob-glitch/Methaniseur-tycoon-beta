@@ -1356,8 +1356,8 @@ function Game({ username, region, maia }) {
   const zoneStateRef       = useRef(zoneState);       useEffect(()=>{zoneStateRef.current=zoneState;},[zoneState]);
   const satSinceRef        = useRef(saturatedSince);  useEffect(()=>{satSinceRef.current=saturatedSince;},[saturatedSince]);
   const offlineUntilRef    = useRef(offlineUntil);    useEffect(()=>{offlineUntilRef.current=offlineUntil;},[offlineUntil]);
-  const gnvBonusRefV24     = useRef(gnvBonus);        useEffect(()=>{gnvBonusRefV24.current=gnvBonus;},[gnvBonus]);
-  const injectedRefV24     = useRef(injected);        useEffect(()=>{injectedRefV24.current=injected;},[injected]);
+  const gnvBonusRefV24     = useRef(1);               useEffect(()=>{gnvBonusRefV24.current=gnvBonus;},[gnvBonus]);
+  const injectedRefV24     = useRef(false);            useEffect(()=>{injectedRefV24.current=injected;},[injected]);
 
   const applyCatchUp = useCallback(() => {
     const fr  = fillRateRef.current;
