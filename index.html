@@ -1,44 +1,35 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-  <meta name="theme-color" content="#0B1623"/>
-  <meta name="description" content="Méthaniseur Tycoon – Challenge interne GRDF 2025"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <link rel="manifest" href="manifest.json"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta name="theme-color" content="#0a1628"/>
   <title>Méthaniseur Tycoon – GRDF</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" crossorigin></script>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{min-height:100%;width:100%}
-    body{background:#0B1623;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#EDF4FF;overscroll-behavior:none}
-    #err{display:none;position:fixed;inset:0;padding:20px;background:#0B1623;color:#E05858;font:12px/1.5 monospace;overflow:auto;z-index:9999;white-space:pre-wrap;word-break:break-word}
-    #err h2{color:#E8A020;margin-bottom:10px;font:bold 16px sans-serif}
-    #err button{margin-top:12px;padding:10px 20px;background:#4A9EDB;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a1628;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100dvh}
+    #root{height:100dvh;display:flex;flex-direction:column}
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <div id="err"><h2>⚠️ Erreur au chargement</h2><pre id="errmsg"></pre><button onclick="(async()=>{if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.unregister();}if('caches' in window){const ks=await caches.keys();for(const k of ks)await caches.delete(k);}localStorage.clear();location.reload(true);})()">🔄 Réinitialiser et recharger</button></div>
+  <div id="root"><p style="color:#e8f4fd;padding:20px">⚠️ Erreur au chargement</p></div>
+  <noscript><p style="color:white;padding:20px">JavaScript requis</p></noscript>
   <script>
-    window.addEventListener('error', e => {
-      const el = document.getElementById('err'), msg = document.getElementById('errmsg');
-      if (el && msg) { msg.textContent = (e.message || e.error || e) + '\n\n' + (e.error?.stack || ''); el.style.display = 'block'; }
-    });
-    window.addEventListener('unhandledrejection', e => {
-      const el = document.getElementById('err'), msg = document.getElementById('errmsg');
-      if (el && msg) { msg.textContent = 'Promise rejection: ' + (e.reason?.message || e.reason); el.style.display = 'block'; }
-    });
+    if('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
   </script>
   <script type="text/babel" data-presets="react">
-// Source de vérité — Méthaniseur Tycoon v23
+
+// Source de vérité — Méthaniseur Tycoon v24.1
 // Workflow : modifier ce fichier → envoyer à Claude → Claude génère index.html compilé
-// v24 : gisements locaux par zone avec saturation, panne et relance — les pins servent vraiment
-// v23 : swipe viewport 2 vues, ville 7 zones animées, flotte multi-tracteurs, pins de priorité
+// v24.1 : seuils chaîne d'injection abaissés (épurateur 50 / compresseur 250 / raccordement 500)
+// v24   : gisements locaux par zone avec saturation, panne et relance — les pins servent vraiment
+// v23   : swipe viewport 2 vues, ville 7 zones animées, flotte multi-tracteurs, pins de priorité
 const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,10 +82,10 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
   return { ok: true };
 };
 
-// Upsert joueur (score + statut raccordement)
-const supabaseUpsert = (payload) => {
-  if (!SUPABASE_KEY || SUPABASE_URL.includes("VOTRE_PROJECT_ID")) return;
-  fetch(SUPABASE_URL + "/rest/v1/players", {
+// Upsert joueur — helper HTTP interne
+const _supabaseFetch = (body) => {
+  if (!SUPABASE_KEY || SUPABASE_URL.includes("VOTRE_PROJECT_ID")) return Promise.resolve();
+  return fetch(SUPABASE_URL + "/rest/v1/players", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,8 +93,25 @@ const supabaseUpsert = (payload) => {
       "Authorization": "Bearer " + SUPABASE_KEY,
       "Prefer": "resolution=merge-duplicates",
     },
-    body: JSON.stringify(Object.assign({}, payload, { updated_at: new Date().toISOString() })),
-  }).catch(function() {});
+    body: JSON.stringify(Object.assign({}, body, { updated_at: new Date().toISOString() })),
+  });
+};
+
+// 1) Score-only — champs critiques classement, toujours envoyés en premier
+const supabaseUpsertScore = (payload) => {
+  const { id, maia, username, region, score_network, score_gnv, is_connected,
+          buffer, epurateur, compresseur, digesteurs } = payload;
+  _supabaseFetch({ id, maia, username, region, score_network, score_gnv,
+                   is_connected, buffer, epurateur, compresseur, digesteurs })
+    .then(r => { if (r && !r.ok) r.text().then(t => console.warn("[Supabase score]", r.status, t)); })
+    .catch(e => console.warn("[Supabase score network]", e));
+};
+
+// 2) Full game state — best-effort (peut échouer si schéma incomplet)
+const supabaseUpsert = (payload) => {
+  _supabaseFetch(payload)
+    .then(r => { if (r && !r.ok) r.text().then(t => console.warn("[Supabase full]", r.status, t)); })
+    .catch(e => console.warn("[Supabase full network]", e));
 };
 
 // Lecture des stats régionales agrégées
@@ -1217,21 +1225,22 @@ function Game({ username, region, maia }) {
     setLbLoading(true);
     fetchNationalLeaderboard().then(rows => {
       if (rows && rows.length > 0) {
-        const prevMap = {};
-        leaderboard.forEach((e, i) => { prevMap[e.name] = i; });
-        setLbPrev(prevMap);
-        // S'assurer que le joueur courant est toujours visible
-        const hasMe = rows.some(r => r.name === username);
-        const merged = hasMe ? rows : [
-          ...rows,
-          { name: username, region, score: bm + gnvBm, scoreNet: bm, scoreGnv: gnvBm, connected: injected, buffer, epurateur: epurateurOk, compresseur: compresseurOk, digesteurs }
-        ];
-        setLb(merged.slice(0, 50));
+        setLb(prev => {
+          const prevMap = {};
+          prev.forEach((e, i) => { prevMap[e.name] = i; });
+          setLbPrev(prevMap);
+          const hasMe = rows.some(r => r.name === username);
+          const merged = hasMe ? rows : [
+            ...rows,
+            { name: username, region, score: bm + gnvBm, scoreNet: bm, scoreGnv: gnvBm, connected: injected, buffer, epurateur: epurateurOk, compresseur: compresseurOk, digesteurs }
+          ];
+          return merged.slice(0, 50);
+        });
       }
       setLbLastUp(Date.now());
       setLbLoading(false);
     });
-  }, [username, region, bm, gnvBm, leaderboard]);
+  }, [username, region, bm, gnvBm]);
 
   // ── SUPABASE REALTIME ─────────────────────────────────────────────────────
   const handleRealtimeChange = useCallback(() => {
@@ -1266,6 +1275,18 @@ function Game({ username, region, maia }) {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(payload)); } catch {}
     // Supabase — source de vérité primaire
     const pid = `${maia || username}_${region}`.toLowerCase().replace(/\s+/g,'_');
+    // Score-only en premier (garanti même si schéma incomplet)
+    supabaseUpsertScore({
+      id: pid, maia: maia || undefined, username, region,
+      score_network: stateRef.current.bm,
+      score_gnv:    stateRef.current.gnvBm,
+      is_connected: stateRef.current.injected,
+      buffer:       stateRef.current.buffer,
+      epurateur:    stateRef.current.epurateurOk,
+      compresseur:  stateRef.current.compresseurOk,
+      digesteurs:   stateRef.current.digesteurs,
+    });
+    // Full state — best-effort
     supabaseUpsert({
       id:           pid,
       maia:         maia || undefined,
@@ -5933,19 +5954,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   
   
   
-  </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        try {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          for (const reg of regs) {
-            if (!reg.active || !reg.active.scriptURL.endsWith('/sw.js')) await reg.unregister();
-          }
-          await navigator.serviceWorker.register('./sw.js', { scope: './' });
-        } catch (e) { console.warn('SW error:', e); }
-      });
-    }
+  
   </script>
 </body>
 </html>
