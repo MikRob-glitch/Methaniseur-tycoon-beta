@@ -1363,7 +1363,10 @@ function Game({ username, region, maia }) {
     // localStorage — fallback offline
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(payload)); } catch {}
     // Supabase — source de vérité primaire
-    const pid = `${maia || username}_${region}`.toLowerCase().replace(/\s+/g,'_');
+    // v25.0.2 — pid DOIT matcher l'id généré au register (sinon 2 lignes pour 1 maia)
+    //   Register : `${maia}`.toLowerCase().replace(/\s+/g,'_')
+    //   Save     : pareil — pas de region appendée (déjà incohérent en v24)
+    const pid = `${maia || username}`.toLowerCase().replace(/\s+/g,'_');
     // Score-only en premier (garanti même si schéma incomplet)
     supabaseUpsertScore({
       id: pid, maia: maia || undefined, username, region,
