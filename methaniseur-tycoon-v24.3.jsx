@@ -1,28 +1,3 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#0a1628"/>
-  <title>Méthaniseur Tycoon – GRDF</title>
-  <link rel="manifest" href="manifest.json"/>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0a1628;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-    #root{min-height:100dvh}
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script>
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').catch(()=>{});
-    }
-  </script>
-  <script type="text/babel" data-presets="react">
 
 // Source de vérité — Méthaniseur Tycoon v24.3
 // Workflow : modifier ce fichier → envoyer à Claude → Claude génère index.html compilé
@@ -6053,26 +6028,3 @@ function RankingTab({
     </div>
   );
 }
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  React.createElement(ThemeProvider, null, React.createElement(App, null))
-);
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  </script>
-</body>
-</html>

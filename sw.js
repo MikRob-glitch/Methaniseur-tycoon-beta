@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Méthaniseur Tycoon — Service Worker v24.2
+// Méthaniseur Tycoon — Service Worker v24.3
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-v24-2';
+const CACHE_NAME = 'methaniseur-v24-3';
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
