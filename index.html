@@ -120,9 +120,12 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
 };
 
 // Upsert joueur — helper HTTP interne
+// v25.0.1 — fix 409 Conflict : on spécifie on_conflict=maia pour matcher la
+//           contrainte UNIQUE sur la colonne `maia`. Sans ça, PostgREST tente
+//           un INSERT et viole players_maia_key.
 const _supabaseFetch = (body) => {
   if (!SUPABASE_KEY || SUPABASE_URL.includes("VOTRE_PROJECT_ID")) return Promise.resolve();
-  return fetch(SUPABASE_URL + "/rest/v1/players", {
+  return fetch(SUPABASE_URL + "/rest/v1/players?on_conflict=maia", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -5081,7 +5084,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v24.3
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.0
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
