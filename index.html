@@ -24,8 +24,13 @@
   </script>
   <script type="text/babel" data-presets="react">
 
-// Source de vérité — Méthaniseur Tycoon v24.3
-// Workflow : modifier ce fichier → envoyer à Claude → Claude génère index.html compilé
+
+// Source de vérité — Méthaniseur Tycoon v25.0
+// Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.0 : YIELD ENGINE — production = masse × yield mix pondéré (m³ CH₄/t)
+//         + tracteur capacité finie (= bagCap) + fix fuite stockMax
+//         + catch-up offline avec yield mix + migration save auto
+//         + seuils €×10, coûts post-injection ×10, CHARGE_MAX 30, LOCAL_CAP_MULT 4
 // v24.3 : menu utilisateur déroulant en haut à gauche avec option "Se déconnecter"
 // v24.2 : fix vidage bac (race condition handlePour) + INSERT Supabase défensif (reliability=100, arrays initialisés)
 // v24.1 : seuils chaîne d'injection abaissés (épurateur 50 / compresseur 250 / raccordement 500)
@@ -85,6 +90,9 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
       owned: [0,0,0,0,0,0,0],
       stock: 0,
       charge: 0,
+      // v25.0 — yield moyen pondéré (m³ CH₄ / t) du contenu BAC et digesteur
+      stock_yield: 0,
+      charge_yield: 0,
       epurateur: false,
       compresseur: false,
       digesteurs: 1,
@@ -351,22 +359,26 @@ function useSupabaseRealtime(onPlayerChange, active) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ⚙️  PARAMÈTRES CLÉS — seuils chaîne d'injection GRDF (m³ dans la cuve tampon)
 // ─────────────────────────────────────────────────────────────────────────────
-const EPURATEUR_THRESHOLD   = 50;
-const COMPRESSEUR_THRESHOLD = 250;
-const INJECTION_THRESHOLD   = 500;
-const GNV_STATION_COSTS   = [5000, 50000, 500000];
-const DIGESTEUR_COSTS     = [10000, 100000];        // digesteur 2 et 3
+// v25.0 — seuils et coûts × 10 pour compenser la production × ~13 induite par realYield actif
+const EPURATEUR_THRESHOLD   = 500;
+const COMPRESSEUR_THRESHOLD = 2500;
+const INJECTION_THRESHOLD   = 5000;
+const GNV_STATION_COSTS   = [50000, 500000, 5000000];
+const DIGESTEUR_COSTS     = [100000, 1000000];      // digesteur 2 et 3
 const DIGESTEUR_LABELS    = ["x2 capacité","x3 capacité","x4 capacité"];
 
 // ─── DONNÉES ─────────────────────────────────────────────────────────────────
-// realYield  : vrai rendement m³ CH₄ / tonne de matière fraîche (source ADEME/GRDF)
-// pedagoTip  : explication pédagogique affichée dans la fiche upgrade
+// v25.0 — realYield devient un paramètre RÉEL du moteur (production = masse × yield)
+//   - baseFill : débit massique (t/s/zone) — étalé 10× entre paliers
+//   - bagCap   : capacité tracteur (t/voyage = bF × 90s)
+//   - realYield: rendement m³ CH₄ / tonne — monotone 20→500 (cohérent avec ADEME)
+//   - localCap = bagCap × qty × LOCAL_CAP_MULT (4) → 6 min de saturation max
 
 const UPGRADES = [
   {
     id:0, name:"Lisier bovin",        icon:"🐄",
     desc:"Effluents d'élevage bovin",
-    baseCost:0.5,   baseFill:0.4,   bagCap:40,        unlocksAt:null,
+    baseCost:0.5,   baseFill:0.10,   bagCap:9,         unlocksAt:null,
     realYield:20,
     realYieldLabel:"~20 m³ CH₄ / tonne",
     pedagoTip:"L'intrant le plus répandu en France. Faible rendement unitaire, mais disponible en très grand volume dans les exploitations agricoles. C'est la porte d'entrée de la méthanisation agricole.",
@@ -374,7 +386,7 @@ const UPGRADES = [
   {
     id:1, name:"Déchets verts",       icon:"🌿",
     desc:"Tontes & résidus végétaux",
-    baseCost:3,     baseFill:3,     bagCap:135,       unlocksAt:null,
+    baseCost:3,     baseFill:0.15,   bagCap:13.5,      unlocksAt:null,
     realYield:75,
     realYieldLabel:"~75 m³ CH₄ / tonne",
     pedagoTip:"Tontes de pelouse, tailles de haies, résidus végétaux de collectivités. Rendement 3,75× supérieur au lisier. Gisement local et stable, souvent sous-valorisé.",
@@ -382,23 +394,23 @@ const UPGRADES = [
   {
     id:2, name:"Biodéchets restau",   icon:"🍽️",
     desc:"Restes alimentaires triés à la source",
-    baseCost:15,    baseFill:15,    bagCap:675,       unlocksAt:"epurateur",
+    baseCost:15,    baseFill:0.30,   bagCap:27,        unlocksAt:"epurateur",
     realYield:100,
     realYieldLabel:"~100 m³ CH₄ / tonne",
     pedagoTip:"Haute teneur en sucres et lipides = excellent rendement. La loi du 1er janvier 2024 impose le tri à la source des biodéchets pour tous les professionnels. Un gisement en plein essor !",
   },
   {
     id:3, name:"Boues de STEP",       icon:"🏭",
-    desc:"Boues des stations d'épuration urbaines",
-    baseCost:80,    baseFill:80,    bagCap:3600,      unlocksAt:"epurateur",
-    realYield:22,
-    realYieldLabel:"~22 m³ CH₄ / tonne",
-    pedagoTip:"Coproduit de l'assainissement urbain. Rendement similaire au lisier, mais volumes considérables en zones urbaines. La méthanisation des boues de STEP évite leur enfouissement.",
+    desc:"Boues d'épuration urbaines optimisées en méthanisation",
+    baseCost:80,    baseFill:0.50,   bagCap:45,        unlocksAt:"epurateur",
+    realYield:120,
+    realYieldLabel:"~120 m³ CH₄ / tonne",
+    pedagoTip:"Coproduit de l'assainissement urbain, optimisé en parc dédié (digestion thermophile, hygiénisation). 6× le rendement du lisier. Volumes considérables en zones urbaines.",
   },
   {
     id:4, name:"Déchets industriels", icon:"⚙️",
     desc:"Coproduits agro-industriels à haute énergie",
-    baseCost:400,   baseFill:400,   bagCap:18000,     unlocksAt:"compresseur",
+    baseCost:400,   baseFill:0.70,   bagCap:63,        unlocksAt:"compresseur",
     realYield:300,
     realYieldLabel:"~300 m³ CH₄ / tonne",
     pedagoTip:"Mélasses, graisses, eaux de process d'abattoirs ou de laiteries. Rendement 15× supérieur au lisier. Les graisses pures peuvent dépasser 800 m³/tonne — le \"kérosène\" de la méthanisation.",
@@ -406,15 +418,15 @@ const UPGRADES = [
   {
     id:5, name:"Cultures CIVE",       icon:"🌾",
     desc:"Cultures intermédiaires à vocation énergétique",
-    baseCost:5000,  baseFill:2000,  bagCap:90000,     unlocksAt:"injected",
-    realYield:150,
-    realYieldLabel:"~150 m³ CH₄ / tonne",
-    pedagoTip:"Sorgho, ray-grass, moutarde : semées entre deux cultures alimentaires, elles captent le CO₂ atmosphérique. Elles ne concurrencent pas l'alimentation et produisent un biométhane 100 % renouvelable.",
+    baseCost:5000,  baseFill:0.90,   bagCap:81,        unlocksAt:"injected",
+    realYield:400,
+    realYieldLabel:"~400 m³ CH₄ / tonne",
+    pedagoTip:"Sorgho, ray-grass, moutarde : semées entre deux cultures alimentaires, elles captent le CO₂ atmosphérique. 20× le rendement du lisier en biométhane 100 % renouvelable.",
   },
   {
     id:6, name:"Parc biogaz+",        icon:"💨",
     desc:"Co-digestion multi-sources optimisée",
-    baseCost:40000, baseFill:12000, bagCap:540000,    unlocksAt:"injected",
+    baseCost:40000, baseFill:1.00,   bagCap:90,        unlocksAt:"injected",
     realYield:500,
     realYieldLabel:"~500 m³ CH₄ / tonne",
     pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 10 % de gaz vert en 2030.",
@@ -462,11 +474,11 @@ const PARCELLES = [
 ];
 
 // ─── TRACTOR UPGRADES ────────────────────────────────────────────────────────
-// Payés en €, donc disponibles après raccordement GRDF seulement (cohérence éco duale).
+// v25.0 — coûts ×10 pour s'aligner sur la nouvelle échelle économique
 const TRACTOR_UPGRADES = {
-  count2:     { cost: 8000,   req: "injected", desc: "Ajoute un 2ᵉ tracteur — double la cadence de chargement" },
-  count3:     { cost: 45000,  req: "injected", desc: "Ajoute un 3ᵉ tracteur — triple la cadence de chargement" },
-  speedBoost: { cost: 15000,  req: "injected", desc: "+30% de vitesse sur tous les tracteurs (route goudronnée)" },
+  count2:     { cost: 80000,  req: "injected", desc: "Ajoute un 2ᵉ tracteur — double la cadence de chargement" },
+  count3:     { cost: 450000, req: "injected", desc: "Ajoute un 3ᵉ tracteur — triple la cadence de chargement" },
+  speedBoost: { cost: 150000, req: "injected", desc: "+30% de vitesse sur tous les tracteurs (route goudronnée)" },
 };
 
 const MOCK_LB = [
@@ -480,7 +492,9 @@ const MOCK_LB = [
 ];
 
 const REGIONS = ["Nord-Ouest","Île-de-France","Est","Centre-Ouest","Sud-Ouest","Sud-Est"];
-const CHARGE_MAX = 300;
+// v25.0 — plancher digesteur réduit (échelle baseFill divisée par ~10)
+// Garantit un digesteur "lisible" même avec qty=1 lisier (TARGET_DRAIN×0,1 = 9t)
+const CHARGE_MAX = 30;
 
 // Affiche 2 décimales utiles pour les petites valeurs ([1, 10[), sinon on tronque.
 // fr-FR assure la virgule décimale et l'espace fin comme séparateur de milliers.
@@ -506,7 +520,9 @@ const BM_TO_EUR = 1.0; // Tarif GRDF : 1 €/m³ (~100 €/MWh)
 // Chaque zone possédée a un tampon local qui se remplit passivement. Si plein,
 // escalade en 2 temps : saturation (N1+N3) → panne (+ perte €). Les pins servent
 // à prioriser les tracteurs vers les zones qui risquent la saturation.
-const LOCAL_CAP_MULT    = 3;              // capacité locale = bagCap × qty × 3 (ajuste le temps de saturation ≈ 90-120s sans tracteur)
+// v25.0 : MULT passe de 3→4 (= 6 min de saturation max) pour donner plus de marge
+//         de réaction et compenser la capacité tracteur désormais finie (= bagCap).
+const LOCAL_CAP_MULT    = 4;              // capacité locale = bagCap × qty × 4 (≈ 6 min de saturation sans tracteur)
 const WARN_THRESHOLD    = 0.8;            // seuil d'alerte visuelle (pin pulse rouge)
 const SAT_GRACE_MS      = 3 * 60 * 1000;  // 3 min de grâce après saturation 100%
 const SAT_PANNE_MS      = 5 * 60 * 1000;  // 5 min total → déclenche la panne
@@ -949,7 +965,7 @@ function Game({ username, region, maia }) {
     const fr         = ownedArr.reduce((a,q,i) => a + UPGRADES[i].baseFill * q, 0);
     if (fr <= 0) return null;
 
-    const stockMaxOff    = ownedArr.reduce((a,q,i) => a + UPGRADES[i].bagCap * q, 0);
+    const stockMaxOff    = ownedArr.reduce((a,q,i) => a + UPGRADES[i].bagCap * q * LOCAL_CAP_MULT, 0);
     const nDig           = sv.digesteurs || 1;
     const burnRateEff    = fr * nDig;
 
@@ -998,6 +1014,20 @@ function Game({ username, region, maia }) {
     const stockGained     = Math.max(0, Math.min(stockMaxOff - savedStock, idealProduction));
     const stockAfterFill  = savedStock + stockGained;
 
+    // ── v25.0 : YIELD MIX — m³ CH₄/t moyen pondéré ─────────────────────────
+    // Apports gisement pendant offline : yield = moyenne pondérée par baseFill×qty
+    const newFlowYield = fr > 0
+      ? ownedArr.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / fr
+      : 0;
+    // Migration : si save < v25 (pas de yield persistés) et stock/charge présents
+    //             → seed avec newFlowYield (best-effort, évite produced=0)
+    const savedStockYield  = (sv.stockYield  != null) ? sv.stockYield  : ((sv.stock  > 0) ? newFlowYield : 0);
+    const savedChargeYield = (sv.chargeYield != null) ? sv.chargeYield : ((sv.charge > 0) ? newFlowYield : 0);
+    // Stock après remplissage = mix savedStock + stockGained (chacun avec leur yield)
+    const stockMixYield = stockAfterFill > 0
+      ? (savedStock * savedStockYield + stockGained * newFlowYield) / stockAfterFill
+      : 0;
+
     // ── Digesteur : matière brûlable (logique préservée) ────────────────────
     let savedCharge = sv.charge || 0;
     let availableToDigest, stockConsumed = 0;
@@ -1011,7 +1041,9 @@ function Game({ username, region, maia }) {
       availableToDigest = Math.min(savedCharge, burnRateEff * elapsedSec);
     }
 
-    const produced = availableToDigest * 0.006;
+    // Production = part de charge (yield charge) + part de stock (yield mix)
+    const fromCharge = Math.min(savedCharge, availableToDigest);
+    const produced = fromCharge * savedChargeYield + stockConsumed * stockMixYield;
     if (produced < 0.01 && stockGained < 1 && totalLocalStockGained < 1) return null;
 
     // ── Gains par filière ─────────────────────────────────────────────────────
@@ -1034,10 +1066,16 @@ function Game({ username, region, maia }) {
     // ── États résiduels (pour corriger le state au retour) ────────────────────
     const remainingCharge = Math.max(0, savedCharge - Math.min(savedCharge, availableToDigest));
     const remainingStock  = Math.max(0, stockAfterFill - stockConsumed);
+    // v25.0 — yields résiduels :
+    //  · charge restante conserve son yield d'origine (on n'a fait que retirer)
+    //  · stock restant conserve le yield mix (mélange savedStock + apports gisement)
+    const remainingChargeYield = remainingCharge > 0 ? savedChargeYield : 0;
+    const remainingStockYield  = remainingStock  > 0 ? stockMixYield    : 0;
 
     return {
       elapsedSec, produced, injected: inj,
       stockGained, stockConsumed, remainingCharge, remainingStock,
+      remainingChargeYield, remainingStockYield,
       bmGained, gnvBmGained, eurosGained,
       // v24 — état des tampons locaux à appliquer au retour
       remainingLocalStock: newLocal,
@@ -1101,6 +1139,28 @@ function Game({ username, region, maia }) {
 
   const [charge,    setCharge]    = useState(() => offlineGains?.remainingCharge ?? saved?.charge ?? 0);
   const [bubbles, setBubbles] = useState([]);
+
+  // v25.0 — yield moyen pondéré (m³ CH₄/t) du contenu BAC et digesteur.
+  // Mis à jour par moyenne pondérée à chaque dépôt tracteur / vidage BAC.
+  // 0 quand le réservoir est vide (pas de yield à propager).
+  // Migration : si l'ancien save a stock/charge > 0 mais pas de yield, on seed avec
+  //             la moyenne pondérée des intrants possédés (best-effort, évite la prod nulle).
+  const _migratedDefaultYield = (() => {
+    const o = saved?.owned || [0,0,0,0,0,0,0];
+    const totalFill = o.reduce((a,q,i) => a + UPGRADES[i].baseFill * q, 0);
+    if (totalFill <= 0) return 0;
+    return o.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / totalFill;
+  })();
+  const [stockYield,  setStockYield]  = useState(() => {
+    if (offlineGains?.remainingStockYield != null) return offlineGains.remainingStockYield;
+    if (saved?.stockYield != null) return saved.stockYield;
+    return (saved?.stock > 0) ? _migratedDefaultYield : 0;
+  });
+  const [chargeYield, setChargeYield] = useState(() => {
+    if (offlineGains?.remainingChargeYield != null) return offlineGains.remainingChargeYield;
+    if (saved?.chargeYield != null) return saved.chargeYield;
+    return (saved?.charge > 0) ? _migratedDefaultYield : 0;
+  });
 
   const [epurateurOk,  setEpurateurOk]  = useState(saved?.epurateurOk  ?? false);
   const [compresseurOk,setCompresseurOk]= useState(saved?.compresseurOk ?? false);
@@ -1170,6 +1230,8 @@ function Game({ username, region, maia }) {
           owned:       cloudOwned,
           stock:       d.stock || 0,
           charge:      d.charge || 0,
+          stockYield:  d.stock_yield  || 0,
+          chargeYield: d.charge_yield || 0,
           digesteurs:  d.digesteurs || 1,
           injected:    !!d.is_connected,
           gnvStations: d.gnv_stations || 0,
@@ -1193,6 +1255,9 @@ function Game({ username, region, maia }) {
         // stock / charge : valeurs post-catch-up
         if (d.stock       != null) setStock(cg?.remainingStock ?? d.stock);
         if (d.charge      != null) setCharge(cg?.remainingCharge ?? d.charge);
+        // v25.0 — yields post-catch-up (fallback save brute si pas de cg)
+        if (d.stock_yield  != null) setStockYield(cg?.remainingStockYield  ?? d.stock_yield);
+        if (d.charge_yield != null) setChargeYield(cg?.remainingChargeYield ?? d.charge_yield);
         if (d.epurateur   != null) setEpurateurOk(!!d.epurateur);
         if (d.compresseur != null) setCompresseurOk(!!d.compresseur);
         if (d.is_connected != null) setInjected(!!d.is_connected);
@@ -1309,7 +1374,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1368,6 +1433,9 @@ function Game({ username, region, maia }) {
       saturated_since:     stateRef.current.saturatedSince,
       offline_until:       stateRef.current.offlineUntil,
       reliability:         stateRef.current.reliability,
+      // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
+      stock_yield:         stateRef.current.stockYield,
+      charge_yield:        stateRef.current.chargeYield,
       last_saved:   new Date().toISOString(),
     });
   }, [SAVE_KEY, username, region, maia]);
@@ -1425,6 +1493,14 @@ function Game({ username, region, maia }) {
   const chargeTickRef   = useRef(Date.now());
   const hiddenAtRef     = useRef(null);
   useEffect(() => { chargeRef.current = charge; }, [charge]);
+
+  // v25.0 — refs miroirs yield (lus dans rAF tracteur / tick digestion sans rerender)
+  const stockRef         = useRef(stock);
+  const stockYieldRef    = useRef(stockYield);
+  const chargeYieldRef   = useRef(chargeYield);
+  useEffect(() => { stockRef.current       = stock;       }, [stock]);
+  useEffect(() => { stockYieldRef.current  = stockYield;  }, [stockYield]);
+  useEffect(() => { chargeYieldRef.current = chargeYield; }, [chargeYield]);
 
   // ── CATCH-UP : appliqué au retour d'arrière-plan ──────────────────────────
   // v24 : on n'utilise PLUS fillRate → stock direct. À la place :
@@ -1493,11 +1569,22 @@ function Game({ username, region, maia }) {
         }
 
         // Stock global : production idéale clampée au stockMax
+        // v25.0 — yield mix : le flux entrant (= "tracteur idéal" qui aurait roulé)
+        // a un yield moyen pondéré par baseFill×qty. On l'intègre au stockYield.
         if (sm > 0) {
+          const flowYield = fr > 0
+            ? ownedNow.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / fr
+            : 0;
           setStock(s => {
             if (s >= sm) return sm;
             const idealProd = fr * dtStock;
-            return Math.min(sm, s + idealProd);
+            const accepted  = Math.min(sm - s, idealProd);
+            if (accepted > 0) {
+              const sYield = stockYieldRef.current || 0;
+              const newS = s + accepted;
+              setStockYield((newS > 0) ? (s * sYield + accepted * flowYield) / newS : 0);
+            }
+            return s + accepted;
           });
         }
       }
@@ -1513,7 +1600,8 @@ function Game({ username, region, maia }) {
           const pct    = cme > 0 ? f / cme : 1;
           const burn   = bre * dtCharge * pct;
           const actual = Math.min(f, burn);
-          const produced = actual * 0.006;
+          // v25.0 — production = masse digérée × yield moyen pondéré du digesteur
+          const produced = actual * (chargeYieldRef.current || 0);
           if (produced > 0) {
             if (st.injected) {
               const euroGain = produced * BM_TO_EUR;
@@ -1567,7 +1655,10 @@ function Game({ username, region, maia }) {
   const chargeMaxEff      = dynamicChargeMax * digesteurs;   // capacité digesteur x nb digesteurs
   chargeMaxEffRef.current = chargeMaxEff;                       // sync immédiat — pas de TDZ
   const burnRateEff       = burnRate * digesteurs;           // débit de transformation x nb digesteurs
-  const stockMax    = owned.reduce((a,q,i) => a+UPGRADES[i].bagCap*q, 0);
+  // v25.0 — stockMax doit absorber le payload tracteur entier sans fuite.
+  //   Avant : sum(bagCap × qty) → fuite garantie au dump si une zone sature.
+  //   Maintenant : sum(bagCap × qty × LOCAL_CAP_MULT) → cohérent avec localCap total
+  const stockMax    = owned.reduce((a,q,i) => a+UPGRADES[i].bagCap*q*LOCAL_CAP_MULT, 0);
   fillRateRef.current    = fillRate;     // sync pour catch-up
   stockMaxRef.current    = stockMax;     // sync pour catch-up
   burnRateEffRef.current = burnRateEff;  // sync pour catch-up
@@ -1597,7 +1688,9 @@ function Game({ username, region, maia }) {
   const canBuySomething = UPGRADES.some((u,i)=>wallet>=getCost(u,owned[i])&&isUpgradeAvailable(i));
 
   // bmPerSecond reflète le taux RÉEL au niveau de charge actuel
-  const bmPerSecond = isDigesting ? chargePct * burnRateEff * 0.006 : 0;
+  // v25.0 : production = burn × chargeYield (m³ CH₄ par tonne digérée, mix pondéré)
+  //         Si digesteur vide, pas de production. Si yield=0 (init), idem.
+  const bmPerSecond = isDigesting ? chargePct * burnRateEff * (chargeYield || 0) : 0;
   const bmPerHour   = bmPerSecond*3600;
 
   const fmtETA = (current, target, perHour) => {
@@ -1782,12 +1875,18 @@ function Game({ username, region, maia }) {
       const dt = Math.min((now - chargeTickRef.current) / 1000, 2);
       chargeTickRef.current = now;
       setCharge(f=>{
-        if (f<=0.001) return 0;                             // purge la queue asymptotique
+        if (f<=0.001) {
+          // v25.0 — purge : digesteur vide → reset yield (rien à propager)
+          if (chargeYieldRef.current !== 0) setChargeYield(0);
+          return 0;
+        }
         const cme    = chargeMaxEffRef.current;
         const pct    = cme > 0 ? f / cme : 1;              // fraction de charge actuelle
         const burn   = burnRateEff * dt * pct;              // débit ∝ niveau du digesteur
         const actual = Math.min(f, burn);
-        const produced = actual * 0.006;                    // m³ CH₄ ∝ matière digérée
+        // v25.0 — production = masse × yield moyen pondéré du digesteur
+        // Le yield reste invariant pendant la digestion (consommation proportionnelle)
+        const produced = actual * (chargeYieldRef.current || 0);
         if (produced > 0) {
           if (injected) {
             const euroGain = produced * BM_TO_EUR;
@@ -1820,7 +1919,17 @@ function Game({ username, region, maia }) {
         const space = cme - cNow;
         if (space <= 0) return s;                     // digesteur plein → stock préservé
         const poured = Math.min(s, space);
+        // v25.0 — propagation yield : stock → charge (moyenne pondérée)
+        const sYield = stockYieldRef.current || 0;
+        const cYield = chargeYieldRef.current || 0;
+        const newCharge = cNow + poured;
+        const newChargeYield = newCharge > 0
+          ? (cNow * cYield + poured * sYield) / newCharge
+          : 0;
+        setChargeYield(newChargeYield);
         setCharge(f => Math.min(cme, f + poured));
+        // Si le BAC se vide, reset stockYield
+        if (s - poured < 0.001 && sYield !== 0) setStockYield(0);
         return s - poured;                            // surplus conservé dans le bac
       });
     }, 2000); // toutes les 2s
@@ -1888,7 +1997,19 @@ function Game({ username, region, maia }) {
     //         les dumps de tracteur pendant l'anim. Le `s` lu était déjà ré-augmenté
     //         par le tracteur, donnant l'impression que le vidage n'avait pas eu lieu.
     // Maintenant : transfert stock→charge instantané, animation purement cosmétique.
-    setStock(s  => Math.max(0, s - dumped));
+    // v25.0 — propagation yield BAC→charge (moyenne pondérée)
+    const sYield = stockYieldRef.current || 0;
+    const cYield = chargeYieldRef.current || 0;
+    const newCharge = cNow + dumped;
+    const newChargeYield = newCharge > 0
+      ? (cNow * cYield + dumped * sYield) / newCharge
+      : 0;
+    setChargeYield(newChargeYield);
+    setStock(s  => {
+      const next = Math.max(0, s - dumped);
+      if (next < 0.001 && sYield !== 0) setStockYield(0);
+      return next;
+    });
     setCharge(f => Math.min(cme, f + dumped));
 
     setPouring(true);
@@ -2624,6 +2745,9 @@ function Game({ username, region, maia }) {
             euros={euros}
             buffer={buffer}
             reliability={reliability}
+            stockRef={stockRef}
+            stockYieldRef={stockYieldRef}
+            setStockYield={setStockYield}
           />
 
           <GasMeter value={injected?bm:buffer} isActive={isDigesting}/>
@@ -3519,7 +3643,7 @@ function computeZoneProgress(zIdx) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -3706,20 +3830,26 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
           }
           if (p >= 1) {
             // v24 : charge le tracteur avec le contenu du gisement local
+            // v25.0 : capacité FINIE (= bagCap), payload restant reste dans la zone
+            //         + yield source mémorisé pour propagation au déchargement
             const zIdx = t.zoneIdx;
             if (zIdx !== null) {
               const upgId = CITY_ZONES[zIdx].upgradeId;
               const cur = localStockRefT.current[upgId] || 0;
-              t.payload = cur;
-              if (cur > 0) {
+              const cap = UPGRADES[upgId].bagCap;     // capacité tracteur = 1× bagCap (tonnes)
+              const taken = Math.min(cur, cap);
+              t.payload = taken;
+              t.payloadYield = UPGRADES[upgId].realYield; // m³ CH₄/t — pour mix au dump
+              if (taken > 0) {
                 setLocalStock(prev => {
                   const next = [...prev];
-                  next[upgId] = 0;
+                  next[upgId] = Math.max(0, (next[upgId] || 0) - taken);
                   return next;
                 });
               }
             } else {
               t.payload = 0;
+              t.payloadYield = 0;
             }
             t.phase = 'travelBack';
             t.phaseStart = now;
@@ -3754,11 +3884,23 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
           if (p >= 1) {
             t.trailerTilt = 0;
             // v24 : verser le payload dans le stock global
+            // v25.0 : yield mix pondéré (stock garde sa moyenne) + capacité respecte localCap (×4)
+            //         → plus de fuite : stockMax dimensionné pour absorber le payload tracteur
             if (t.payload && t.payload > 0) {
               const sm = (stockMaxRef && stockMaxRef.current) || Infinity;
               const payload = t.payload;
-              setStock(s => Math.min(sm, s + payload));
+              const pYield  = t.payloadYield || 0;
+              const sCur    = (stockRef && stockRef.current) || 0;
+              const sYield  = (stockYieldRef && stockYieldRef.current) || 0;
+              const accepted = Math.max(0, Math.min(payload, sm - sCur));
+              if (accepted > 0) {
+                const newStock = sCur + accepted;
+                const newYield = (sCur * sYield + accepted * pYield) / newStock;
+                setStockYield(newYield);
+                setStock(s => Math.min(sm, s + accepted));
+              }
               t.payload = 0;
+              t.payloadYield = 0;
             }
             t.phase = 'idle';
             t.zoneIdx = null;
@@ -4662,7 +4804,9 @@ function DigesteurScene({
   cityView, setCityView, injected, epurateurOk, compresseurOk,
   // v24 — gisements
   zoneState, localStock, setLocalStock, setStock, stockMaxRef,
-  offlineUntil, handleRelaunchZone, euros, buffer, reliability
+  offlineUntil, handleRelaunchZone, euros, buffer, reliability,
+  // v25.0 — yield engine (mix pondéré stock/charge)
+  stockRef, stockYieldRef, setStockYield
 }) {
   // Taille des digesteurs selon le nombre (inchangé)
   const dSize  = digesteurs === 1 ? 115 : digesteurs === 2 ? 90 : 72;
@@ -5040,6 +5184,9 @@ function DigesteurScene({
               setStock={setStock}
               stockMaxRef={stockMaxRef}
               overlayRef={tractorOverlayRef}
+              stockRef={stockRef}
+              stockYieldRef={stockYieldRef}
+              setStockYield={setStockYield}
             />
           </svg>
 
@@ -6053,7 +6200,6 @@ function RankingTab({
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById('root')).render(
   React.createElement(ThemeProvider, null, React.createElement(App, null))
 );
