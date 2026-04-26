@@ -2678,8 +2678,13 @@ function Game({ username, region, maia }) {
       </div>
 
       {/* ══ TAB DIGESTEUR ══ */}
-      {tab==="game"&&(
-        <div style={{padding:"16px 16px 30px"}}>
+      {/* v25.0.4 — fix : display:none au lieu de unmount conditionnel.
+                   Avant : tab≠"game" démontait DigesteurScene → TractorWorld
+                   se détruisait → ses rAF/useEffect cleanup → AUCUN tracteur ne
+                   travaillait quand on était sur Achats/Classement. Le BAC ne
+                   recevait plus rien tant qu'on n'était pas sur l'onglet jeu.
+                   Maintenant : composant monté en permanence, juste caché. */}
+      <div style={{padding:"16px 16px 30px",display: tab==="game" ? "block" : "none"}}>
 
           {/* Flux */}
           <div style={{marginBottom:"16px",padding:"10px 12px",borderRadius:"12px",background:"rgba(74,158,219,.05)",border:"1px solid rgba(74,158,219,.09)"}}>
@@ -3036,7 +3041,6 @@ function Game({ username, region, maia }) {
             </div>
           )}
         </div>
-      )}
 
       {/* ══ TAB ACHATS ══ */}
       {tab==="upgrades"&&(
