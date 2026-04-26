@@ -102,6 +102,7 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
       tractor_gnv: false,
       euros: 0,
       auto_dump: false,
+      auto_dump_threshold: 0,                 // v25.0.8 — seuil déclenchement déverseur (0 = continu)
       // v23 — flotte tracteurs
       tractor_count: 1,
       tractor_speed_boost: false,
@@ -1269,6 +1270,13 @@ function Game({ username, region, maia }) {
   const [digesteurs,  setDigesteurs]  = useState(saved?.digesteurs  ?? 1);
   const [euros,       setEuros]       = useState(() => (saved?.euros ?? 0) + (offlineGains?.eurosGained || 0));
   const [autoDump,    setAutoDump]    = useState(saved?.autoDump    ?? false);
+  // v25.0.8 — seuil de déclenchement du déverseur automatique (% du BAC)
+  //   Le déverseur automatique tente de déverser toutes les 2s, mais ne le
+  //   fait QUE si le stock dépasse autoDumpThreshold % de stockMax.
+  //   0%   = déverse dès qu'il y a de la matière (comportement v25.0)
+  //   50%  = déverse seulement si BAC à moitié plein (compromis par défaut)
+  //   90%  = quasi anti-saturation (laisse le BAC se remplir avant)
+  const [autoDumpThreshold, setAutoDumpThreshold] = useState(saved?.autoDumpThreshold ?? 0);
   // ── FLOTTE TRACTEURS (v23) ──
   const [tractorCount,      setTractorCount]      = useState(saved?.tractorCount      ?? 1);
   const [tractorSpeedBoost, setTractorSpeedBoost] = useState(saved?.tractorSpeedBoost ?? false);
@@ -1359,6 +1367,8 @@ function Game({ username, region, maia }) {
         if (d.tractor_gnv != null) setTractorGnv(!!d.tractor_gnv);
         if (d.digesteurs  != null) setDigesteurs(d.digesteurs);
         if (d.auto_dump   != null) setAutoDump(!!d.auto_dump);
+        // v25.0.8 — seuil de déclenchement du déverseur
+        if (d.auto_dump_threshold != null) setAutoDumpThreshold(d.auto_dump_threshold);
         // v23 — flotte tracteurs
         if (d.tractor_count       != null) setTractorCount(d.tractor_count);
         if (d.tractor_speed_boost != null) setTractorSpeedBoost(!!d.tractor_speed_boost);
@@ -1467,7 +1477,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1520,6 +1530,7 @@ function Game({ username, region, maia }) {
       tractor_gnv:  stateRef.current.tractorGnv,
       euros:        stateRef.current.euros,
       auto_dump:    stateRef.current.autoDump,
+      auto_dump_threshold: stateRef.current.autoDumpThreshold,  // v25.0.8 — seuil déclenchement déverseur
       // v23 — flotte tracteurs
       tractor_count:       stateRef.current.tractorCount,
       tractor_speed_boost: stateRef.current.tractorSpeedBoost,
@@ -1598,6 +1609,9 @@ function Game({ username, region, maia }) {
   useEffect(() => { stockRef.current       = stock;       }, [stock]);
   useEffect(() => { stockYieldRef.current  = stockYield;  }, [stockYield]);
   useEffect(() => { chargeYieldRef.current = chargeYield; }, [chargeYield]);
+  // v25.0.8 — ref miroir seuil auto-dump (lu dans tick 2s sans recréer l'interval)
+  const autoDumpThresholdRef = useRef(autoDumpThreshold);
+  useEffect(() => { autoDumpThresholdRef.current = autoDumpThreshold; }, [autoDumpThreshold]);
 
   // ── CATCH-UP : appliqué au retour d'arrière-plan ──────────────────────────
   // v24 : on n'utilise PLUS fillRate → stock direct. À la place :
@@ -2006,11 +2020,18 @@ function Game({ username, region, maia }) {
   },[burnRateEff,injected,gnvStations,gnvSplit]);
 
   // ── AUTO-DUMP — déverseur automatique ─────────────────────────────────────
+  // v25.0.8 — seuil de déclenchement : ne déverse que si stock ≥ X% de stockMax.
+  //   Permet au joueur d'accumuler dans le BAC avant déversement automatique.
+  //   Cas d'usage : éviter saturation digesteur, gameplay anti-AFK plus tactique.
   useEffect(()=>{
     if (!autoDump) return;
     const id=setInterval(()=>{
       setStock(s=>{
         if (s<1) return s;
+        // v25.0.8 — Vérification du seuil de déclenchement
+        const sm = stockMaxRef.current;
+        const threshold = autoDumpThresholdRef.current || 0;
+        if (sm > 0 && (s / sm) * 100 < threshold) return s;  // seuil pas atteint → on attend
         const cme   = chargeMaxEffRef.current;
         const cNow  = chargeRef.current;
         const space = cme - cNow;
@@ -3119,13 +3140,51 @@ function Game({ username, region, maia }) {
             </div>
           )}
           {injected && autoDump && (
-            <div style={{marginTop:"14px",padding:"10px 16px",borderRadius:"14px",
-              background:"rgba(232,160,32,.1)",border:"1px solid rgba(232,160,32,.3)",
-              display:"flex",alignItems:"center",gap:"10px"}}>
-              <span style={{fontSize:"20px"}}>🤖</span>
+            <div style={{marginTop:"14px",padding:"12px 16px",borderRadius:"14px",
+              background:"rgba(232,160,32,.1)",border:"1px solid rgba(232,160,32,.3)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px"}}>
+                <span style={{fontSize:"20px"}}>🤖</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"12px",fontWeight:700,color:"#E8A020"}}>Déverseur automatique ✅</div>
+                  <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)"}}>
+                    {autoDumpThreshold === 0
+                      ? "Déverse en continu (toutes les 2s)"
+                      : `Déverse seulement si BAC ≥ ${autoDumpThreshold}%`}
+                  </div>
+                </div>
+                <div style={{
+                  fontSize:"14px",fontWeight:900,color:"#F5BE50",
+                  padding:"4px 10px",borderRadius:"8px",
+                  background:"rgba(245,190,80,.15)",border:"1px solid rgba(245,190,80,.3)",
+                  minWidth:"48px",textAlign:"center"
+                }}>{autoDumpThreshold}%</div>
+              </div>
+              {/* v25.0.8 — Slider seuil de déclenchement */}
               <div>
-                <div style={{fontSize:"12px",fontWeight:700,color:"#E8A020"}}>Déverseur automatique ✅</div>
-                <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)"}}>Le bac se vide automatiquement toutes les 2s</div>
+                <input
+                  type="range"
+                  min="0" max="100" step="5"
+                  value={autoDumpThreshold}
+                  onChange={(e) => setAutoDumpThreshold(parseInt(e.target.value, 10))}
+                  style={{
+                    width:"100%",height:"6px",borderRadius:"3px",
+                    background:`linear-gradient(90deg,#E8A020 0%,#E8A020 ${autoDumpThreshold}%,rgba(255,255,255,.1) ${autoDumpThreshold}%,rgba(255,255,255,.1) 100%)`,
+                    appearance:"none",WebkitAppearance:"none",outline:"none",cursor:"pointer"
+                  }}
+                />
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"9px",color:"rgba(255,255,255,.4)",marginTop:"4px"}}>
+                  <span>0% (continu)</span>
+                  <span>50% (équilibré)</span>
+                  <span>100% (anti-saturation)</span>
+                </div>
+                <div style={{
+                  marginTop:"8px",padding:"6px 10px",borderRadius:"8px",
+                  background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.06)",
+                  fontSize:"10px",color:"rgba(255,255,255,.5)",lineHeight:1.5
+                }}>
+                  💡 Plus le seuil est haut, plus le BAC se remplit avant déversement.
+                  Utile pour produire un mélange d'intrants avant de l'envoyer dans le digesteur.
+                </div>
               </div>
             </div>
           )}
