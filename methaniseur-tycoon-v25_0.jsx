@@ -3034,7 +3034,7 @@ function Game({ username, region, maia }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
                 <div>
                   <div style={{fontSize:"12px",fontWeight:700,color:canConnect?"#F5BE50":"rgba(255,255,255,.72)"}}>{canConnect?"🔓 Raccordement possible !":"🎯 Objectif raccordement"}</div>
-                  <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)} m³ accumulés</div>
+                  <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)} accumulés</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:"20px",fontWeight:800,color:canConnect?"#F5BE50":"#4A9EDB"}}>{Math.round(bufferPct*100)}%</div>
@@ -3167,7 +3167,7 @@ function Game({ username, region, maia }) {
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(85,68,204,.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"#E05858",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:compresseurOk?"rgba(204,119,0,.2)":"rgba(255,68,68,.1)",color:compresseurOk?"#E8A020":"#E05858",fontWeight:700}}>{compresseurOk?"✅":"❌"} Compresseur</span>
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:hasIndus?"rgba(74,158,219,.2)":"rgba(255,68,68,.1)",color:hasIndus?"#6DB5EC":"#E05858",fontWeight:700}}>{hasIndus?"✅":"❌"} ⚙️ Déchets indus.</span>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=INJECTION_THRESHOLD?"rgba(245,190,80,.2)":"rgba(255,255,255,.06)",color:buffer>=INJECTION_THRESHOLD?"#F5BE50":"rgba(255,255,255,.4)",fontWeight:700}}>{buffer>=INJECTION_THRESHOLD?"✅":"⏳"} {fmt(INJECTION_THRESHOLD)} m³</span>
+                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=INJECTION_THRESHOLD?"rgba(245,190,80,.2)":"rgba(255,255,255,.06)",color:buffer>=INJECTION_THRESHOLD?"#F5BE50":"rgba(255,255,255,.4)",fontWeight:700}}>{buffer>=INJECTION_THRESHOLD?"✅":"⏳"} {fmt(INJECTION_THRESHOLD)}</span>
                       </div>
                       {!blocked && (
                         <div style={{height:"8px",borderRadius:"4px",background:"rgba(255,255,255,.06)",overflow:"hidden",marginBottom:"4px"}}>
@@ -5452,7 +5452,7 @@ function DigesteurScene({
                             </div>
                             <div>
                               <div style={{fontSize:"8px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
-                              <div style={{fontSize:"13px", fontWeight:800, color:"#4ADB94"}}>{fmt(totalGas)} m³</div>
+                              <div style={{fontSize:"13px", fontWeight:800, color:"#4ADB94"}}>{fmt(totalGas)}</div>
                             </div>
                           </div>
                         </div>
@@ -5492,7 +5492,7 @@ function DigesteurScene({
                             </div>
                             <div style={{display:"flex", justifyContent:"space-between", fontSize:"8px", color:"rgba(255,255,255,.45)"}}>
                               <span>{fmtT(it.mass)} · {it.upg.realYield} m³/t</span>
-                              <span style={{color:"#4ADB94", fontWeight:600}}>+{fmt(it.contribGas)} m³</span>
+                              <span style={{color:"#4ADB94", fontWeight:600}}>+{fmt(it.contribGas)}</span>
                             </div>
                           </div>
                         ));
@@ -6567,7 +6567,7 @@ function RankingTab({
           <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
             {[
               { id:"go",     icon:"📜", name:"Garantie d'Origine (GO)",  desc:"Chaque MWh injecté génère 1 GO",             unlocked: injected && totalScore >= 100,     detail: injected && totalScore>=100 ? `${Math.floor(totalScore/100)} GO émises` : injected ? `${fmt(totalScore)} / 100 m³` : "Raccordement requis", color:"#4A9EDB" },
-              { id:"cpb",    icon:"🏛️", name:"Certificat de Production de Biogaz", desc:"Dispositif national obligatoire 2025", unlocked: totalScore >= 10000,               detail: totalScore>=10000 ? "Éligible CPB" : `${fmt(10000)} m³ requis`, color:"#5544CC" },
+              { id:"cpb",    icon:"🏛️", name:"Certificat de Production de Biogaz", desc:"Dispositif national obligatoire 2025", unlocked: totalScore >= 10000,               detail: totalScore>=10000 ? "Éligible CPB" : `${fmt(10000)} requis`, color:"#5544CC" },
               { id:"quali",  icon:"⭐", name:"Label Qualimétha",         desc:"Qualité CH₄ > 97% maintenue",                unlocked: injected && digesteurs >= 2,        detail: injected&&digesteurs>=2 ? "Certifié" : "2 digesteurs requis", color:"#E8A020" },
             ].map(cert => (
               <div key={cert.id} style={{
@@ -6733,7 +6733,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
       <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
         {[
           { id:"go",     icon:"📜", name:"Garantie d'Origine (GO)",  desc:"Chaque MWh injecté génère 1 GO",             unlocked: injected && totalScore >= 100,     detail: injected && totalScore>=100 ? `${Math.floor(totalScore/100)} GO émises` : injected ? `${fmt(totalScore)} / 100 m³` : "Raccordement requis", color:"#4A9EDB" },
-          { id:"cpb",    icon:"🏛️", name:"Certificat de Production de Biogaz", desc:"Dispositif national obligatoire 2025", unlocked: totalScore >= 10000,               detail: totalScore>=10000 ? "Éligible CPB" : `${fmt(10000)} m³ requis`, color:"#5544CC" },
+          { id:"cpb",    icon:"🏛️", name:"Certificat de Production de Biogaz", desc:"Dispositif national obligatoire 2025", unlocked: totalScore >= 10000,               detail: totalScore>=10000 ? "Éligible CPB" : `${fmt(10000)} requis`, color:"#5544CC" },
           { id:"quali",  icon:"⭐", name:"Label Qualimétha",         desc:"Qualité CH₄ > 97% maintenue",                unlocked: injected && digesteurs >= 2,        detail: injected&&digesteurs>=2 ? "Certifié" : "2 digesteurs requis", color:"#E8A020" },
         ].map(cert => (
           <div key={cert.id} style={{
