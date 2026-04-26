@@ -138,11 +138,12 @@ const _supabaseFetch = (body) => {
 };
 
 // 1) Score-only — champs critiques classement, toujours envoyés en premier
+// v25.0.5 — euros ajouté car tie-breaker du tri composite leaderboard
 const supabaseUpsertScore = (payload) => {
   const { id, maia, username, region, score_network, score_gnv, is_connected,
-          buffer, epurateur, compresseur, digesteurs } = payload;
+          buffer, epurateur, compresseur, digesteurs, euros } = payload;
   _supabaseFetch({ id, maia, username, region, score_network, score_gnv,
-                   is_connected, buffer, epurateur, compresseur, digesteurs })
+                   is_connected, buffer, epurateur, compresseur, digesteurs, euros })
     .then(r => { if (r && !r.ok) r.text().then(t => console.warn("[Supabase score]", r.status, t)); })
     .catch(e => console.warn("[Supabase score network]", e));
 };
@@ -166,9 +167,16 @@ const fetchRegionalStats = () => {
     rows.forEach(function(r) {
       if (!map[r.region]) map[r.region] = { region: r.region, sites: 0, volume: 0 };
       if (r.is_connected) map[r.region].sites++;
-      map[r.region].volume += (r.score_network || 0) + (r.score_gnv || 0);
+      // v25.0.5 — volume pondéré GNV pour cohérence avec le score individuel
+      map[r.region].volume += computeScore(r.score_network, r.score_gnv);
     });
-    return Object.values(map).sort(function(a, b) { return b.volume - a.volume; });
+    // v25.0.5 — tri composite : volume DESC → sites raccordés DESC
+    //   Avant : tri uniquement sur volume → régions à 0 m³ rangées arbitrairement
+    //           (Sud-Est avec 1 site raccordé pouvait passer après Nord-Ouest sans aucun)
+    return Object.values(map).sort(function(a, b) {
+      if (b.volume !== a.volume) return b.volume - a.volume;
+      return b.sites - a.sites;
+    });
   }).catch(function() { return null; });
 };
 
@@ -187,24 +195,39 @@ const supabaseLoadGame = async (maia) => {
 };
 
 // ─── LEADERBOARD — NATIONAL (top 50) ─────────────────────────────────────────
+// v25.0.5 — tri composite côté JS :
+//   1) score = bm + gnvBm × GNV_BONUS (DESC)
+//   2) euros (DESC) — différencie les égalités à 0
+//   3) niveau de chaîne (DESC) — ultime tie-breaker pédagogique
 const fetchNationalLeaderboard = () => {
   if (!SUPABASE_KEY) return Promise.resolve(null);
   return fetch(
-    SUPABASE_URL + "/rest/v1/players?select=username,region,score_network,score_gnv,is_connected,buffer,epurateur,compresseur,digesteurs&order=score_network.desc,score_gnv.desc&limit=50",
+    SUPABASE_URL + "/rest/v1/players?select=username,region,score_network,score_gnv,is_connected,buffer,epurateur,compresseur,digesteurs,euros&limit=200",
     { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
   ).then(r => r.json())
-  .then(rows => rows.map(r => ({
-    name:       r.username,
-    region:     r.region,
-    score:      (r.score_network || 0) + (r.score_gnv || 0),
-    scoreNet:   r.score_network || 0,
-    scoreGnv:   r.score_gnv || 0,
-    connected:  !!r.is_connected,
-    buffer:     r.buffer || 0,
-    epurateur:  !!r.epurateur,
-    compresseur:!!r.compresseur,
-    digesteurs: r.digesteurs || 1,
-  })))
+  .then(rows => rows.map(r => {
+    const scoreNet = r.score_network || 0;
+    const scoreGnv = r.score_gnv     || 0;
+    return {
+      name:       r.username,
+      region:     r.region,
+      score:      computeScore(scoreNet, scoreGnv),
+      scoreNet,
+      scoreGnv,
+      connected:  !!r.is_connected,
+      buffer:     r.buffer || 0,
+      epurateur:  !!r.epurateur,
+      compresseur:!!r.compresseur,
+      digesteurs: r.digesteurs || 1,
+      euros:      r.euros || 0,
+      chainLevel: computeChainLevel(!!r.epurateur, !!r.compresseur, !!r.is_connected),
+    };
+  }))
+  .then(arr => arr.sort((a, b) => {
+    if (b.score      !== a.score)      return b.score      - a.score;
+    if (b.euros      !== a.euros)      return b.euros      - a.euros;
+    return b.chainLevel - a.chainLevel;
+  }).slice(0, 50))
   .catch(() => null);
 };
 
@@ -212,21 +235,34 @@ const fetchNationalLeaderboard = () => {
 const fetchIndividualLeaderboard = fetchNationalLeaderboard;
 
 // ─── LEADERBOARD — RÉGIONAL ───────────────────────────────────────────────────
+// v25.0.5 — même tri composite que national + epurateur/compresseur pour chainLevel
 const fetchRegionalLeaderboard = (region) => {
   if (!SUPABASE_KEY || !region) return Promise.resolve(null);
   return fetch(
-    SUPABASE_URL + `/rest/v1/players?region=eq.${encodeURIComponent(region)}&select=username,score_network,score_gnv,is_connected,digesteurs&order=score_network.desc,score_gnv.desc`,
+    SUPABASE_URL + `/rest/v1/players?region=eq.${encodeURIComponent(region)}&select=username,score_network,score_gnv,is_connected,digesteurs,epurateur,compresseur,euros`,
     { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
   ).then(r => r.json())
-  .then(rows => rows.map((r, i) => ({
-    rank:      i + 1,
-    name:      r.username,
-    score:     (r.score_network || 0) + (r.score_gnv || 0),
-    scoreNet:  r.score_network || 0,
-    scoreGnv:  r.score_gnv || 0,
-    connected: !!r.is_connected,
-    digesteurs:r.digesteurs || 1,
-  })))
+  .then(rows => rows.map(r => {
+    const scoreNet = r.score_network || 0;
+    const scoreGnv = r.score_gnv     || 0;
+    return {
+      name:       r.username,
+      score:      computeScore(scoreNet, scoreGnv),
+      scoreNet,
+      scoreGnv,
+      connected:  !!r.is_connected,
+      digesteurs: r.digesteurs || 1,
+      epurateur:  !!r.epurateur,
+      compresseur:!!r.compresseur,
+      euros:      r.euros || 0,
+      chainLevel: computeChainLevel(!!r.epurateur, !!r.compresseur, !!r.is_connected),
+    };
+  }))
+  .then(arr => arr.sort((a, b) => {
+    if (b.score      !== a.score)      return b.score      - a.score;
+    if (b.euros      !== a.euros)      return b.euros      - a.euros;
+    return b.chainLevel - a.chainLevel;
+  }).map((entry, i) => ({ ...entry, rank: i + 1 })))
   .catch(() => null);
 };
 
@@ -518,6 +554,16 @@ const fmtEuro = n => {
   return n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 };
 const BM_TO_EUR = 1.0; // Tarif GRDF : 1 €/m³ (~100 €/MWh)
+// v25.0.5 — pondération GNV dans le score classement.
+//   score = bm + gnvBm × GNV_BONUS
+//   K=1.2 : valorise le GNV de 20% sans casser la primauté du réseau (cohérent
+//           avec la pédagogie GRDF qui reste un opérateur d'injection).
+const GNV_BONUS = 1.2;
+const computeScore = (bm, gnvBm) => (bm || 0) + (gnvBm || 0) * GNV_BONUS;
+// v25.0.5 — niveau de chaîne d'injection (tie-breaker classement)
+//   0 = rien, 1 = épurateur, 2 = compresseur, 3 = raccordé
+const computeChainLevel = (epurateur, compresseur, injected) =>
+  injected ? 3 : compresseur ? 2 : epurateur ? 1 : 0;
 
 // ─── v24 : SYSTÈME GISEMENTS LOCAUX ──────────────────────────────────────────
 // Chaque zone possédée a un tampon local qui se remplit passivement. Si plein,
@@ -1403,6 +1449,7 @@ function Game({ username, region, maia }) {
       epurateur:    stateRef.current.epurateurOk,
       compresseur:  stateRef.current.compresseurOk,
       digesteurs:   stateRef.current.digesteurs,
+      euros:        stateRef.current.euros,   // v25.0.5 — tie-breaker classement
     });
     // Full state — best-effort
     supabaseUpsert({
@@ -1687,7 +1734,7 @@ function Game({ username, region, maia }) {
     if (u.unlocksAt==="injected")    return injected;
     return false;
   };
-  const totalScore      = bm + gnvBm;
+  const totalScore      = computeScore(bm, gnvBm);   // v25.0.5 — pondéré GNV
   const wallet          = injected ? euros : buffer;
   const walletLabel     = injected ? "€" : "m³";
   const fmtWallet       = injected ? fmtEuro : fmt;
@@ -1984,10 +2031,25 @@ function Game({ username, region, maia }) {
   useEffect(() => {
     setLb(prev => {
       const without = prev.filter(e => e.name !== username);
-      return [...without, {name:username,region,score:totalScore,scoreNet:bm,scoreGnv:gnvBm,connected:injected,buffer:bufferQ,epurateur:epurateurOk,compresseur:compresseurOk,digesteurs,isMe:true}]
-        .sort((a,b) => b.score - a.score).slice(0,15);
+      // v25.0.5 — tri composite : score → euros → chainLevel
+      const me = {
+        name: username, region,
+        score: totalScore, scoreNet: bm, scoreGnv: gnvBm,
+        connected: injected, buffer: bufferQ,
+        epurateur: epurateurOk, compresseur: compresseurOk,
+        digesteurs, euros,
+        chainLevel: computeChainLevel(epurateurOk, compresseurOk, injected),
+        isMe: true,
+      };
+      return [...without, me]
+        .sort((a, b) => {
+          if (b.score      !== a.score)      return b.score      - a.score;
+          if ((b.euros||0) !== (a.euros||0)) return (b.euros||0) - (a.euros||0);
+          return (b.chainLevel||0) - (a.chainLevel||0);
+        })
+        .slice(0, 15);
     });
-  }, [totalScore, bufferQ, injected, epurateurOk, compresseurOk, digesteurs, username, region]);
+  }, [totalScore, bufferQ, injected, epurateurOk, compresseurOk, digesteurs, euros, username, region]);
 
   // ── DÉVERSER ───────────────────────────────────────────────────────────────
   const handlePour = useCallback(()=>{
@@ -5781,8 +5843,8 @@ function RankingTab({
                         <span style={{fontSize:"7px",color:"rgba(74,200,120,.6)"}}>⛽{fmt(entry.scoreGnv || 0)}</span>
                       </div>
                     </>) : (<>
-                      {/* Progression steps */}
-                      <div style={{display:"flex",gap:"3px",justifyContent:"flex-end",marginBottom:"3px"}}>
+                      {/* v25.0.5 — Progression steps : étapes débloquées avant injection */}
+                      <div style={{display:"flex",gap:"3px",justifyContent:"flex-end",marginBottom:"4px"}}>
                         {[
                           {icon:"🫙",label:"Cuve",ok:true},
                           {icon:"🧪",label:"Épur.",ok:entry.epurateur},
@@ -5799,15 +5861,15 @@ function RankingTab({
                           }} title={s.label}>{s.icon}</div>
                         ))}
                       </div>
-                      {/* Buffer progress bar */}
-                      <div style={{width:"80px",height:"6px",borderRadius:"3px",background:"rgba(255,255,255,.08)",overflow:"hidden",marginLeft:"auto"}}>
-                        <div style={{height:"100%",borderRadius:"3px",
-                          width:`${Math.min(100,(entry.buffer||0)/500*100)}%`,
-                          background:"linear-gradient(90deg,#2A7DBB,#E8A020)",
-                          transition:"width .5s"}}/>
-                      </div>
-                      <div style={{fontSize:"7px",color:"rgba(255,255,255,.4)",marginTop:"2px",textAlign:"right"}}>
-                        {fmt(entry.buffer||0)} / {fmt(500)}
+                      {/* v25.0.5 — Badge "En attente d'injection" remplace la barre buffer */}
+                      <div style={{
+                        display:"inline-flex",alignItems:"center",gap:"4px",
+                        padding:"3px 8px",borderRadius:"10px",marginLeft:"auto",
+                        background:"rgba(255,160,32,.12)",border:"1px solid rgba(255,160,32,.3)",
+                        fontSize:"9px",fontWeight:600,color:"#E8A020",letterSpacing:".02em"
+                      }}>
+                        <span style={{width:"5px",height:"5px",borderRadius:"50%",background:"#E8A020",animation:"meterGlow 1.5s ease infinite"}}/>
+                        En attente injection
                       </div>
                     </>)}
                   </div>
@@ -6020,12 +6082,14 @@ function RankingTab({
                                   {p.connected ? (
                                     <span style={{fontSize:"10px",fontWeight:700,color:rg?.light||"#6DB5EC",flexShrink:0}}>{fmt(p.score)}</span>
                                   ) : (
-                                    <div style={{display:"flex",alignItems:"center",gap:"3px",flexShrink:0}}>
-                                      <div style={{width:"40px",height:"4px",borderRadius:"2px",background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
-                                        <div style={{height:"100%",borderRadius:"2px",width:`${Math.min(100,(p.buffer||0)/500*100)}%`,background:`linear-gradient(90deg,${rg?.color||"#2A7DBB"},#E8A020)`}}/>
-                                      </div>
-                                      <span style={{fontSize:"8px",color:"rgba(255,255,255,.35)"}}>{Math.round((p.buffer||0)/500*100)}%</span>
-                                    </div>
+                                    /* v25.0.5 — barre supprimée (calcul cassé : buffer/500 alors que seuil=5000)
+                                                 + cohérence avec le classement individuel */
+                                    <span style={{
+                                      fontSize:"8px",fontWeight:600,color:"#E8A020",letterSpacing:".02em",
+                                      padding:"2px 6px",borderRadius:"6px",
+                                      background:"rgba(255,160,32,.12)",border:"1px solid rgba(255,160,32,.3)",
+                                      flexShrink:0,whiteSpace:"nowrap"
+                                    }}>En attente</span>
                                   )}
                                 </div>
                               );
