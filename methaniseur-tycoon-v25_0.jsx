@@ -64,9 +64,12 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
       owned: [0,0,0,0,0,0,0],
       stock: 0,
       charge: 0,
-      // v25.0 — yield moyen pondéré (m³ CH₄ / t) du contenu BAC et digesteur
+      // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
       stock_yield: 0,
       charge_yield: 0,
+      // v25.0.9 — composition réelle par intrant
+      stock_composition:  [0,0,0,0,0,0,0],
+      charge_composition: [0,0,0,0,0,0,0],
       epurateur: false,
       compresseur: false,
       digesteurs: 1,
@@ -475,6 +478,29 @@ const UPGRADES = [
 // v25.0.7 — Helper centralisé : débit massique effectif d'un intrant (t/s) avec bonus étoile
 //   = baseFill × qty × bonus_étoile (sans bonus GNV — appliqué globalement par ailleurs)
 const fillFor = (i, qty) => UPGRADES[i].baseFill * qty * getIntrantBonus(qty);
+
+// v25.0.9 — Helper : yield moyen pondéré (m³ CH₄/t) à partir d'une composition par intrant
+//   composition = [t_lisier, t_verts, t_restau, t_step, t_indus, t_cive, t_biogazplus]
+//   Retourne 0 si masse totale nulle (réservoir vide).
+const yieldFromComposition = (composition) => {
+  if (!Array.isArray(composition)) return 0;
+  let totalMass = 0, totalGas = 0;
+  for (let i = 0; i < 7; i++) {
+    const m = composition[i] || 0;
+    if (m > 0) {
+      totalMass += m;
+      totalGas  += m * UPGRADES[i].realYield;
+    }
+  }
+  return totalMass > 0 ? totalGas / totalMass : 0;
+};
+// v25.0.9 — Helper : masse totale d'une composition (somme des intrants)
+const massFromComposition = (composition) => {
+  if (!Array.isArray(composition)) return 0;
+  let total = 0;
+  for (let i = 0; i < 7; i++) total += composition[i] || 0;
+  return total;
+};
 
 // Chaîne d'équipements réels entre digesteur et réseau GRDF
 const EQUIPMENT = [
@@ -1140,10 +1166,53 @@ function Game({ username, region, maia }) {
     const remainingChargeYield = remainingCharge > 0 ? savedChargeYield : 0;
     const remainingStockYield  = remainingStock  > 0 ? stockMixYield    : 0;
 
+    // ── v25.0.9 : compositions résiduelles ─────────────────────────────────
+    //   Charge offline : on a consommé `Math.min(savedCharge, availableToDigest)`
+    //                    → décrément proportionnel de chargeComposition
+    //   Stock offline  : ajout par "tracteur idéal" proportionnel à fillFor par zone
+    //                    moins le stockConsumed (proportionnel à la composition mixée)
+    const savedStockComp  = Array.isArray(sv.stockComposition)  && sv.stockComposition.length === 7
+      ? sv.stockComposition  : null;
+    const savedChargeComp = Array.isArray(sv.chargeComposition) && sv.chargeComposition.length === 7
+      ? sv.chargeComposition : null;
+    // Composition de la charge restante (proportionnelle à savedCharge)
+    let remainingChargeComposition = [0,0,0,0,0,0,0];
+    const consumedFromCharge = Math.min(savedCharge, availableToDigest);
+    if (savedChargeComp && savedCharge > 0) {
+      const keepRatio = (savedCharge - consumedFromCharge) / savedCharge;
+      remainingChargeComposition = savedChargeComp.map(m => (m || 0) * keepRatio);
+    }
+    // Composition du stock après remplissage offline + consommation auto-dump
+    // 1) On part de savedStockComp (ou seed proportionnel si absent)
+    // 2) On ajoute stockGained réparti proportionnellement à fillFor par intrant
+    // 3) On retire stockConsumed proportionnellement à la composition résultante
+    let stockCompAfterFill;
+    if (savedStockComp) {
+      stockCompAfterFill = [...savedStockComp];
+    } else {
+      // Migration : reconstruction depuis savedStock × yield via fillFor
+      const totalFill = ownedArr.reduce((a,q,i) => a + fillFor(i, q), 0);
+      stockCompAfterFill = totalFill > 0
+        ? ownedArr.map((q, i) => savedStock * fillFor(i, q) / totalFill)
+        : [savedStock, 0, 0, 0, 0, 0, 0];
+    }
+    if (stockGained > 0 && fr > 0) {
+      // Apport offline réparti proportionnellement à fillFor (= flux gisement)
+      for (let i = 0; i < 7; i++) {
+        stockCompAfterFill[i] += stockGained * fillFor(i, ownedArr[i]) / fr;
+      }
+    }
+    let remainingStockComposition = stockCompAfterFill;
+    if (stockConsumed > 0 && stockAfterFill > 0) {
+      const keepRatio = Math.max(0, (stockAfterFill - stockConsumed) / stockAfterFill);
+      remainingStockComposition = stockCompAfterFill.map(m => (m || 0) * keepRatio);
+    }
+
     return {
       elapsedSec, produced, injected: inj,
       stockGained, stockConsumed, remainingCharge, remainingStock,
       remainingChargeYield, remainingStockYield,
+      remainingStockComposition, remainingChargeComposition,
       bmGained, gnvBmGained, eurosGained,
       // v24 — état des tampons locaux à appliquer au retour
       remainingLocalStock: newLocal,
@@ -1229,6 +1298,38 @@ function Game({ username, region, maia }) {
     if (saved?.chargeYield != null) return saved.chargeYield;
     return (saved?.charge > 0) ? _migratedDefaultYield : 0;
   });
+  // v25.0.9 — Composition réelle du BAC et du digesteur (en tonnes par intrant).
+  //   Source de vérité du yield (calculable comme yield = Σ(c[i]×realYield[i]) / Σc[i]).
+  //   Migration : si save < v25.0.9, on reconstitue une composition cohérente avec
+  //               la masse totale × yield moyen, en attribuant proportionnellement
+  //               aux intrants possédés (best-effort).
+  const _migrateComposition = (totalMass, yieldMoyen, ownedArr) => {
+    if (totalMass <= 0) return [0,0,0,0,0,0,0];
+    // On répartit proportionnellement à fillFor pour matcher le yield moyen au mieux
+    const totalFill = ownedArr.reduce((a,q,i) => a + fillFor(i, q), 0);
+    if (totalFill <= 0) {
+      // Aucun intrant possédé : impossible à reconstituer — on attribue tout au Lisier (best fallback)
+      return [totalMass, 0, 0, 0, 0, 0, 0];
+    }
+    return ownedArr.map((q, i) => totalMass * fillFor(i, q) / totalFill);
+  };
+  const [stockComposition, setStockComposition] = useState(() => {
+    if (offlineGains?.remainingStockComposition) return offlineGains.remainingStockComposition;
+    if (Array.isArray(saved?.stockComposition) && saved.stockComposition.length === 7) {
+      return saved.stockComposition;
+    }
+    // Migration depuis ancienne save (yield scalaire)
+    const o = saved?.owned || [0,0,0,0,0,0,0];
+    return _migrateComposition(saved?.stock || 0, saved?.stockYield || _migratedDefaultYield, o);
+  });
+  const [chargeComposition, setChargeComposition] = useState(() => {
+    if (offlineGains?.remainingChargeComposition) return offlineGains.remainingChargeComposition;
+    if (Array.isArray(saved?.chargeComposition) && saved.chargeComposition.length === 7) {
+      return saved.chargeComposition;
+    }
+    const o = saved?.owned || [0,0,0,0,0,0,0];
+    return _migrateComposition(saved?.charge || 0, saved?.chargeYield || _migratedDefaultYield, o);
+  });
 
   const [epurateurOk,  setEpurateurOk]  = useState(saved?.epurateurOk  ?? false);
   const [compresseurOk,setCompresseurOk]= useState(saved?.compresseurOk ?? false);
@@ -1307,6 +1408,9 @@ function Game({ username, region, maia }) {
           charge:      d.charge || 0,
           stockYield:  d.stock_yield  || 0,
           chargeYield: d.charge_yield || 0,
+          // v25.0.9 — compositions par intrant
+          stockComposition:  Array.isArray(d.stock_composition)  ? d.stock_composition  : null,
+          chargeComposition: Array.isArray(d.charge_composition) ? d.charge_composition : null,
           digesteurs:  d.digesteurs || 1,
           injected:    !!d.is_connected,
           gnvStations: d.gnv_stations || 0,
@@ -1333,6 +1437,11 @@ function Game({ username, region, maia }) {
         // v25.0 — yields post-catch-up (fallback save brute si pas de cg)
         if (d.stock_yield  != null) setStockYield(cg?.remainingStockYield  ?? d.stock_yield);
         if (d.charge_yield != null) setChargeYield(cg?.remainingChargeYield ?? d.charge_yield);
+        // v25.0.9 — compositions post-catch-up
+        const _cloudStockComp  = Array.isArray(d.stock_composition)  && d.stock_composition.length === 7  ? d.stock_composition  : null;
+        const _cloudChargeComp = Array.isArray(d.charge_composition) && d.charge_composition.length === 7 ? d.charge_composition : null;
+        if (_cloudStockComp  != null) setStockComposition(cg?.remainingStockComposition  ?? _cloudStockComp);
+        if (_cloudChargeComp != null) setChargeComposition(cg?.remainingChargeComposition ?? _cloudChargeComp);
         if (d.epurateur   != null) setEpurateurOk(!!d.epurateur);
         if (d.compresseur != null) setCompresseurOk(!!d.compresseur);
         if (d.is_connected != null) setInjected(!!d.is_connected);
@@ -1451,7 +1560,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1518,6 +1627,9 @@ function Game({ username, region, maia }) {
       // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
       stock_yield:         stateRef.current.stockYield,
       charge_yield:        stateRef.current.chargeYield,
+      // v25.0.9 — composition réelle par intrant (source de vérité du yield)
+      stock_composition:   stateRef.current.stockComposition,
+      charge_composition:  stateRef.current.chargeComposition,
       last_saved:   new Date().toISOString(),
     });
   }, [SAVE_KEY, username, region, maia]);
@@ -1586,6 +1698,11 @@ function Game({ username, region, maia }) {
   // v25.0.8 — ref miroir seuil auto-dump (lu dans tick 2s sans recréer l'interval)
   const autoDumpThresholdRef = useRef(autoDumpThreshold);
   useEffect(() => { autoDumpThresholdRef.current = autoDumpThreshold; }, [autoDumpThreshold]);
+  // v25.0.9 — refs miroirs composition (lus en tick auto-dump, tracteur, etc.)
+  const stockCompRef  = useRef(stockComposition);
+  const chargeCompRef = useRef(chargeComposition);
+  useEffect(() => { stockCompRef.current  = stockComposition;  }, [stockComposition]);
+  useEffect(() => { chargeCompRef.current = chargeComposition; }, [chargeComposition]);
 
   // ── CATCH-UP : appliqué au retour d'arrière-plan ──────────────────────────
   // v24 : on n'utilise PLUS fillRate → stock direct. À la place :
@@ -1963,6 +2080,8 @@ function Game({ username, region, maia }) {
         if (f<=0.001) {
           // v25.0 — purge : digesteur vide → reset yield (rien à propager)
           if (chargeYieldRef.current !== 0) setChargeYield(0);
+          // v25.0.9 — purge composition aussi
+          setChargeComposition([0,0,0,0,0,0,0]);
           return 0;
         }
         const cme    = chargeMaxEffRef.current;
@@ -1972,6 +2091,11 @@ function Game({ username, region, maia }) {
         // v25.0 — production = masse × yield moyen pondéré du digesteur
         // Le yield reste invariant pendant la digestion (consommation proportionnelle)
         const produced = actual * (chargeYieldRef.current || 0);
+        // v25.0.9 — décrément composition proportionnel à la consommation
+        if (actual > 0 && f > 0) {
+          const ratio = actual / f;
+          setChargeComposition(prev => prev.map(m => Math.max(0, (m || 0) * (1 - ratio))));
+        }
         if (produced > 0) {
           if (injected) {
             const euroGain = produced * BM_TO_EUR;
@@ -2020,8 +2144,20 @@ function Game({ username, region, maia }) {
           : 0;
         setChargeYield(newChargeYield);
         setCharge(f => Math.min(cme, f + poured));
-        // Si le BAC se vide, reset stockYield
-        if (s - poured < 0.001 && sYield !== 0) setStockYield(0);
+        // v25.0.9 — propagation composition proportionnelle stock → charge
+        // On retire `poured/s` de chaque intrant du BAC et on l'ajoute au digesteur
+        const sComp = stockCompRef.current || [0,0,0,0,0,0,0];
+        const ratio = s > 0 ? poured / s : 0;
+        if (ratio > 0) {
+          const transfer = sComp.map(m => (m || 0) * ratio);
+          setStockComposition(prev => prev.map((m, i) => Math.max(0, (m || 0) - transfer[i])));
+          setChargeComposition(prev => prev.map((m, i) => (m || 0) + transfer[i]));
+        }
+        // Si le BAC se vide, reset stockYield + composition
+        if (s - poured < 0.001) {
+          if (sYield !== 0) setStockYield(0);
+          setStockComposition([0,0,0,0,0,0,0]);
+        }
         return s - poured;                            // surplus conservé dans le bac
       });
     }, 2000); // toutes les 2s
@@ -2112,9 +2248,20 @@ function Game({ username, region, maia }) {
       ? (cNow * cYield + dumped * sYield) / newCharge
       : 0;
     setChargeYield(newChargeYield);
+    // v25.0.9 — propagation composition BAC→charge proportionnelle
+    const sComp = stockCompRef.current || [0,0,0,0,0,0,0];
+    const ratio = stock > 0 ? dumped / stock : 0;
+    if (ratio > 0) {
+      const transfer = sComp.map(m => (m || 0) * ratio);
+      setStockComposition(prev => prev.map((m, i) => Math.max(0, (m || 0) - transfer[i])));
+      setChargeComposition(prev => prev.map((m, i) => (m || 0) + transfer[i]));
+    }
     setStock(s  => {
       const next = Math.max(0, s - dumped);
-      if (next < 0.001 && sYield !== 0) setStockYield(0);
+      if (next < 0.001) {
+        if (sYield !== 0) setStockYield(0);
+        setStockComposition([0,0,0,0,0,0,0]);
+      }
       return next;
     });
     setCharge(f => Math.min(cme, f + dumped));
@@ -2874,6 +3021,9 @@ function Game({ username, region, maia }) {
             stockRef={stockRef}
             stockYieldRef={stockYieldRef}
             setStockYield={setStockYield}
+            setStockComposition={setStockComposition}
+            stockComposition={stockComposition}
+            stockYield={stockYield}
           />
 
           <GasMeter value={injected?bm:buffer} isActive={isDigesting}/>
@@ -3850,7 +4000,7 @@ function computeZoneProgress(zIdx) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -4039,6 +4189,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
             // v24 : charge le tracteur avec le contenu du gisement local
             // v25.0 : capacité FINIE (= bagCap), payload restant reste dans la zone
             //         + yield source mémorisé pour propagation au déchargement
+            // v25.0.9 : payloadIntrant mémorisé pour mettre à jour stockComposition
             const zIdx = t.zoneIdx;
             if (zIdx !== null) {
               const upgId = CITY_ZONES[zIdx].upgradeId;
@@ -4047,6 +4198,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
               const taken = Math.min(cur, cap);
               t.payload = taken;
               t.payloadYield = UPGRADES[upgId].realYield; // m³ CH₄/t — pour mix au dump
+              t.payloadIntrant = upgId;                    // index intrant pour composition
               if (taken > 0) {
                 setLocalStock(prev => {
                   const next = [...prev];
@@ -4093,10 +4245,12 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
             // v24 : verser le payload dans le stock global
             // v25.0 : yield mix pondéré (stock garde sa moyenne) + capacité respecte localCap (×4)
             //         → plus de fuite : stockMax dimensionné pour absorber le payload tracteur
+            // v25.0.9 : ajout au stockComposition (source de vérité du yield, popup pédago)
             if (t.payload && t.payload > 0) {
               const sm = (stockMaxRef && stockMaxRef.current) || Infinity;
               const payload = t.payload;
               const pYield  = t.payloadYield || 0;
+              const pIntrant = t.payloadIntrant;
               const sCur    = (stockRef && stockRef.current) || 0;
               const sYield  = (stockYieldRef && stockYieldRef.current) || 0;
               const accepted = Math.max(0, Math.min(payload, sm - sCur));
@@ -4105,9 +4259,18 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
                 const newYield = (sCur * sYield + accepted * pYield) / newStock;
                 setStockYield(newYield);
                 setStock(s => Math.min(sm, s + accepted));
+                // v25.0.9 — mise à jour composition par intrant
+                if (pIntrant != null && setStockComposition) {
+                  setStockComposition(prev => {
+                    const next = [...prev];
+                    next[pIntrant] = (next[pIntrant] || 0) + accepted;
+                    return next;
+                  });
+                }
               }
               t.payload = 0;
               t.payloadYield = 0;
+              t.payloadIntrant = null;
             }
             t.phase = 'idle';
             t.zoneIdx = null;
@@ -5013,8 +5176,13 @@ function DigesteurScene({
   zoneState, localStock, setLocalStock, setStock, stockMaxRef,
   offlineUntil, handleRelaunchZone, euros, buffer, reliability,
   // v25.0 — yield engine (mix pondéré stock/charge)
-  stockRef, stockYieldRef, setStockYield
+  stockRef, stockYieldRef, setStockYield, setStockComposition,
+  // v25.0.9 — composition par intrant (popup pédago)
+  stockComposition, stockYield
 }) {
+  // v25.0.9 — popup détail composition BAC (pédagogie yield mix)
+  const [bacPopupOpen, setBacPopupOpen] = useState(false);
+
   // Taille des digesteurs selon le nombre (inchangé)
   const dSize  = digesteurs === 1 ? 115 : digesteurs === 2 ? 90 : 72;
   const dEmoji = digesteurs === 1 ? "40px" : digesteurs === 2 ? "32px" : "26px";
@@ -5148,11 +5316,16 @@ function DigesteurScene({
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
                 </div>
-                <div style={{
-                  transformOrigin:"bottom left",
-                  transform:`rotate(${binRotate}deg) translateX(${binTransX}px)`,
-                  transition: pouring ? "none" : "transform .4s ease"
-                }}>
+                <div
+                  onClick={() => setBacPopupOpen(true)}
+                  style={{
+                    transformOrigin:"bottom left",
+                    transform:`rotate(${binRotate}deg) translateX(${binTransX}px)`,
+                    transition: pouring ? "none" : "transform .4s ease",
+                    cursor: "pointer"
+                  }}
+                  title="Voir la composition du BAC"
+                >
                   <div style={{
                     width:"88px", height:"120px", position:"relative",
                     background:"linear-gradient(180deg,rgba(11,22,40,.92),rgba(8,16,32,.96))",
@@ -5186,12 +5359,39 @@ function DigesteurScene({
                       <div style={{fontSize:"8px", opacity:.7, marginTop:"1px"}}>{fmtT(stock)}</div>
                       <div style={{fontSize:"7px", opacity:.4}}>/ {fmtT(stockMax)}</div>
                     </div>
+                    {/* v25.0.9 — Mini icône info en haut à droite */}
+                    {stock > 0 && (
+                      <div style={{
+                        position:"absolute", top:"4px", right:"4px",
+                        width:"18px", height:"18px", borderRadius:"50%",
+                        background:"rgba(245,190,80,.25)", border:"1px solid rgba(245,190,80,.6)",
+                        color:"#F5BE50", fontSize:"11px", fontWeight:900,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        boxShadow:"0 0 8px rgba(245,190,80,.4)",
+                        zIndex: 25
+                      }}>i</div>
+                    )}
                   </div>
                   <div style={{width:"88px", height:"8px", background:"linear-gradient(90deg,rgba(74,158,219,.12),rgba(74,158,219,.28),rgba(74,158,219,.12))", borderRadius:"0 0 8px 8px"}}/>
                 </div>
                 <div style={{fontSize:"9px", fontWeight:700, textAlign:"center", color:stockPct>=1?"#E05858":stockPct>=.8?"#E07820":"#6DB5EC"}}>
                   {stockPct>=1?"🔴 PLEIN !":stockPct>=.8?"🟠 Attention":stockPct>=.5?"🟡 Mi-plein":"🟢 OK"}
                 </div>
+                {/* v25.0.9 — Mini-indicateur yield permanent */}
+                {stock > 0.01 && (stockYield || 0) > 0 && (
+                  <div
+                    onClick={() => setBacPopupOpen(true)}
+                    style={{
+                      fontSize:"9px", fontWeight:700, textAlign:"center",
+                      padding:"3px 8px", borderRadius:"8px",
+                      background:"rgba(245,190,80,.10)", border:"1px solid rgba(245,190,80,.25)",
+                      color:"#F5BE50", cursor:"pointer", letterSpacing:".02em"
+                    }}
+                    title="Composition détaillée"
+                  >
+                    🧪 {Math.round(stockYield)} m³/t
+                  </div>
+                )}
                 <button onClick={handlePour} disabled={pouring||stock<1} style={{
                   width:"88px", padding:"9px 0", borderRadius:"10px", border:"none",
                   background: stock<1 ? "rgba(74,158,219,.08)" : stockPct>=.8 ? "linear-gradient(135deg,#E04444,#E05858)" : "linear-gradient(135deg,#2A7DBB,#4A9EDB)",
@@ -5204,6 +5404,126 @@ function DigesteurScene({
                   {pouring ? "⏳ ..." : "⬇️ Déverser"}
                 </button>
               </div>
+
+              {/* v25.0.9 — POPUP COMPOSITION BAC ── pédagogie yield mix ── */}
+              {bacPopupOpen && (
+                <div onClick={() => setBacPopupOpen(false)} style={{
+                  position:"fixed", inset:0, zIndex:1000,
+                  background:"rgba(0,0,0,.72)", backdropFilter:"blur(4px)",
+                  display:"flex", alignItems:"center", justifyContent:"center", padding:"20px"
+                }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{
+                    background:"linear-gradient(180deg,#152537,#0B1623)",
+                    border:"1px solid rgba(245,190,80,.35)", borderRadius:"18px",
+                    width:"100%", maxWidth:"380px", maxHeight:"85vh", overflow:"auto",
+                    boxShadow:"0 12px 50px rgba(245,190,80,.25)",
+                    animation:"riseIn .25s ease"
+                  }}>
+                    {/* Header */}
+                    <div style={{
+                      padding:"16px 18px 12px", borderBottom:"1px solid rgba(245,190,80,.15)",
+                      display:"flex", alignItems:"center", gap:"10px"
+                    }}>
+                      <span style={{fontSize:"24px"}}>🧪</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:"14px", fontWeight:900, color:"#F5BE50"}}>Composition du BAC</div>
+                        <div style={{fontSize:"10px", color:"rgba(255,255,255,.45)", marginTop:"1px"}}>Recette en cours · Mix pédagogique</div>
+                      </div>
+                      <button onClick={() => setBacPopupOpen(false)} style={{
+                        background:"rgba(255,255,255,.08)", border:"none", borderRadius:"8px",
+                        width:"28px", height:"28px", color:"rgba(255,255,255,.6)",
+                        fontSize:"16px", cursor:"pointer"
+                      }}>✕</button>
+                    </div>
+
+                    {/* Stats globales */}
+                    {(() => {
+                      const totalMass  = massFromComposition(stockComposition);
+                      const yieldMoy   = yieldFromComposition(stockComposition);
+                      const totalGas   = totalMass * yieldMoy;
+                      return (
+                        <div style={{padding:"14px 18px", background:"rgba(245,190,80,.05)", borderBottom:"1px solid rgba(245,190,80,.1)"}}>
+                          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"10px", textAlign:"center"}}>
+                            <div>
+                              <div style={{fontSize:"9px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Masse</div>
+                              <div style={{fontSize:"15px", fontWeight:800, color:"#6DB5EC", marginTop:"2px"}}>{fmtT(totalMass)}</div>
+                            </div>
+                            <div>
+                              <div style={{fontSize:"9px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Rendement</div>
+                              <div style={{fontSize:"15px", fontWeight:800, color:"#F5BE50", marginTop:"2px"}}>{Math.round(yieldMoy)} m³/t</div>
+                            </div>
+                            <div>
+                              <div style={{fontSize:"9px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
+                              <div style={{fontSize:"15px", fontWeight:800, color:"#4ADB94", marginTop:"2px"}}>{fmt(totalGas)} m³</div>
+                            </div>
+                          </div>
+                          <div style={{
+                            marginTop:"10px", padding:"8px 10px", borderRadius:"8px",
+                            background:"rgba(74,219,148,.08)", border:"1px solid rgba(74,219,148,.2)",
+                            fontSize:"10px", color:"rgba(74,219,148,.9)", lineHeight:1.5
+                          }}>
+                            💡 Si tu déversais le BAC entier maintenant, ce mélange produirait <strong>{fmt(totalGas)} m³ de CH₄</strong>.
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Liste composition */}
+                    <div style={{padding:"14px 18px"}}>
+                      <div style={{fontSize:"9px", fontWeight:700, color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:"10px"}}>
+                        Détail des intrants
+                      </div>
+                      {(() => {
+                        const totalMass = massFromComposition(stockComposition);
+                        if (totalMass < 0.001) {
+                          return (
+                            <div style={{fontSize:"11px", color:"rgba(255,255,255,.4)", padding:"20px 0", textAlign:"center"}}>
+                              Le BAC est vide. Achète des intrants et laisse les tracteurs travailler.
+                            </div>
+                          );
+                        }
+                        // Trier par masse décroissante
+                        const items = (stockComposition || []).map((m, i) => ({
+                          i, mass: m || 0, upg: UPGRADES[i],
+                          pct: ((m || 0) / totalMass) * 100,
+                          contribGas: (m || 0) * UPGRADES[i].realYield
+                        })).filter(x => x.mass > 0.001).sort((a, b) => b.mass - a.mass);
+
+                        return items.map(it => (
+                          <div key={it.i} style={{marginBottom:"10px"}}>
+                            <div style={{display:"flex", alignItems:"center", gap:"8px", marginBottom:"3px"}}>
+                              <span style={{fontSize:"16px"}}>{it.upg.icon}</span>
+                              <span style={{flex:1, fontSize:"12px", fontWeight:700, color:"#EDF4FF"}}>{it.upg.name}</span>
+                              <span style={{fontSize:"11px", fontWeight:800, color:"#6DB5EC"}}>{it.pct.toFixed(1)}%</span>
+                            </div>
+                            <div style={{height:"6px", background:"rgba(255,255,255,.06)", borderRadius:"3px", overflow:"hidden", marginBottom:"4px"}}>
+                              <div style={{
+                                height:"100%", width:`${it.pct}%`,
+                                background:`linear-gradient(90deg,${MAITRISE_COLORS[it.i]||"#6DB5EC"}aa,${MAITRISE_COLORS[it.i]||"#6DB5EC"})`,
+                                borderRadius:"3px", transition:"width .5s"
+                              }}/>
+                            </div>
+                            <div style={{display:"flex", justifyContent:"space-between", fontSize:"9px", color:"rgba(255,255,255,.45)"}}>
+                              <span>{fmtT(it.mass)} · {it.upg.realYield} m³/t</span>
+                              <span style={{color:"#4ADB94", fontWeight:600}}>+{fmt(it.contribGas)} m³ CH₄</span>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+
+                    {/* Footer pédago */}
+                    <div style={{
+                      padding:"10px 18px 14px", borderTop:"1px solid rgba(255,255,255,.06)",
+                      fontSize:"10px", color:"rgba(255,255,255,.5)", lineHeight:1.6
+                    }}>
+                      🎓 <strong style={{color:"#E8A020"}}>Effet cocktail</strong> : la co-digestion de plusieurs intrants
+                      complémentaires (riches en sucres, en lipides, en protéines) optimise globalement
+                      le rendement biométhane.
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ── PIPE BAC → DIGESTEURS ── */}
               <div style={{flex:"0 0 28px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px"}}>
@@ -5394,6 +5714,7 @@ function DigesteurScene({
               stockRef={stockRef}
               stockYieldRef={stockYieldRef}
               setStockYield={setStockYield}
+              setStockComposition={setStockComposition}
             />
           </svg>
 
