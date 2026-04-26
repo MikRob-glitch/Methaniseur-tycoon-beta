@@ -2016,11 +2016,22 @@ function Game({ username, region, maia }) {
 
   const handleUnlockEpurateur = () => {
     if (!canUnlockEpurateur) return;
-    triggerAnim("epurateur",()=>{ setEpurateurOk(true); showNotif("Épurateur activé","success","Biodéchets et boues de STEP débloqués"); });
+    // v25.0.3 — fix : déblocage consomme le buffer (cohérence avec le raccordement)
+    //                  Avant : épurateur débloqué gratuitement, le seuil n'avait aucun coût.
+    triggerAnim("epurateur",()=>{
+      setEpurateurOk(true);
+      setBuffer(b => Math.max(0, b - EPURATEUR_THRESHOLD));
+      showNotif("Épurateur activé","success","Biodéchets et boues de STEP débloqués");
+    });
   };
   const handleUnlockCompresseur = () => {
     if (!canUnlockCompresseur) return;
-    triggerAnim("compresseur",()=>{ setCompresseurOk(true); showNotif("Compresseur activé","success","Déchets industriels débloqués"); });
+    // v25.0.3 — fix : idem, consomme le seuil
+    triggerAnim("compresseur",()=>{
+      setCompresseurOk(true);
+      setBuffer(b => Math.max(0, b - COMPRESSEUR_THRESHOLD));
+      showNotif("Compresseur activé","success","Déchets industriels débloqués");
+    });
   };
   const handleConnect = () => {
     if (!canConnect) return;
