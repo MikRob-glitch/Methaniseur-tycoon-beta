@@ -1135,7 +1135,7 @@ function Game({ username, region, maia }) {
 
   // ── ÉTAT ────────────────────────────────────────────────────────────────────
   const [tab,     setTab]     = useState("game");
-  const [rankTab, setRankTab] = useState("mine"); // "mine" | "regions" | "badges"
+  const [rankTab, setRankTab] = useState("mine"); // v25.0.6 — "mine" | "regions" (badges promu en onglet principal)
   const [myRankTab, setMyRankTab] = useState("national"); // "national" | "regional" (nested under "mine")
   const [mo,      setMo]      = useState(saved?.mo      ?? 0);
   const [bm,      setBm]      = useState(() => {
@@ -2695,19 +2695,22 @@ function Game({ username, region, maia }) {
       </div>
 
       {/* Tabs */}
+      {/* v25.0.6 — Récompenses promu au niveau principal (sortie de Classement)
+                   pour améliorer la découvrabilité. Libellés raccourcis
+                   pour rester lisibles avec 4 onglets en portrait mobile. */}
       <div style={{display:"flex",background:"rgba(11,22,35,.55)",borderBottom:"1px solid rgba(74,158,219,.09)"}}>
-        {[["game","⚗️ Digesteur"],["upgrades","⬆️ Achats"],["ranking","🏆 Classement"]].map(([id,lbl])=>{
+        {[["game","⚗️ Digesteur"],["upgrades","⬆️ Achats"],["ranking","🏆 Classement"],["rewards","🎖️ Récomp."]].map(([id,lbl])=>{
           const highlight=id==="upgrades"&&canBuySomething&&tab!=="upgrades";
           return (
             <button key={id} onClick={()=>{ setTab(id); if(id==="upgrades"&&tutStep===0) setTutStep(1); }} style={{
-              flex:1,padding:"11px 4px",border:"none",
+              flex:1,padding:"11px 2px",border:"none",
               background:highlight?"rgba(74,158,219,.14)":"transparent",
               color:tab===id?"#4A9EDB":highlight?"#6DB5EC":"rgba(255,255,255,.35)",
-              fontSize:"12px",fontWeight:tab===id||highlight?700:400,
+              fontSize:"11px",fontWeight:tab===id||highlight?700:400,
               borderBottom:tab===id?"2px solid #4A9EDB":highlight?"2px solid rgba(74,158,219,.5)":"2px solid transparent",
-              cursor:"pointer",position:"relative",transition:"all .3s"}}>
+              cursor:"pointer",position:"relative",transition:"all .3s",whiteSpace:"nowrap"}}>
               {lbl}
-              {highlight&&<span style={{position:"absolute",top:"6px",right:"10px",width:"7px",height:"7px",borderRadius:"50%",background:"#4A9EDB",boxShadow:"0 0 6px rgba(74,158,219,.95)"}}/>}
+              {highlight&&<span style={{position:"absolute",top:"6px",right:"6px",width:"7px",height:"7px",borderRadius:"50%",background:"#4A9EDB",boxShadow:"0 0 6px rgba(74,158,219,.95)"}}/>}
             </button>
           );
         })}
@@ -3108,6 +3111,19 @@ function Game({ username, region, maia }) {
           autoDump={autoDump}
           SAVE_KEY={SAVE_KEY}
           rtStatus={rtStatus}
+        />
+      )}
+
+      {/* ══ TAB RÉCOMPENSES (v25.0.6) ══ */}
+      {tab==="rewards"&&(
+        <RewardsTab
+          injected={injected}
+          totalScore={totalScore}
+          digesteurs={digesteurs}
+          owned={owned}
+          gnvStations={gnvStations}
+          tractorGnv={tractorGnv}
+          autoDump={autoDump}
         />
       )}
     </div>
@@ -5645,12 +5661,13 @@ function RankingTab({
       </div>
 
       {/* ── SUB TABS ── */}
+      {/* v25.0.6 — sous-onglet "Récompenses" retiré (promu au niveau principal) */}
       <div style={{display:"flex",borderBottom:"1px solid rgba(74,158,219,.1)"}}>
-        {[["mine","🏆 Mon classement"],["regions","🗺️ Ma région"],["badges","🎖️ Récompenses"]].map(([id,lbl]) => (
+        {[["mine","🏆 Mon classement"],["regions","🗺️ Ma région"]].map(([id,lbl]) => (
           <button key={id} onClick={() => setRankTab(id)} style={{
             flex:1,padding:"11px",border:"none",background:"transparent",
             color:rankTab===id?"#4A9EDB":"rgba(255,255,255,.35)",
-            fontSize:"11px",fontWeight:rankTab===id?700:400,
+            fontSize:"12px",fontWeight:rankTab===id?700:400,
             borderBottom:rankTab===id?"2px solid #4A9EDB":"2px solid transparent",
             cursor:"pointer",transition:"all .3s"
           }}>{lbl}</button>
@@ -6099,7 +6116,10 @@ function RankingTab({
       )}
 
       {/* ══ ONGLET RÉCOMPENSES ══ */}
-      {rankTab === "badges" && (
+      {/* v25.0.6 — bloc inactif : la condition rankTab === "badges" n'arrive
+                   plus jamais (sous-onglet retiré). Conservé en attendant
+                   la promotion en composant indépendant RewardsTab. */}
+      {false && rankTab === "badges" && (
         <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
 
           {/* Certificats réalistes */}
@@ -6256,6 +6276,169 @@ function RankingTab({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── REWARDS TAB — onglet récompenses (v25.0.6) ──────────────────────────────
+// Sorti de RankingTab pour devenir un onglet principal (meilleure découvrabilité).
+// Affiche : certificats officiels (GO, CPB, Qualimétha), milestones de production,
+// et badges gamifiés (progression / diversité / maîtrise).
+function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, tractorGnv, autoDump }) {
+  return (
+    <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
+
+      {/* Certificats réalistes */}
+      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
+      <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
+        {[
+          { id:"go",     icon:"📜", name:"Garantie d'Origine (GO)",  desc:"Chaque MWh injecté génère 1 GO",             unlocked: injected && totalScore >= 100,     detail: injected && totalScore>=100 ? `${Math.floor(totalScore/100)} GO émises` : injected ? `${fmt(totalScore)} / 100 m³` : "Raccordement requis", color:"#4A9EDB" },
+          { id:"cpb",    icon:"🏛️", name:"Certificat de Production de Biogaz", desc:"Dispositif national obligatoire 2025", unlocked: totalScore >= 10000,               detail: totalScore>=10000 ? "Éligible CPB" : `${fmt(10000)} m³ requis`, color:"#5544CC" },
+          { id:"quali",  icon:"⭐", name:"Label Qualimétha",         desc:"Qualité CH₄ > 97% maintenue",                unlocked: injected && digesteurs >= 2,        detail: injected&&digesteurs>=2 ? "Certifié" : "2 digesteurs requis", color:"#E8A020" },
+        ].map(cert => (
+          <div key={cert.id} style={{
+            padding:"14px 16px",borderRadius:"14px",
+            background:cert.unlocked?"rgba(74,158,219,.08)":"rgba(255,255,255,.03)",
+            border:`1px solid ${cert.unlocked?cert.color+"45":"rgba(255,255,255,.08)"}`,
+            opacity:cert.unlocked?1:.55,transition:"all .4s"
+          }}>
+            <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+              <div style={{
+                width:"40px",height:"40px",borderRadius:"12px",flexShrink:0,
+                background:cert.unlocked?cert.color+"22":"rgba(255,255,255,.04)",
+                border:`1.5px solid ${cert.unlocked?cert.color:"rgba(255,255,255,.1)"}`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",
+                boxShadow:cert.unlocked?`0 0 12px ${cert.color}35`:"none"
+              }}>{cert.unlocked?cert.icon:"🔒"}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:"13px",fontWeight:800,color:cert.unlocked?"#EDF4FF":"rgba(255,255,255,.3)"}}>{cert.name}</div>
+                <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginTop:"2px"}}>{cert.desc}</div>
+                {cert.detail && <div style={{fontSize:"10px",fontWeight:700,color:cert.unlocked?cert.color:"rgba(255,255,255,.25)",marginTop:"4px"}}>{cert.detail}</div>}
+              </div>
+              {cert.unlocked && <span style={{fontSize:"11px",fontWeight:700,color:cert.color,padding:"3px 10px",borderRadius:"20px",background:cert.color+"18",flexShrink:0}}>✅</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Milestones de production */}
+      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
+      <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"20px"}}>
+        {[
+          { icon:"🥉", name:"Premier MWh injecté",       threshold:100,      medal:"bronze" },
+          { icon:"🥈", name:"100 foyers alimentés",      threshold:1000000,   medal:"silver",  sub:"≈ 10 000 MWh" },
+          { icon:"🥇", name:"1 000 foyers alimentés",    threshold:10000000,  medal:"gold",    sub:"≈ 100 000 MWh" },
+          { icon:"💎", name:"Territoire Vert",            threshold:100000000, medal:"diamond", sub:"10% de la consommation régionale simulée" },
+        ].map(ms => {
+          const done = totalScore >= ms.threshold;
+          const pct = Math.min(100, (totalScore / ms.threshold) * 100);
+          const colors = { bronze:"#CD7F32", silver:"#C0C0C0", gold:"#F5BE50", diamond:"#6DB5EC" };
+          const c = colors[ms.medal];
+          return (
+            <div key={ms.name} style={{
+              padding:"10px 14px",borderRadius:"12px",
+              background:done?`${c}12`:"rgba(255,255,255,.02)",
+              border:`1px solid ${done?c+"40":"rgba(255,255,255,.06)"}`,
+              opacity:done?1:.6
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:done?0:"6px"}}>
+                <span style={{fontSize:"18px",filter:done?"none":"grayscale(100%) opacity(0.4)"}}>{ms.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(255,255,255,.35)"}}>{ms.name}</div>
+                  {ms.sub && <div style={{fontSize:"9px",color:"rgba(255,255,255,.3)",marginTop:"1px"}}>{ms.sub}</div>}
+                </div>
+                {done ? (
+                  <span style={{fontSize:"10px",fontWeight:700,color:c,padding:"2px 8px",borderRadius:"10px",background:c+"18"}}>✅</span>
+                ) : (
+                  <span style={{fontSize:"10px",color:"rgba(255,255,255,.3)"}}>{pct.toFixed(0)}%</span>
+                )}
+              </div>
+              {!done && (
+                <div style={{height:"4px",borderRadius:"2px",background:"rgba(255,255,255,.06)",overflow:"hidden",marginTop:"4px"}}>
+                  <div style={{height:"100%",borderRadius:"2px",width:`${pct}%`,background:`linear-gradient(90deg,${c}55,${c})`,transition:"width .5s"}}/>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Badges gamifiés */}
+      {(() => {
+        const allBadges = computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump });
+        const byCat = {
+          progression: allBadges.filter(b => b.category === "progression"),
+          diversite:   allBadges.filter(b => b.category === "diversite"),
+          maitrise:    allBadges.filter(b => b.category === "maitrise"),
+        };
+
+        const renderBadge = (b) => (
+          <div key={b.id} style={{
+            position:"relative",overflow:"hidden",
+            padding:"12px 10px",borderRadius:"12px",textAlign:"center",
+            background:b.done?`${b.color}12`:"rgba(255,255,255,.02)",
+            border:`1px solid ${b.done?b.color+"40":"rgba(255,255,255,.06)"}`,
+            opacity:b.done?1:.55,transition:"all .4s"
+          }}>
+            <div style={{fontSize:"24px",filter:b.done?"drop-shadow(0 0 8px "+b.color+"80)":"grayscale(100%) opacity(0.35)",marginBottom:"6px"}}>{b.icon}</div>
+            <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(255,255,255,.35)"}}>{b.name}</div>
+            <div style={{fontSize:"9px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>{b.desc}</div>
+            {b.done ? (
+              <div style={{fontSize:"8px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
+            ) : b.pct != null ? (
+              <div style={{marginTop:"6px"}}>
+                <div style={{height:"3px",borderRadius:"2px",background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
+                  <div style={{height:"100%",borderRadius:"2px",width:`${b.pct}%`,background:`linear-gradient(90deg,${b.color}55,${b.color})`,transition:"width .5s"}}/>
+                </div>
+                {b.detail && <div style={{fontSize:"8px",color:"rgba(255,255,255,.35)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
+              </div>
+            ) : null}
+            {b.done && (
+              <div style={{
+                position:"absolute",top:"6px",right:"4px",
+                transform:"rotate(-12deg)",opacity:.85,pointerEvents:"none"
+              }}>
+                <svg width="42" height="42" viewBox="0 0 170 170" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="85" cy="85" r="72" fill="none" stroke="#B82E1A" strokeWidth="3" strokeDasharray="4 3" opacity="0.75"/>
+                  <circle cx="85" cy="85" r="62" fill="none" stroke="#B82E1A" strokeWidth="5"/>
+                  <text x="85" y="98" textAnchor="middle" fontSize="36" fontWeight="900" fill="#B82E1A" letterSpacing="2" fontFamily="Georgia, serif">OK</text>
+                </svg>
+              </div>
+            )}
+          </div>
+        );
+
+        const sectionTitleStyle = {fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"};
+
+        return (
+          <>
+            <div style={sectionTitleStyle}>🎖️ Progression</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"8px",marginBottom:"20px"}}>
+              {byCat.progression.map(renderBadge)}
+            </div>
+
+            <div style={sectionTitleStyle}>🌈 Diversité des intrants</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"8px",marginBottom:"20px"}}>
+              {byCat.diversite.map(renderBadge)}
+            </div>
+
+            <div style={sectionTitleStyle}>🏆 Maîtrise d'un intrant</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"8px"}}>
+              {byCat.maitrise.map(renderBadge)}
+            </div>
+          </>
+        );
+      })()}
+
+      {/* Info pédago */}
+      <div style={{
+        marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
+        background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
+        fontSize:"10px",color:"rgba(255,255,255,.45)",lineHeight:1.6
+      }}>
+        💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
+        de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
+      </div>
     </div>
   );
 }
