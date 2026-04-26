@@ -407,6 +407,31 @@ const DIGESTEUR_COSTS     = [100000, 1000000];      // digesteur 2 et 3
 const DIGESTEUR_LABELS    = ["x2 capacité","x3 capacité","x4 capacité"];
 
 // ─── DONNÉES ─────────────────────────────────────────────────────────────────
+// v25.0.7 — Système d'étoiles par intrant (maîtrise opérationnelle)
+//   Chaque intrant peut accumuler 0 à 5 étoiles selon le qty acheté.
+//   Chaque palier débloque un bonus multiplicatif sur baseFill de cet intrant.
+//   Pédagogie : simule le gain d'efficacité opérationnelle qu'un site obtient
+//   en exploitant durablement le même type d'intrant (procédés, équipes, logistique).
+const STAR_THRESHOLDS = [1, 5, 10, 20, 40];                 // qty seuils 1★→5★
+const STAR_BONUSES    = [1.05, 1.10, 1.20, 1.35, 1.50];     // multiplicateurs cumulatifs (PAS additifs)
+const getIntrantStars = (qty) => {
+  if (qty <= 0) return 0;
+  let stars = 0;
+  for (let i = 0; i < STAR_THRESHOLDS.length; i++) {
+    if (qty >= STAR_THRESHOLDS[i]) stars = i + 1; else break;
+  }
+  return stars;
+};
+const getIntrantBonus = (qty) => {
+  const stars = getIntrantStars(qty);
+  return stars === 0 ? 1 : STAR_BONUSES[stars - 1];
+};
+const getNextStarThreshold = (qty) => {
+  for (let i = 0; i < STAR_THRESHOLDS.length; i++) {
+    if (qty < STAR_THRESHOLDS[i]) return STAR_THRESHOLDS[i];
+  }
+  return null; // 5★ atteinte
+};
 // v25.0 — realYield devient un paramètre RÉEL du moteur (production = masse × yield)
 //   - baseFill : débit massique (t/s/zone) — étalé 10× entre paliers
 //   - bagCap   : capacité tracteur (t/voyage = bF × 90s)
@@ -471,6 +496,10 @@ const UPGRADES = [
     pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 10 % de gaz vert en 2030.",
   },
 ];
+
+// v25.0.7 — Helper centralisé : débit massique effectif d'un intrant (t/s) avec bonus étoile
+//   = baseFill × qty × bonus_étoile (sans bonus GNV — appliqué globalement par ailleurs)
+const fillFor = (i, qty) => UPGRADES[i].baseFill * qty * getIntrantBonus(qty);
 
 // Chaîne d'équipements réels entre digesteur et réseau GRDF
 const EQUIPMENT = [
@@ -914,17 +943,31 @@ function computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump })
     detail: `${Math.min(diversityCount, threshold)}/${threshold}`,
   }));
 
-  const mastery = UPGRADES.map((u, i) => ({
-    id: `mast-${i}`,
-    category: "maitrise",
-    icon: u.icon,
-    name: `Expert ${u.name}`,
-    desc: "10 achats de cet intrant",
-    done: (owned[i] || 0) >= 10,
-    color: MAITRISE_COLORS[i] || "#4A9EDB",
-    pct: Math.min(100, ((owned[i] || 0) / 10) * 100),
-    detail: `${Math.min(owned[i] || 0, 10)}/10`,
-  }));
+  // v25.0.7 — Maîtrise multi-paliers (5 étoiles par intrant)
+  // Chaque seuil 1/5/10/20/40 génère un badge séparé, débloquable progressivement.
+  // Pédagogie : montre la courbe d'apprentissage opérationnel sur la durée.
+  const STAR_LABELS = ["Initiation", "Pratique", "Expertise", "Excellence", "Maîtrise totale"];
+  const mastery = [];
+  UPGRADES.forEach((u, i) => {
+    const qty = owned[i] || 0;
+    STAR_THRESHOLDS.forEach((threshold, sIdx) => {
+      const stars = sIdx + 1;
+      const bonusPct = Math.round((STAR_BONUSES[sIdx] - 1) * 100);
+      mastery.push({
+        id: `mast-${i}-s${stars}`,
+        category: "maitrise",
+        icon: u.icon,
+        name: `${u.name} ${"★".repeat(stars)}`,
+        desc: `${threshold} achats — bonus +${bonusPct}% débit`,
+        done: qty >= threshold,
+        color: MAITRISE_COLORS[i] || "#4A9EDB",
+        pct: Math.min(100, (qty / threshold) * 100),
+        detail: `${Math.min(qty, threshold)}/${threshold} · ${STAR_LABELS[sIdx]}`,
+        intrantIdx: i,
+        starLevel: stars,
+      });
+    });
+  });
 
   return [...progression, ...diversity, ...mastery];
 }
@@ -1011,7 +1054,7 @@ function Game({ username, region, maia }) {
     if (elapsedSec < 5) return null;
 
     const ownedArr   = sv.owned || [0,0,0,0,0,0,0];
-    const fr         = ownedArr.reduce((a,q,i) => a + UPGRADES[i].baseFill * q, 0);
+    const fr         = ownedArr.reduce((a,q,i) => a + fillFor(i, q), 0);
     if (fr <= 0) return null;
 
     const stockMaxOff    = ownedArr.reduce((a,q,i) => a + UPGRADES[i].bagCap * q * LOCAL_CAP_MULT, 0);
@@ -1032,7 +1075,7 @@ function Game({ username, region, maia }) {
     for (let i = 0; i < 7; i++) {
       if (ownedArr[i] === 0) { newLocal[i] = 0; continue; }
       const cap   = UPGRADES[i].bagCap * ownedArr[i] * LOCAL_CAP_MULT;
-      const baseI = UPGRADES[i].baseFill * ownedArr[i];
+      const baseI = fillFor(i, ownedArr[i]);
       const wasOffline = (Array.isArray(sv.zoneState) && sv.zoneState[i] === 'offline');
       // Si la zone était offline ET que le timer n'est pas écoulé, on garde la panne
       const offUntil = Array.isArray(sv.offlineUntil) ? sv.offlineUntil[i] : null;
@@ -1064,9 +1107,10 @@ function Game({ username, region, maia }) {
     const stockAfterFill  = savedStock + stockGained;
 
     // ── v25.0 : YIELD MIX — m³ CH₄/t moyen pondéré ─────────────────────────
-    // Apports gisement pendant offline : yield = moyenne pondérée par baseFill×qty
+    // Apports gisement pendant offline : yield = moyenne pondérée par baseFill×qty×bonus
+    // v25.0.7 — pondération via fillFor pour cohérence avec les bonus étoile
     const newFlowYield = fr > 0
-      ? ownedArr.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / fr
+      ? ownedArr.reduce((a,q,i) => a + fillFor(i, q) * UPGRADES[i].realYield, 0) / fr
       : 0;
     // Migration : si save < v25 (pas de yield persistés) et stock/charge présents
     //             → seed avec newFlowYield (best-effort, évite produced=0)
@@ -1196,9 +1240,9 @@ function Game({ username, region, maia }) {
   //             la moyenne pondérée des intrants possédés (best-effort, évite la prod nulle).
   const _migratedDefaultYield = (() => {
     const o = saved?.owned || [0,0,0,0,0,0,0];
-    const totalFill = o.reduce((a,q,i) => a + UPGRADES[i].baseFill * q, 0);
+    const totalFill = o.reduce((a,q,i) => a + fillFor(i, q), 0);
     if (totalFill <= 0) return 0;
-    return o.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / totalFill;
+    return o.reduce((a,q,i) => a + fillFor(i, q) * UPGRADES[i].realYield, 0) / totalFill;
   })();
   const [stockYield,  setStockYield]  = useState(() => {
     if (offlineGains?.remainingStockYield != null) return offlineGains.remainingStockYield;
@@ -1611,7 +1655,7 @@ function Game({ username, region, maia }) {
             zoneChanged = true;
           }
           const cap = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
-          const baseI = UPGRADES[i].baseFill * ownedNow[i];
+          const baseI = fillFor(i, ownedNow[i]);
           newLocal[i] = Math.min(cap, newLocal[i] + baseI * dtStock);
         }
         setLocalStock(newLocal);
@@ -1623,10 +1667,10 @@ function Game({ username, region, maia }) {
 
         // Stock global : production idéale clampée au stockMax
         // v25.0 — yield mix : le flux entrant (= "tracteur idéal" qui aurait roulé)
-        // a un yield moyen pondéré par baseFill×qty. On l'intègre au stockYield.
+        // a un yield moyen pondéré par baseFill×qty×bonus. On l'intègre au stockYield.
         if (sm > 0) {
           const flowYield = fr > 0
-            ? ownedNow.reduce((a,q,i) => a + UPGRADES[i].baseFill * q * UPGRADES[i].realYield, 0) / fr
+            ? ownedNow.reduce((a,q,i) => a + fillFor(i, q) * UPGRADES[i].realYield, 0) / fr
             : 0;
           setStock(s => {
             if (s >= sm) return sm;
@@ -1699,7 +1743,7 @@ function Game({ username, region, maia }) {
   const gnvBonus      = tractorGnv ? 1.15 : 1;
   gnvBonusRefV24.current = gnvBonus;       // sync immédiat — pas de TDZ
   injectedRefV24.current = injected;       // sync immédiat — pas de TDZ
-  const fillRate      = owned.reduce((a,q,i) => a+UPGRADES[i].baseFill*q, 0) * gnvBonus;
+  const fillRate      = owned.reduce((a,q,i) => a+fillFor(i, q), 0) * gnvBonus;
   const burnRate      = fillRate;
   // chargeMaxEff dynamique : cible ~90s de digestion à tout niveau d'intrant
   // → le niveau du digesteur reste lisible quelle que soit la vitesse de remplissage
@@ -1790,14 +1834,14 @@ function Game({ username, region, maia }) {
       const offNow     = offlineUntilRef.current;
       const gnvBonusNow= gnvBonusRefV24.current;
 
-      // 1) Remplissage des tampons locaux
+      // 1) Remplissage des tampons locaux — v25.0.7 : fillFor inclut le bonus étoile par intrant
       const newLocal = [...locNow];
       for (let i = 0; i < 7; i++) {
         if (ownedNow[i] === 0) { newLocal[i] = 0; continue; }
         const st = stNow[i];
         if (st === 'offline' || st === 'saturated') continue;
         const localCap = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
-        const baseFill = UPGRADES[i].baseFill * ownedNow[i] * gnvBonusNow;
+        const baseFill = fillFor(i, ownedNow[i]) * gnvBonusNow;
         newLocal[i] = Math.min(localCap, newLocal[i] + baseFill * dt);
       }
 
@@ -3503,13 +3547,44 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "13px", fontWeight: 800, color: avail ? "#EDF4FF" : "rgba(255,255,255,.28)" }}>{upg.name}</div>
                   <div style={{ fontSize: "10px", color: "rgba(255,255,255,.38)", marginTop: "1px" }}>{upg.desc}</div>
-                  {avail && qty > 0 && (
-                    <div style={{ display: "flex", gap: "6px", marginTop: "4px", fontSize: "10px", flexWrap: "wrap" }}>
-                      <span style={{ color: "#6DB5EC", fontWeight: 600 }}>+{parseFloat((upg.baseFill * qty).toPrecision(6))} t/s</span>
-                      <span style={{ color: "rgba(255,255,255,.18)" }}>·</span>
-                      <span style={{ color: "#E8A020", fontWeight: 600 }}>{upg.realYieldLabel}</span>
-                    </div>
-                  )}
+                  {avail && qty > 0 && (() => {
+                    const stars = getIntrantStars(qty);
+                    const bonusPct = Math.round((getIntrantBonus(qty) - 1) * 100);
+                    const next = getNextStarThreshold(qty);
+                    const effFill = fillFor(i, qty);
+                    return (
+                      <div style={{ marginTop: "4px" }}>
+                        <div style={{ display: "flex", gap: "6px", fontSize: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                          <span style={{ color: "#6DB5EC", fontWeight: 600 }}>+{parseFloat(effFill.toPrecision(6))} t/s</span>
+                          {bonusPct > 0 && (
+                            <span style={{ color: "#F5BE50", fontWeight: 700, fontSize: "9px" }}>+{bonusPct}%</span>
+                          )}
+                          <span style={{ color: "rgba(255,255,255,.18)" }}>·</span>
+                          <span style={{ color: "#E8A020", fontWeight: 600 }}>{upg.realYieldLabel}</span>
+                        </div>
+                        {/* v25.0.7 — Étoiles de maîtrise */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
+                          <div style={{ display: "flex", gap: "1px" }}>
+                            {[0,1,2,3,4].map(si => (
+                              <span key={si} style={{
+                                fontSize: "10px",
+                                color: si < stars ? "#F5BE50" : "rgba(255,255,255,.15)",
+                                filter: si < stars ? "drop-shadow(0 0 3px rgba(245,190,80,.6))" : "none"
+                              }}>★</span>
+                            ))}
+                          </div>
+                          {next != null && (
+                            <span style={{ fontSize: "8px", color: "rgba(255,255,255,.35)", fontWeight: 600 }}>
+                              {qty}/{next} → ★{stars + 1} (+{Math.round((STAR_BONUSES[stars] - 1) * 100)}%)
+                            </span>
+                          )}
+                          {next == null && (
+                            <span style={{ fontSize: "8px", color: "#F5BE50", fontWeight: 700 }}>MAÎTRISE TOTALE</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {avail && qty === 0 && (
                     <div style={{ fontSize: "10px", color: "#E8A020", marginTop: "3px", fontWeight: 600 }}>
                       {upg.realYieldLabel}
@@ -6448,10 +6523,60 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
               {byCat.diversite.map(renderBadge)}
             </div>
 
-            <div style={sectionTitleStyle}>🏆 Maîtrise d'un intrant</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"8px"}}>
-              {byCat.maitrise.map(renderBadge)}
-            </div>
+            <div style={sectionTitleStyle}>🏆 Maîtrise par intrant</div>
+            {/* v25.0.7 — Groupement par intrant (5 étoiles chacun = 35 badges au total)
+                          Chaque ligne montre l'intrant + ses 5 paliers compactés horizontalement
+                          pour rester lisible. */}
+            {UPGRADES.map((u, i) => {
+              const intrantBadges = byCat.maitrise.filter(b => b.intrantIdx === i);
+              const qty = owned[i] || 0;
+              const starsEarned = intrantBadges.filter(b => b.done).length;
+              const c = MAITRISE_COLORS[i] || "#4A9EDB";
+              return (
+                <div key={`mastery-${i}`} style={{
+                  marginBottom: "10px", padding: "10px 12px", borderRadius: "12px",
+                  background: starsEarned > 0 ? `${c}10` : "rgba(255,255,255,.02)",
+                  border: `1px solid ${starsEarned > 0 ? c+"30" : "rgba(255,255,255,.06)"}`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "20px" }}>{u.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "12px", fontWeight: 800, color: "#EDF4FF" }}>{u.name}</div>
+                      <div style={{ fontSize: "9px", color: "rgba(255,255,255,.4)" }}>{qty} acheté{qty > 1 ? "s" : ""}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: "1px" }}>
+                      {[0,1,2,3,4].map(si => (
+                        <span key={si} style={{
+                          fontSize: "12px",
+                          color: si < starsEarned ? "#F5BE50" : "rgba(255,255,255,.15)",
+                          filter: si < starsEarned ? "drop-shadow(0 0 4px rgba(245,190,80,.7))" : "none"
+                        }}>★</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "3px" }}>
+                    {intrantBadges.map(b => (
+                      <div key={b.id} style={{
+                        padding: "4px 2px", borderRadius: "6px", textAlign: "center",
+                        background: b.done ? `${c}25` : "rgba(255,255,255,.03)",
+                        border: `1px solid ${b.done ? c+"55" : "rgba(255,255,255,.06)"}`,
+                        opacity: b.done ? 1 : 0.5,
+                      }}>
+                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "#F5BE50" : "rgba(255,255,255,.3)" }}>
+                          {"★".repeat(b.starLevel)}
+                        </div>
+                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(255,255,255,.3)", fontWeight: 600, marginTop: "1px" }}>
+                          +{Math.round((STAR_BONUSES[b.starLevel-1]-1)*100)}%
+                        </div>
+                        <div style={{ fontSize: "7px", color: "rgba(255,255,255,.35)", marginTop: "1px" }}>
+                          {STAR_THRESHOLDS[b.starLevel-1]}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </>
         );
       })()}
