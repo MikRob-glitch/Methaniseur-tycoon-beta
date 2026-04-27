@@ -2524,6 +2524,7 @@ function Game({ username, region, maia }) {
         @keyframes paddle-osc-inv{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
         @keyframes gasFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
         @keyframes gasFlowReverse{from{stroke-dashoffset:0}to{stroke-dashoffset:20}}
+        @keyframes augerSpin{from{stroke-dashoffset:0}to{stroke-dashoffset:-16}}
         @keyframes gasBubbleSvg{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(-32px);opacity:0}}
       `}</style>
 
@@ -5397,9 +5398,16 @@ function DigesteurScene({
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
                 Avant : BAC à gauche, DIGESTEURS à droite (lane tracteur à gauche).
                 Après : DIGESTEURS à gauche, BAC à droite (côté gisement, plus pédago). */}
-            <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px 6px"}}>
+            {/* v25.1.17 — Resserrement bac↔digesteurs pour fix débordement digesteurs à gauche
+                sur Android petit écran (320-360px) :
+                · padding 38px 6px → 38px 4px (-4px)
+                · gap 10px → 6px (-8px sur 2 gaps)
+                · bac 96px → 78px (-18px)
+                · pipe intrants 28px → 22px (-6px)
+                Total : 36px supplémentaires pour la zone digesteurs. */}
+            <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"6px", height:"100%", padding:"38px 4px 38px 4px"}}>
               {/* ── BAC D'INTRANTS ── */}
-              <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
+              <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
                 </div>
@@ -5417,7 +5425,7 @@ function DigesteurScene({
                   title="Voir la composition du BAC"
                 >
                   <div style={{
-                    width:"88px", height:"120px", position:"relative",
+                    width:"72px", height:"112px", position:"relative",
                     background:"linear-gradient(180deg,rgba(11,22,40,.92),rgba(8,16,32,.96))",
                     border:`2px solid ${stockColor}`, borderRadius:"6px 6px 14px 14px",
                     overflow:"hidden",
@@ -5462,7 +5470,7 @@ function DigesteurScene({
                       }}>i</div>
                     )}
                   </div>
-                  <div style={{width:"88px", height:"8px", background:"linear-gradient(90deg,rgba(74,158,219,.12),rgba(74,158,219,.28),rgba(74,158,219,.12))", borderRadius:"0 0 8px 8px"}}/>
+                  <div style={{width:"72px", height:"8px", background:"linear-gradient(90deg,rgba(74,158,219,.12),rgba(74,158,219,.28),rgba(74,158,219,.12))", borderRadius:"0 0 8px 8px"}}/>
                 </div>
                 <div style={{fontSize:"9px", fontWeight:700, textAlign:"center", color:stockPct>=1?"#E05858":stockPct>=.8?"#E07820":"#6DB5EC"}}>
                   {stockPct>=1?"🔴 PLEIN !":stockPct>=.8?"🟠 Attention":stockPct>=.5?"🟡 Mi-plein":"🟢 OK"}
@@ -5483,7 +5491,7 @@ function DigesteurScene({
                   </div>
                 )}
                 <button onClick={handlePour} disabled={pouring||stock<1} style={{
-                  width:"88px", padding:"9px 0", borderRadius:"10px", border:"none",
+                  width:"72px", padding:"9px 0", borderRadius:"10px", border:"none",
                   background: stock<1 ? "rgba(74,158,219,.08)" : stockPct>=.8 ? "linear-gradient(135deg,#E04444,#E05858)" : "linear-gradient(135deg,#2A7DBB,#4A9EDB)",
                   color: stock<1 ? "rgba(74,158,219,.25)" : "white",
                   fontWeight:800, fontSize:"11px",
@@ -5603,7 +5611,8 @@ function DigesteurScene({
               {/* ── PIPE BAC → DIGESTEURS ── */}
               {/* v25.1.6 : label "Intrants" pour clarifier qu'il s'agit du flux solide
                   bac→digesteurs (pas du biogaz ; le biogaz lui sort par le bas vers la cuve tampon). */}
-              <div style={{flex:"0 0 28px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px", gap:"2px"}}>
+              {/* v25.1.17 : largeur 28→22px (resserrement) */}
+              <div style={{flex:"0 0 22px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px", gap:"2px"}}>
                 <div style={{fontSize:"7px", color:pouring?"rgba(255,255,255,.55)":"rgba(255,255,255,.25)", textTransform:"uppercase", letterSpacing:".04em", fontWeight:700, transition:"color .3s"}}>
                   Intrants
                 </div>
@@ -5645,6 +5654,8 @@ function DigesteurScene({
                     />
                   ))}
                 </div>
+                {/* v25.1.18 — Vis sans fin distributeur d'intrants (active pendant pouring) */}
+                <DigesteurFeeder digesteurs={digesteurs} pouring={pouring} />
                 <div style={{width:"100%", display:"flex", flexDirection:"column", gap:"5px", marginTop:"2px"}}>
                   <div style={{
                     background: isDigesting?"rgba(74,158,219,.12)":"rgba(255,255,255,.09)",
@@ -6033,6 +6044,77 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
               fill="rgba(11,22,35,.9)" stroke="rgba(74,158,219,.28)" strokeWidth="1"/>
             <text x={(x1+xN)/2} y={9} textAnchor="middle"
               fontSize="7" fill="rgba(74,158,219,.9)" fontWeight="700">Biogaz</text>
+          </React.Fragment>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+// ─── DIGESTEUR FEEDER — distributeur d'intrants avec vis sans fin ─────────────
+// v25.1.18 — Symétrique du DigesteurManifold mais avec sémantique différente :
+//   · Tube horizontal SOUS les dômes (au-dessus des cuves) qui distribue les intrants
+//   · Branches MONTANTES vers chaque digesteur (les intrants entrent par le haut/dôme)
+//   · Animation = vis sans fin (chevrons /// qui défilent de droite à gauche)
+//   · Active uniquement quand `pouring=true` (le levier déclenche la vis)
+//   · S'étend vers la DROITE (vers le bac) au lieu de gauche (collecteur biogaz)
+//   · Couleur ambre/terre (intrants solides) plutôt que vert (gaz)
+function DigesteurFeeder({ digesteurs, pouring }) {
+  const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
+  const GAP    = digesteurs === 3 ? 4 : 8;
+  const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
+  // Extension vers la DROITE (vers le bac d'intrants)
+  const RIGHT_EXT = 50;
+  const svgW   = totalW + RIGHT_EXT;
+  const svgH   = 22;
+  const cY     = 8;
+  const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
+  const x1 = centers[0], xN = centers[digesteurs-1];
+
+  return (
+    // Wrapper avec width = totalW (sans extension) pour pas forcer le layout flex.
+    // Le SVG en absolu déborde à droite via overflow:visible.
+    <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{position:"absolute", left:0, top:0, overflow:"visible", display:"block"}}>
+
+        {/* Branches MONTANTES vers chaque digesteur (depuis le tube vers les cuves) */}
+        {centers.map((px,i) => (
+          <React.Fragment key={i}>
+            <rect x={px-4} y={0} width={8} height={cY} rx={3}
+              fill="#3a2c10" stroke="rgba(232,160,32,.3)" strokeWidth=".8"/>
+            <rect x={px-2} y={1} width={4} height={cY-2} rx={2}
+              fill={pouring ? "rgba(232,160,32,.85)" : "rgba(232,160,32,.18)"}
+              style={{animation: pouring ? "chargePulse 1.4s ease infinite" : "none"}}/>
+          </React.Fragment>
+        ))}
+
+        {/* Tube horizontal distributeur (s'étend du digesteur #1 jusqu'à RIGHT_EXT) */}
+        <rect x={x1-4} y={cY} width={(xN-x1)+8+RIGHT_EXT} height={9} rx={4}
+          fill="#3a2c10" stroke="rgba(232,160,32,.42)" strokeWidth="1.5"/>
+
+        {/* VIS SANS FIN : motif chevrons défilants `<<<` (visuel hélicoïdal en 2D) */}
+        <line x1={x1-2} y1={cY+4.5} x2={xN+RIGHT_EXT+2} y2={cY+4.5}
+          stroke="rgba(245,190,80,.85)" strokeWidth="2.5"
+          strokeDasharray="3 5" strokeLinecap="round"
+          style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
+        {/* Deuxième passe décalée pour donner l'effet hélicoïdal (2 brins de vis) */}
+        <line x1={x1-2} y1={cY+4.5} x2={xN+RIGHT_EXT+2} y2={cY+4.5}
+          stroke="rgba(232,160,32,.6)" strokeWidth="1.5"
+          strokeDasharray="2 6" strokeDashoffset="3" strokeLinecap="round"
+          style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
+
+        {/* Embout droit (entrée des intrants depuis le bac) */}
+        <rect x={xN+RIGHT_EXT-2} y={cY-2} width={6} height={13} rx={2}
+          fill="#5a4520" stroke="rgba(232,160,32,.6)" strokeWidth=".8"/>
+
+        {/* Badge "Intrants" centré sur le tube (visible si > 1 digesteur) */}
+        {digesteurs > 1 && (
+          <React.Fragment>
+            <rect x={(x1+xN)/2-22} y={cY+13} width={44} height={9} rx={4}
+              fill="rgba(11,22,35,.9)" stroke="rgba(232,160,32,.28)" strokeWidth=".8"/>
+            <text x={(x1+xN)/2} y={cY+19} textAnchor="middle"
+              fontSize="6.5" fill="rgba(245,190,80,.85)" fontWeight="700">Intrants</text>
           </React.Fragment>
         )}
       </svg>
