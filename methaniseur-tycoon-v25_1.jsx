@@ -5384,8 +5384,12 @@ function DigesteurScene({
           {/* ════════ VUE 1 : DIGESTEUR + BAC + CHAÎNE D'INJECTION ════════ */}
           {/* v25.1.6 — Structure verticale 350+250 :
               · Top (350px) : digesteurs+bac+tracteur (zone scène SVG MONDE inchangée)
-              · Bottom (250px) : chaîne d'injection migrée depuis sous la scène */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", display:"flex", flexDirection:"column"}}>
+              · Bottom (250px) : chaîne d'injection migrée depuis sous la scène
+              v25.1.16 — minWidth:0 + overflow:hidden : empêche les enfants (collecteur étendu,
+              SVG monde, etc.) de forcer la VUE 1 à dépasser 50% de la scène (= 50% du viewport
+              car scène = 200%). Sans ça, sur Android la VUE 1 prenait > 50% et poussait la VUE 2
+              hors écran. */}
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* v25.1.11 — Pipe TOP RETIRÉ : remplacé par l'extension du tube collecteur
                 (DigesteurManifold prolonge maintenant jusqu'au bord gauche de l'écran). */}
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
@@ -5748,8 +5752,9 @@ function DigesteurScene({
               · Top (350px) : parcelles d'approvisionnement (inchangé)
               · Bottom (250px) : PLACEHOLDER pour le réseau aval GRDF (chantier C — à venir)
                                  - Réseau général (résidentiel) animé selon burnRate
-                                 - Station GNV qui grandit selon gnvStationCount */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", display:"flex", flexDirection:"column"}}>
+                                 - Station GNV qui grandit selon gnvStationCount
+              v25.1.16 — minWidth:0 + overflow:hidden (cf. VUE 1, même raison). */}
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
