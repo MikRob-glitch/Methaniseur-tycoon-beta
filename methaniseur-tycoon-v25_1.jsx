@@ -4004,59 +4004,68 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 // v25.1 — INVERSION DU LAYOUT VUE 1 :
 //   Avant : BAC à gauche, DIGESTEURS à droite, tracteur décharge en LANE_LEFT (x=30)
 //   Après : DIGESTEURS à gauche, BAC à droite (côté gisement), tracteur décharge
-//           AU-DESSUS du bac (DUMP_X juste à gauche du bord gauche du bac).
-//   Logique narrative : zones (VUE 2) → BAC → DIGESTEUR (gauche, transformation).
-//   Bonus : le tracteur ne traverse plus toute la VUE 1, déchargement plus rapide.
+//           AU-DESSUS du centre du bac (DUMP_X = centre horizontal du bac).
+//
+//   Path en U complet conçu pour NE JAMAIS traverser le bac visuellement :
+//     - DUMP_X (346)      = au-dessus du centre du bac (point de décharge)
+//     - DUMP_X_LEFT (250) = lane verticale À GAUCHE du bac (montée/descente sans chevauchement)
+//     - Le tracteur sort en montant vertical (au-dessus du bac, pas de chevauchement)
+//     - Il revient par lane bot, remonte à DUMP_X_LEFT (gauche du bac), puis GLISSE
+//       horizontalement au-dessus du bac (à DUMP_Y) pour atteindre le DUMP et décharger.
 const WORLD = {
   W: 800, H: 280,
-  DUMP_X:    200,                  // v25.1 : était LANE_LEFT=30. À gauche du bac qui est maintenant à droite.
-  LANE_TOP:  15,                   // y lane retour (tracteur chargé)
-  LANE_BOT:  253,                  // y lane aller (tracteur vide)
-  DUMP_Y:    130,                  // v25.1 : 140→130. Juste au-dessus du top du bac (~150 SVG).
-  V1_V2:     400,                  // frontière vue 1 / vue 2
+  DUMP_X:      346,                // v25.1 : centre horizontal du bac (point de décharge AU-DESSUS du bac)
+  DUMP_X_LEFT: 250,                // v25.1 : lane verticale gauche (descente/montée sans traverser le bac)
+  LANE_TOP:    15,                 // y lane retour (tracteur chargé)
+  LANE_BOT:    253,                // y lane aller (tracteur vide)
+  DUMP_Y:      135,                // v25.1 : juste au-dessus du top du bac (~150 SVG)
+  V1_V2:       400,                // frontière vue 1 / vue 2
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
 // zone → charge → remonte → lane haut → retour lane gauche → DUMP point
-// v25.1 — Path inversé : DUMP_X à droite du milieu (200), bac à droite de VUE 1.
-//          SORTIE par LANE_TOP (vide, monte), RETOUR par LANE_BOT (chargé, descend).
-//          Le tracteur ne traverse plus la VUE 1 ; il fait l'AR directement zone↔bac.
+// v25.1 — Path conçu pour NE JAMAIS traverser le bac (cf. schéma WORLD plus haut).
+//   Aller : DUMP (au-dessus du bac) → glisse à GAUCHE du bac → monte → lane top → zone
+//   Retour : zone → lane bot → remonte à GAUCHE du bac → glisse à droite au-dessus du bac → DUMP
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;       // coord scène monde (x>400 = vue 2)
   const routeX = WORLD.V1_V2 + z.routeX;  // route verticale de la parcelle
-  const { DUMP_X, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  const { DUMP_X, DUMP_X_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
   return `
     M ${DUMP_X} ${DUMP_Y}
-    L ${DUMP_X} ${LANE_TOP}
+    L ${DUMP_X_LEFT} ${DUMP_Y}
+    L ${DUMP_X_LEFT} ${LANE_TOP}
     L ${routeX} ${LANE_TOP}
     L ${routeX} ${z.y}
     L ${zoneX} ${z.y}
     L ${routeX} ${z.y}
     L ${routeX} ${LANE_BOT}
-    L ${DUMP_X} ${LANE_BOT}
+    L ${DUMP_X_LEFT} ${LANE_BOT}
+    L ${DUMP_X_LEFT} ${DUMP_Y}
     L ${DUMP_X} ${DUMP_Y}
   `.trim().replace(/\s+/g,' ');
 }
 
 // Calcule la fraction du path (0..1) à laquelle le tracteur atteint la zone
-// (fin du segment 4 dans le path v25.1).
-// Utilisé pour que t.progress s'arrête pile sur le bâtiment pendant "loading".
+// v25.1 : 11 waypoints, 10 segments. CHARGE à la fin du segment 5 (zoneX, z.y).
 function computeZoneProgress(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
-  // Mêmes waypoints que buildMissionPath v25.1 (9 points, 8 segments)
+  const { DUMP_X, DUMP_X_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  // 11 waypoints (mêmes que buildMissionPath v25.1)
   const pts = [
-    [DUMP_X, DUMP_Y],        // 0 : départ DUMP
-    [DUMP_X, LANE_TOP],      // 1 : monte sur lane haut
-    [routeX, LANE_TOP],      // 2 : va à droite vers la zone
-    [routeX, z.y],           // 3 : descend vers la zone
-    [zoneX, z.y],            // 4 ← CHARGE ici (fin du segment 4)
-    [routeX, z.y],           // 5
-    [routeX, LANE_BOT],      // 6 : descend sur lane bas
-    [DUMP_X, LANE_BOT],      // 7 : retour vers VUE 1 par lane bas
-    [DUMP_X, DUMP_Y],        // 8 ← DUMP ici (remonte au point de décharge)
+    [DUMP_X,      DUMP_Y],   // 0 : départ DUMP (au-dessus du bac)
+    [DUMP_X_LEFT, DUMP_Y],   // 1 : glisse à gauche
+    [DUMP_X_LEFT, LANE_TOP], // 2 : monte sur lane haut
+    [routeX,      LANE_TOP], // 3 : va à droite vers la zone
+    [routeX,      z.y],      // 4 : descend vers la zone
+    [zoneX,       z.y],      // 5 ← CHARGE ici (fin du segment 5)
+    [routeX,      z.y],      // 6
+    [routeX,      LANE_BOT], // 7 : descend sur lane bas
+    [DUMP_X_LEFT, LANE_BOT], // 8 : retour vers VUE 1 par lane bas
+    [DUMP_X_LEFT, DUMP_Y],   // 9 : remonte à gauche du bac
+    [DUMP_X,      DUMP_Y],   // 10 ← DUMP ici (glisse au-dessus du bac, décharge)
   ];
   let totalL = 0, loadL = 0;
   for (let i = 1; i < pts.length; i++) {
@@ -4064,7 +4073,7 @@ function computeZoneProgress(zIdx) {
     const dy = pts[i][1] - pts[i-1][1];
     const segL = Math.sqrt(dx*dx + dy*dy);
     totalL += segL;
-    if (i === 4) loadL = totalL;  // fin segment 4 = position zone
+    if (i === 5) loadL = totalL;  // fin segment 5 = position zone
   }
   return totalL > 0 ? loadL / totalL : 0.5;
 }
@@ -5605,7 +5614,7 @@ function DigesteurScene({
                 flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:"4px",
                 transform:`scale(${digesteurZoneScale})`,
                 transformOrigin:"center bottom",
-                transition:"transform 1s cubic-bezier(.22,.68,0,1.2)"
+                transition:"transform 1s cubic-bezier(.22,.68,0,1.2)",
               }}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
                   Digesteur{digesteurs>1?"s":""} ×{digesteurs}
@@ -5723,12 +5732,16 @@ function DigesteurScene({
           >
             {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
             <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              {/* v25.1 — VUE 1 : périmètre en U ouvert à GAUCHE (le tracteur s'arrête
-                  sur la route verticale DROITE à x=DUMP_X, juste à gauche du bac).
-                  Le bac est désormais à droite de VUE 1, le tracteur ne traverse plus VUE 1. */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.DUMP_X} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              {/* v25.1 — VUE 1 : lane verticale à GAUCHE du bac (DUMP_X_LEFT) +
+                  petit segment horizontal au-dessus du bac (DUMP_X_LEFT → DUMP_X à y=DUMP_Y).
+                  Le tracteur stationne à DUMP_X (au-dessus du centre du bac) pour décharger,
+                  mais il transit via DUMP_X_LEFT pour ne JAMAIS traverser le bac. */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_LEFT} ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.DUMP_X_LEFT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_LEFT} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X_LEFT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              {/* Segment horizontal au-dessus du bac : route entre la lane verticale gauche
+                  et le DUMP point (au-dessus du centre du bac). */}
+              <path d={`M ${WORLD.DUMP_X_LEFT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
 
               {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
