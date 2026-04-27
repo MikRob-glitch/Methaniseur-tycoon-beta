@@ -5411,39 +5411,46 @@ function DigesteurScene({
               · Top (350px) : digesteurs+bac+tracteur (zone scène SVG MONDE inchangée)
               · Bottom (250px) : chaîne d'injection migrée depuis sous la scène */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", display:"flex", flexDirection:"column"}}>
-            {/* v25.1.8 — GRAND PIPE BIOGAZ EN L : longe tout le côté gauche de VUE 1.
-                · Démarre au sommet (au-dessus du digesteur #1, niveau collecteur Biogaz)
-                · Descend verticalement à GAUCHE, passant à côté de "Production totale"
-                  et "Charge digesteur" (sans les masquer car le pipe est à l'extrême gauche)
-                · Tourne à droite tout en bas (à l'entrée de la cuve tampon)
-                · Animation gasFlow verte si digesting, gris si idle.
-                Position absolue, pointer-events:none → pas de clic intercept. */}
+            {/* v25.1.9 — PIPE BIOGAZ EN U INVERSÉ (approche déterministe en CSS pixels).
+                Le SVG fait sa taille réelle (pas étiré), les coordonnées dans le viewBox
+                correspondent aux pixels CSS → calibrage prévisible.
+                · Top (y=0)    : niveau du collecteur biogaz horizontal au-dessus des digesteurs
+                · y=10 → 470   : segment vertical à gauche
+                · y=470, x=160 : entrée de la cuve tampon (premier élément chaîne d'injection) */}
             <svg
-              viewBox="0 0 60 600"
-              preserveAspectRatio="none"
+              width="180" height="480"
+              viewBox="0 0 180 480"
               style={{
-                position:"absolute", left:"4px", top:"40px",
-                width:"40px", height:"540px",
+                position:"absolute", left:"0", top:"60px",
                 pointerEvents:"none", zIndex:2, overflow:"visible"
               }}
             >
-              {/* Tube enveloppe (couleur foncée + bordure bleue) */}
-              <path d="M 18 0 L 18 540 L 60 540"
+              {/* Path complet :
+                  M 80 0   ← start au-dessus du digesteur #1 (CSS x=80, niveau collecteur biogaz)
+                  L 80 14  ← descend de 14px (sortie du collecteur)
+                  L 14 14  ← va vers la gauche jusqu'au bord
+                  L 14 470 ← descend tout le long sur le côté gauche
+                  L 80 470 ← va à droite vers la cuve (CSS x=80)
+              */}
+              <path d="M 80 0 L 80 14 L 14 14 L 14 470 L 80 470"
                 fill="none" stroke="#1E3848" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M 18 0 L 18 540 L 60 540"
+              <path d="M 80 0 L 80 14 L 14 14 L 14 470 L 80 470"
                 fill="none" stroke="rgba(74,158,219,.4)" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" opacity=".5"/>
               {/* Flux animé biogaz (vert si digestion en cours) */}
-              <path d="M 18 0 L 18 540 L 60 540"
+              <path d="M 80 0 L 80 14 L 14 14 L 14 470 L 80 470"
                 fill="none"
                 stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
                 strokeWidth="5"
                 strokeDasharray="14 10" strokeLinecap="round"
                 style={{animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
-              {/* Label "BIOGAZ" vertical le long du pipe */}
-              <text x="9" y="160" textAnchor="middle"
-                fontSize="9" fill={isDigesting?"rgba(102,238,136,.85)":"rgba(74,158,219,.45)"}
+              {/* Flèche d'arrivée à la cuve tampon */}
+              <polygon points="86,470 76,465 76,475"
+                fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
+              {/* Label "BIOGAZ ↓" vertical sur le segment de descente */}
+              <text x="6" y="220" textAnchor="middle"
+                fontSize="10" fill={isDigesting?"rgba(102,238,136,.85)":"rgba(74,158,219,.45)"}
                 fontWeight="800" letterSpacing="2"
-                transform="rotate(-90 9 160)">
+                transform="rotate(-90 6 220)">
                 BIOGAZ ↓
               </text>
             </svg>
