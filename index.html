@@ -5998,62 +5998,66 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
   // v25.1.11 : EXTENSION vers la GAUCHE pour que le tube collecteur sorte de l'écran.
-  //   - LEFT_EXT (140px de tube qui prolonge à gauche jusqu'au bord)
-  //   - le SVG démarre à x=-LEFT_EXT côté display (via marginLeft négatif)
+  // v25.1.14 : SVG en position:absolute pour que l'extension ne force PAS la largeur
+  //   de la colonne digesteurs (qui sur Android coupait le bac à droite).
   const LEFT_EXT = 140;
   const svgW   = totalW + LEFT_EXT;
   const svgH   = 38;
   const cY     = 14;
-  // Décale tous les centers de +LEFT_EXT pour réserver l'espace à gauche
   const centers = Array.from({length:digesteurs}, (_,i) => LEFT_EXT + i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
 
   return (
-    <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{overflow:"visible", display:"block", marginLeft:`-${LEFT_EXT}px`}}>
+    // v25.1.14 : Wrapper avec hauteur réservée 38px et width:totalW (sans LEFT_EXT)
+    // pour que le flex parent calcule la largeur SANS l'extension. Le SVG en absolu
+    // déborde visuellement à gauche sans impacter le layout.
+    <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
 
-      {/* Branches vers chaque digesteur */}
-      {centers.map((px,i) => (
-        <React.Fragment key={i}>
-          <rect x={px-4} y={cY} width={8} height={svgH-cY} rx={3}
-            fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
-          <rect x={px-2} y={cY+2} width={4} height={svgH-cY-4} rx={2}
-            fill="rgba(102,238,136,.4)" style={{animation:"chargePulse 1.4s ease infinite"}}/>
-        </React.Fragment>
-      ))}
+        {/* Branches vers chaque digesteur */}
+        {centers.map((px,i) => (
+          <React.Fragment key={i}>
+            <rect x={px-4} y={cY} width={8} height={svgH-cY} rx={3}
+              fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
+            <rect x={px-2} y={cY+2} width={4} height={svgH-cY-4} rx={2}
+              fill="rgba(102,238,136,.4)" style={{animation:"chargePulse 1.4s ease infinite"}}/>
+          </React.Fragment>
+        ))}
 
-      {/* v25.1.11 — Tube collecteur ÉTENDU vers la gauche (x=0 = bord écran)
-          jusqu'aux digesteurs (xN). L'animation va vers la GAUCHE (gasFlowReverse). */}
-      <rect x={0} y={cY-4} width={xN-0+4} height={8} rx={4}
-        fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
-      <line x1={0} y1={cY} x2={xN} y2={cY}
-        stroke="rgba(102,238,136,.6)" strokeWidth="4"
-        strokeDasharray="10 8" strokeLinecap="round"
-        style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
+        {/* v25.1.11 — Tube collecteur ÉTENDU vers la gauche (x=0 = bord écran)
+            jusqu'aux digesteurs (xN). L'animation va vers la GAUCHE (gasFlowReverse). */}
+        <rect x={0} y={cY-4} width={xN-0+4} height={8} rx={4}
+          fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
+        <line x1={0} y1={cY} x2={xN} y2={cY}
+          stroke="rgba(102,238,136,.6)" strokeWidth="4"
+          strokeDasharray="10 8" strokeLinecap="round"
+          style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
 
-      {/* Flèche pointant vers la GAUCHE (sortie hors champ vers la cuve) */}
-      <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
-        fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
+        {/* Flèche pointant vers la GAUCHE (sortie hors champ vers la cuve) */}
+        <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
+          fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
 
-      {/* Label "Biogaz vers la cuve ↓" — positionné côté DROIT de l'extension
-          (près du digesteur #1) pour rester dans la zone visible de l'écran.
-          v25.1.13 : x=LEFT_EXT-50 au lieu de LEFT_EXT/2 (sinon coupé hors champ). */}
-      <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
-        fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
-        fontWeight="700" letterSpacing=".3">
-        ◀ Biogaz vers la cuve
-      </text>
+        {/* Label "Biogaz vers la cuve ↓" — positionné côté DROIT de l'extension
+            (près du digesteur #1) pour rester dans la zone visible de l'écran.
+            v25.1.13 : x=LEFT_EXT-50 au lieu de LEFT_EXT/2 (sinon coupé hors champ). */}
+        <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
+          fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
+          fontWeight="700" letterSpacing=".3">
+          ◀ Biogaz vers la cuve
+        </text>
 
-      {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
-      {digesteurs > 1 && (
-        <React.Fragment>
-          <rect x={(x1+xN)/2-19} y={0} width={38} height={12} rx={6}
-            fill="rgba(11,22,35,.9)" stroke="rgba(74,158,219,.28)" strokeWidth="1"/>
-          <text x={(x1+xN)/2} y={9} textAnchor="middle"
-            fontSize="7" fill="rgba(74,158,219,.9)" fontWeight="700">Biogaz</text>
-        </React.Fragment>
-      )}
-    </svg>
+        {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
+        {digesteurs > 1 && (
+          <React.Fragment>
+            <rect x={(x1+xN)/2-19} y={0} width={38} height={12} rx={6}
+              fill="rgba(11,22,35,.9)" stroke="rgba(74,158,219,.28)" strokeWidth="1"/>
+            <text x={(x1+xN)/2} y={9} textAnchor="middle"
+              fontSize="7" fill="rgba(74,158,219,.9)" fontWeight="700">Biogaz</text>
+          </React.Fragment>
+        )}
+      </svg>
+    </div>
   );
 }
 
