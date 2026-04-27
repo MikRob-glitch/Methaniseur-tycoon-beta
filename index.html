@@ -5423,9 +5423,16 @@ function DigesteurScene({
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
                 Avant : BAC à gauche, DIGESTEURS à droite (lane tracteur à gauche).
                 Après : DIGESTEURS à gauche, BAC à droite (côté gisement, plus pédago). */}
-            <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px 6px"}}>
+            {/* v25.1.17 — Resserrement bac↔digesteurs pour fix débordement digesteurs à gauche
+                sur Android petit écran (320-360px) :
+                · padding 38px 6px → 38px 4px (-4px)
+                · gap 10px → 6px (-8px sur 2 gaps)
+                · bac 96px → 78px (-18px)
+                · pipe intrants 28px → 22px (-6px)
+                Total : 36px supplémentaires pour la zone digesteurs. */}
+            <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"6px", height:"100%", padding:"38px 4px 38px 4px"}}>
               {/* ── BAC D'INTRANTS ── */}
-              <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
+              <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
                 </div>
@@ -5443,7 +5450,7 @@ function DigesteurScene({
                   title="Voir la composition du BAC"
                 >
                   <div style={{
-                    width:"88px", height:"120px", position:"relative",
+                    width:"72px", height:"112px", position:"relative",
                     background:"linear-gradient(180deg,rgba(11,22,40,.92),rgba(8,16,32,.96))",
                     border:`2px solid ${stockColor}`, borderRadius:"6px 6px 14px 14px",
                     overflow:"hidden",
@@ -5488,7 +5495,7 @@ function DigesteurScene({
                       }}>i</div>
                     )}
                   </div>
-                  <div style={{width:"88px", height:"8px", background:"linear-gradient(90deg,rgba(74,158,219,.12),rgba(74,158,219,.28),rgba(74,158,219,.12))", borderRadius:"0 0 8px 8px"}}/>
+                  <div style={{width:"72px", height:"8px", background:"linear-gradient(90deg,rgba(74,158,219,.12),rgba(74,158,219,.28),rgba(74,158,219,.12))", borderRadius:"0 0 8px 8px"}}/>
                 </div>
                 <div style={{fontSize:"9px", fontWeight:700, textAlign:"center", color:stockPct>=1?"#E05858":stockPct>=.8?"#E07820":"#6DB5EC"}}>
                   {stockPct>=1?"🔴 PLEIN !":stockPct>=.8?"🟠 Attention":stockPct>=.5?"🟡 Mi-plein":"🟢 OK"}
@@ -5509,7 +5516,7 @@ function DigesteurScene({
                   </div>
                 )}
                 <button onClick={handlePour} disabled={pouring||stock<1} style={{
-                  width:"88px", padding:"9px 0", borderRadius:"10px", border:"none",
+                  width:"72px", padding:"9px 0", borderRadius:"10px", border:"none",
                   background: stock<1 ? "rgba(74,158,219,.08)" : stockPct>=.8 ? "linear-gradient(135deg,#E04444,#E05858)" : "linear-gradient(135deg,#2A7DBB,#4A9EDB)",
                   color: stock<1 ? "rgba(74,158,219,.25)" : "white",
                   fontWeight:800, fontSize:"11px",
@@ -5629,7 +5636,8 @@ function DigesteurScene({
               {/* ── PIPE BAC → DIGESTEURS ── */}
               {/* v25.1.6 : label "Intrants" pour clarifier qu'il s'agit du flux solide
                   bac→digesteurs (pas du biogaz ; le biogaz lui sort par le bas vers la cuve tampon). */}
-              <div style={{flex:"0 0 28px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px", gap:"2px"}}>
+              {/* v25.1.17 : largeur 28→22px (resserrement) */}
+              <div style={{flex:"0 0 22px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px", gap:"2px"}}>
                 <div style={{fontSize:"7px", color:pouring?"rgba(255,255,255,.55)":"rgba(255,255,255,.25)", textTransform:"uppercase", letterSpacing:".04em", fontWeight:700, transition:"color .3s"}}>
                   Intrants
                 </div>
