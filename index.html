@@ -5411,6 +5411,42 @@ function DigesteurScene({
               · Top (350px) : digesteurs+bac+tracteur (zone scène SVG MONDE inchangée)
               · Bottom (250px) : chaîne d'injection migrée depuis sous la scène */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", display:"flex", flexDirection:"column"}}>
+            {/* v25.1.8 — GRAND PIPE BIOGAZ EN L : longe tout le côté gauche de VUE 1.
+                · Démarre au sommet (au-dessus du digesteur #1, niveau collecteur Biogaz)
+                · Descend verticalement à GAUCHE, passant à côté de "Production totale"
+                  et "Charge digesteur" (sans les masquer car le pipe est à l'extrême gauche)
+                · Tourne à droite tout en bas (à l'entrée de la cuve tampon)
+                · Animation gasFlow verte si digesting, gris si idle.
+                Position absolue, pointer-events:none → pas de clic intercept. */}
+            <svg
+              viewBox="0 0 60 600"
+              preserveAspectRatio="none"
+              style={{
+                position:"absolute", left:"4px", top:"40px",
+                width:"40px", height:"540px",
+                pointerEvents:"none", zIndex:2, overflow:"visible"
+              }}
+            >
+              {/* Tube enveloppe (couleur foncée + bordure bleue) */}
+              <path d="M 18 0 L 18 540 L 60 540"
+                fill="none" stroke="#1E3848" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M 18 0 L 18 540 L 60 540"
+                fill="none" stroke="rgba(74,158,219,.4)" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" opacity=".5"/>
+              {/* Flux animé biogaz (vert si digestion en cours) */}
+              <path d="M 18 0 L 18 540 L 60 540"
+                fill="none"
+                stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
+                strokeWidth="5"
+                strokeDasharray="14 10" strokeLinecap="round"
+                style={{animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
+              {/* Label "BIOGAZ" vertical le long du pipe */}
+              <text x="9" y="160" textAnchor="middle"
+                fontSize="9" fill={isDigesting?"rgba(102,238,136,.85)":"rgba(74,158,219,.45)"}
+                fontWeight="800" letterSpacing="2"
+                transform="rotate(-90 9 160)">
+                BIOGAZ ↓
+              </text>
+            </svg>
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -5704,34 +5740,9 @@ function DigesteurScene({
             </div>
             {/* ─── BOTTOM : Chaîne d'injection (250px) ─── */}
             {/* v25.1.6 — Migration de la chaîne d'injection ICI (depuis sous la scène).
-                Connecté visuellement aux digesteurs via un pipe biogaz vertical (descend
-                depuis la zone digesteurs vers la cuve tampon de la chaîne d'injection). */}
-            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative"}}>
-              {/* v25.1.7 — Pipe biogaz descendant en L : sort du dôme du digesteur #1
-                  (gauche), descend verticalement, puis tourne à droite vers la cuve tampon
-                  (premier élément de la chaîne d'injection). Position absolue pour être
-                  visuellement collé aux digesteurs sans perturber le layout flex. */}
-              <svg
-                viewBox="0 0 100 80"
-                preserveAspectRatio="none"
-                style={{position:"absolute", left:"22px", top:"-50px", width:"60px", height:"110px", pointerEvents:"none", overflow:"visible"}}
-              >
-                {/* Tube enveloppe */}
-                <path d="M 8 0 L 8 50 L 60 50"
-                  fill="none" stroke="#1E3848" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M 8 0 L 8 50 L 60 50"
-                  fill="none" stroke="rgba(74,158,219,.42)" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" opacity=".4"/>
-                {/* Flux animé (vert biogaz) si digestion en cours */}
-                <path d="M 8 0 L 8 50 L 60 50"
-                  fill="none"
-                  stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
-                  strokeWidth="4"
-                  strokeDasharray="10 8" strokeLinecap="round"
-                  style={{animation: isDigesting ? "gasFlow 1s linear infinite" : "none"}}/>
-                {/* Flèche d'arrivée vers la cuve */}
-                <polygon points="64,50 56,46 56,54"
-                  fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.4)"}/>
-              </svg>
+                v25.1.8 : le pipe biogaz vertical a été déplacé au niveau du wrapper VUE 1
+                (cf. SVG en absolu au-dessus). Il longe tout le côté gauche en L. */}
+            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px 32px", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative"}}>
               {/* Header compact : titre + statut */}
               <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px", padding:"0 4px", marginTop:"4px"}}>
                 <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
