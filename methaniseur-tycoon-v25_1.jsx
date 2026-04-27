@@ -5682,9 +5682,12 @@ function DigesteurScene({
                 Total : 36px supplémentaires pour la zone digesteurs. */}
             <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"6px", height:"100%", padding:"38px 4px 38px 4px"}}>
               {/* ── BAC D'INTRANTS ── */}
-              {/* v25.1.20 — Anchor "bac.bottom" pour que le pipe vis sans fin
-                  puisse se connecter dynamiquement au pied du bac. */}
-              <Anchor name="bac.bottom" side="bottom">
+              {/* v25.1.21 — Anchor "bac.bottom-left" sur le coin BAS-GAUCHE du bac.
+                  v25.1.23 : targetSelector="[data-anchor-point=bac-sprite]" pour cibler
+                  précisément le sprite 72×112 (et NON le wrapper qui inclut le bouton
+                  Déverser sous le bac). */}
+              <Anchor name="bac.bottom-left" side="bottom-left"
+                targetSelector="[data-anchor-point='bac-sprite']">
               <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
@@ -5700,7 +5703,7 @@ function DigesteurScene({
                   }}
                   title="Voir la composition du BAC"
                 >
-                  <div style={{
+                  <div data-anchor-point="bac-sprite" style={{
                     width:"72px", height:"112px", position:"relative",
                     background:"linear-gradient(180deg,rgba(11,22,40,.92),rgba(8,16,32,.96))",
                     border:`2px solid ${stockColor}`, borderRadius:"6px 6px 14px 14px",
@@ -5904,32 +5907,32 @@ function DigesteurScene({
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
                   Digesteur{digesteurs>1?"s":""} ×{digesteurs}
                 </div>
-                {/* v25.1.20 — DigesteurManifold et DigesteurFeeder remplacés par
-                    des <Pipe> ancrés au niveau du wrapper VUE 1 (cf. plus bas).
-                    Les SingleDigesteur exposent maintenant 2 ancres :
-                    · `digesteur.{i}.top`      = sortie biogaz (haut du dôme)
-                    · `digesteur.{i}.top-feed` = entrée intrants (haut latéral) */}
+                {/* v25.1.21 — Collecteur biogaz (au-dessus des digesteurs).
+                    v25.1.23 : toujours rendu (visible même si pas en digestion),
+                    avec rendu éteint si !isDigesting (cf. composant). */}
+                <DigesteurManifold digesteurs={digesteurs} isDigesting={isDigesting} />
                 <div style={{display:"flex", gap:digesteurs===3?"4px":"8px", alignItems:"flex-end", justifyContent:"center"}}>
                   {Array.from({length:digesteurs}).map((_,di) => (
-                    /* v25.1.20 — Wrapper Anchor sur le SingleDigesteur lui-même.
-                       2 ancres pour le même élément : `top` (sortie biogaz) et
-                       `top-feed` (entrée intrants). Sémantique différente, position identique
-                       pour l'instant — pourra évoluer si on ajoute un point d'entrée latéral. */
-                    <Anchor key={di} name={`digesteur.${di}.top`} side="top">
-                      <Anchor name={`digesteur.${di}.top-feed`} side="top">
-                        <SingleDigesteur
-                          index={di}
-                          total={digesteurs}
-                          bubbles={di===0 ? bubbles : []}
-                          chargePct={chargePct}
-                          isDigesting={isDigesting}
-                          bmPerHour={bmPerHour}
-                          isNew={di === digesteurs - 1}
-                        />
-                      </Anchor>
-                    </Anchor>
+                    <SingleDigesteur
+                      key={di}
+                      index={di}
+                      total={digesteurs}
+                      bubbles={di===0 ? bubbles : []}
+                      chargePct={chargePct}
+                      isDigesting={isDigesting}
+                      bmPerHour={bmPerHour}
+                      isNew={di === digesteurs - 1}
+                    />
                   ))}
                 </div>
+                {/* v25.1.21 — Vis sans fin SOUS les digesteurs avec branches montantes.
+                    Wrapper Anchor "feeder.right" sur l'embout droit pour qu'un Pipe
+                    dynamique relie ce point au coin bas-gauche du bac.
+                    v25.1.23 : targetSelector pour cibler l'embout précis dans le SVG. */}
+                <Anchor name="feeder.right" side="right"
+                  targetSelector="[data-anchor-target='feeder-right-embout']">
+                  <DigesteurFeeder digesteurs={digesteurs} pouring={pouring} />
+                </Anchor>
                 <div style={{width:"100%", display:"flex", flexDirection:"column", gap:"5px", marginTop:"2px"}}>
                   <div style={{
                     background: isDigesting?"rgba(74,158,219,.12)":"rgba(255,255,255,.09)",
@@ -6034,22 +6037,16 @@ function DigesteurScene({
                 </div>
               )}
             </div>
-            {/* v25.1.20 — Pipes globaux qui utilisent les ancres déclarées dans la VUE 1.
-                Ils se redessinent automatiquement au resize / changement de layout. */}
-            {/* Pipe COLLECTEUR BIOGAZ : sort du dôme du digesteur #0 vers la gauche,
-                hors champ (suggère un trajet vers la cuve tampon en VUE 1 bottom). */}
-            <Pipe from="digesteur.0.top" to={null} mode="off-left"
-              color="#4A9EDB" flowColor="#27a85a"
-              active={isDigesting} animate="flow-reverse" animSpeed="1.4s"
-              strokeWidth={10}
-              label="◀ Biogaz vers la cuve"/>
-            {/* Pipe VIS SANS FIN : du bac (bottom) vers le digesteur #0 (top) en L-up.
-                Active uniquement pendant le déversement (pouring=true). */}
-            <Pipe from="bac.bottom" to="digesteur.0.top-feed" mode="L-up"
+            {/* v25.1.21 — Le collecteur biogaz est rendu par DigesteurManifold (composant
+                inline avec branches descendantes vers chaque digesteur, extension à gauche
+                hors champ). La vis sans fin sous les digesteurs est rendue par
+                DigesteurFeeder. Reste le pipe DYNAMIQUE qui relie le coin bas-gauche
+                du bac à l'embout droit du DigesteurFeeder — c'est le seul qui demandait
+                du calibrage manuel auparavant. Il utilise maintenant le système d'ancres. */}
+            <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
               color="#E8A020" flowColor="#F5BE50"
               active={pouring} animate="auger" animSpeed=".35s"
-              strokeWidth={10}
-              label={pouring ? "Intrants ↓" : null}/>
+              strokeWidth={9}/>
             </AnchorProvider>
           </div>
 
@@ -6300,13 +6297,14 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
         style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
 
-        {/* Branches vers chaque digesteur */}
+        {/* Branches vers chaque digesteur (v25.1.23 : éteintes si !isDigesting) */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
             <rect x={px-4} y={cY} width={8} height={svgH-cY} rx={3}
               fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
             <rect x={px-2} y={cY+2} width={4} height={svgH-cY-4} rx={2}
-              fill="rgba(102,238,136,.4)" style={{animation:"chargePulse 1.4s ease infinite"}}/>
+              fill={isDigesting ? "rgba(102,238,136,.4)" : "rgba(74,158,219,.15)"}
+              style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
           </React.Fragment>
         ))}
 
@@ -6355,32 +6353,23 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
 //   · S'étend vers la DROITE (vers le bac) au lieu de gauche (collecteur biogaz)
 //   · Couleur ambre/terre (intrants solides) plutôt que vert (gaz)
 function DigesteurFeeder({ digesteurs, pouring }) {
+  // v25.1.21 — Simplifié : seulement le tube horizontal SOUS les digesteurs avec
+  // branches MONTANTES vers le bas de chaque digesteur. La connexion vers le bac
+  // est désormais gérée par un <Pipe> ancré (cf. AnchorProvider de la VUE 1).
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
-  // v25.1.18 — Extension vers la DROITE jusqu'au bac d'intrants.
-  //   · RIGHT_EXT (180px) : longueur horizontale jusqu'au bas du bac
-  //   · UP_EXT (95px)     : remontée verticale jusqu'au pied du bac (coude vers le haut)
-  //   La vis sans fin parcourt l'horizontal puis le vertical.
-  const RIGHT_EXT = 180;
-  const UP_EXT    = 95;
-  const svgW   = totalW + RIGHT_EXT;
   const svgH   = 22;
   const cY     = 8;
   const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
-  // Coordonnées du coude horizontal/vertical
-  const cornerX = totalW + RIGHT_EXT - 8;   // x du virage
-  const lineY   = cY + 4.5;                  // y centre du tube horizontal
 
   return (
-    // Wrapper avec width = totalW (sans extension) pour pas forcer le layout flex.
-    // Hauteur étendue au-dessus pour le coude vertical (overflow:visible).
-    <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
-      <svg width={svgW} height={svgH + UP_EXT} viewBox={`0 ${-UP_EXT} ${svgW} ${svgH + UP_EXT}`}
-        style={{position:"absolute", left:0, top:`${-UP_EXT}px`, overflow:"visible", display:"block"}}>
+    <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`}}>
+      <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`}
+        style={{display:"block", overflow:"visible"}}>
 
-        {/* Branches MONTANTES vers chaque digesteur (depuis le tube vers les cuves) */}
+        {/* Branches MONTANTES vers chaque digesteur */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
             <rect x={px-4} y={0} width={8} height={cY} rx={3}
@@ -6391,33 +6380,26 @@ function DigesteurFeeder({ digesteurs, pouring }) {
           </React.Fragment>
         ))}
 
-        {/* TUBE horizontal (du digesteur #1 jusqu'au coude) — fait office de fond du tube */}
-        <rect x={x1-4} y={cY} width={cornerX - (x1-4)} height={9} rx={4}
+        {/* TUBE horizontal complet */}
+        <rect x={x1-4} y={cY} width={(xN-x1)+8} height={9} rx={4}
           fill="#3a2c10" stroke="rgba(232,160,32,.42)" strokeWidth="1.5"/>
 
-        {/* COUDE vertical (du tube horizontal vers le bac) — descend du bac vers le tube */}
-        <rect x={cornerX} y={cY - UP_EXT} width={9} height={UP_EXT + 9} rx={4}
-          fill="#3a2c10" stroke="rgba(232,160,32,.42)" strokeWidth="1.5"/>
-
-        {/* VIS SANS FIN — path en L : horizontal du tube puis vertical du coude */}
-        {/* Le path part du digesteur #1, va à droite jusqu'au coude, puis remonte vers le bac.
-            Une fois "défilé" via stroke-dashoffset, donne l'illusion d'une vis qui pousse les
-            intrants depuis le bac (haut-droite) vers les digesteurs (bas-gauche). */}
-        <path d={`M ${x1-2} ${lineY} L ${cornerX + 4.5} ${lineY} L ${cornerX + 4.5} ${cY - UP_EXT + 4}`}
-          fill="none" stroke="rgba(245,190,80,.85)" strokeWidth="2.5"
+        {/* VIS SANS FIN : 2 brins défilants pour effet hélicoïdal */}
+        <line x1={x1-2} y1={cY+4.5} x2={xN+2} y2={cY+4.5}
+          stroke="rgba(245,190,80,.85)" strokeWidth="2.5"
           strokeDasharray="3 5" strokeLinecap="round"
           style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
-        {/* Brin secondaire décalé pour effet hélicoïdal */}
-        <path d={`M ${x1-2} ${lineY} L ${cornerX + 4.5} ${lineY} L ${cornerX + 4.5} ${cY - UP_EXT + 4}`}
-          fill="none" stroke="rgba(232,160,32,.6)" strokeWidth="1.5"
+        <line x1={x1-2} y1={cY+4.5} x2={xN+2} y2={cY+4.5}
+          stroke="rgba(232,160,32,.6)" strokeWidth="1.5"
           strokeDasharray="2 6" strokeDashoffset="3" strokeLinecap="round"
           style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
 
-        {/* Embout HAUT (connexion au pied du bac) — petit collier de raccordement */}
-        <rect x={cornerX - 2} y={cY - UP_EXT - 2} width={13} height={6} rx={2}
-          fill="#5a4520" stroke="rgba(232,160,32,.6)" strokeWidth=".8"/>
+        {/* Embout DROIT — point de raccordement vers le bac (sera ciblé par l'ancre feeder.right) */}
+        <rect x={xN+2} y={cY-2} width={6} height={13} rx={2}
+          fill="#5a4520" stroke="rgba(232,160,32,.6)" strokeWidth=".8"
+          data-anchor-target="feeder-right-embout"/>
 
-        {/* Badge "Intrants" centré sur le tube horizontal (visible si > 1 digesteur) */}
+        {/* Badge "Intrants" centré sur le tube */}
         {digesteurs > 1 && (
           <React.Fragment>
             <rect x={(x1+xN)/2-22} y={cY+13} width={44} height={9} rx={4}

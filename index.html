@@ -5708,10 +5708,12 @@ function DigesteurScene({
                 Total : 36px supplémentaires pour la zone digesteurs. */}
             <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"6px", height:"100%", padding:"38px 4px 38px 4px"}}>
               {/* ── BAC D'INTRANTS ── */}
-              {/* v25.1.21 — Anchor "bac.bottom-left" sur le coin BAS-GAUCHE du bac
-                  pour que le pipe vis sans fin se connecte précisément à ce coin
-                  (le tube vient de la gauche et arrive en bas du bac). */}
-              <Anchor name="bac.bottom-left" side="bottom-left">
+              {/* v25.1.21 — Anchor "bac.bottom-left" sur le coin BAS-GAUCHE du bac.
+                  v25.1.23 : targetSelector="[data-anchor-point=bac-sprite]" pour cibler
+                  précisément le sprite 72×112 (et NON le wrapper qui inclut le bouton
+                  Déverser sous le bac). */}
+              <Anchor name="bac.bottom-left" side="bottom-left"
+                targetSelector="[data-anchor-point='bac-sprite']">
               <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
@@ -5727,7 +5729,7 @@ function DigesteurScene({
                   }}
                   title="Voir la composition du BAC"
                 >
-                  <div style={{
+                  <div data-anchor-point="bac-sprite" style={{
                     width:"72px", height:"112px", position:"relative",
                     background:"linear-gradient(180deg,rgba(11,22,40,.92),rgba(8,16,32,.96))",
                     border:`2px solid ${stockColor}`, borderRadius:"6px 6px 14px 14px",
@@ -5931,8 +5933,10 @@ function DigesteurScene({
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
                   Digesteur{digesteurs>1?"s":""} ×{digesteurs}
                 </div>
-                {/* v25.1.21 — Collecteur biogaz (au-dessus des digesteurs) */}
-                {isDigesting && (<DigesteurManifold digesteurs={digesteurs} isDigesting={isDigesting} />)}
+                {/* v25.1.21 — Collecteur biogaz (au-dessus des digesteurs).
+                    v25.1.23 : toujours rendu (visible même si pas en digestion),
+                    avec rendu éteint si !isDigesting (cf. composant). */}
+                <DigesteurManifold digesteurs={digesteurs} isDigesting={isDigesting} />
                 <div style={{display:"flex", gap:digesteurs===3?"4px":"8px", alignItems:"flex-end", justifyContent:"center"}}>
                   {Array.from({length:digesteurs}).map((_,di) => (
                     <SingleDigesteur
@@ -5949,8 +5953,10 @@ function DigesteurScene({
                 </div>
                 {/* v25.1.21 — Vis sans fin SOUS les digesteurs avec branches montantes.
                     Wrapper Anchor "feeder.right" sur l'embout droit pour qu'un Pipe
-                    dynamique relie ce point au coin bas-gauche du bac. */}
-                <Anchor name="feeder.right" side="right">
+                    dynamique relie ce point au coin bas-gauche du bac.
+                    v25.1.23 : targetSelector pour cibler l'embout précis dans le SVG. */}
+                <Anchor name="feeder.right" side="right"
+                  targetSelector="[data-anchor-target='feeder-right-embout']">
                   <DigesteurFeeder digesteurs={digesteurs} pouring={pouring} />
                 </Anchor>
                 <div style={{width:"100%", display:"flex", flexDirection:"column", gap:"5px", marginTop:"2px"}}>
@@ -6317,13 +6323,14 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
         style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
 
-        {/* Branches vers chaque digesteur */}
+        {/* Branches vers chaque digesteur (v25.1.23 : éteintes si !isDigesting) */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
             <rect x={px-4} y={cY} width={8} height={svgH-cY} rx={3}
               fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
             <rect x={px-2} y={cY+2} width={4} height={svgH-cY-4} rx={2}
-              fill="rgba(102,238,136,.4)" style={{animation:"chargePulse 1.4s ease infinite"}}/>
+              fill={isDigesting ? "rgba(102,238,136,.4)" : "rgba(74,158,219,.15)"}
+              style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
           </React.Fragment>
         ))}
 
