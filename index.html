@@ -5706,22 +5706,34 @@ function DigesteurScene({
             {/* v25.1.6 — Migration de la chaîne d'injection ICI (depuis sous la scène).
                 Connecté visuellement aux digesteurs via un pipe biogaz vertical (descend
                 depuis la zone digesteurs vers la cuve tampon de la chaîne d'injection). */}
-            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px", display:"flex", flexDirection:"column", overflow:"hidden"}}>
-              {/* Pipe biogaz visuel : sort des digesteurs (haut) et descend vers la cuve */}
-              <div style={{display:"flex", justifyContent:"flex-start", paddingLeft:"38px", marginTop:"-26px", marginBottom:"-4px", pointerEvents:"none"}}>
-                <div style={{
-                  width:"4px", height:"24px",
-                  background: isDigesting ? "linear-gradient(180deg, rgba(74,158,219,.9), rgba(74,158,219,.25))" : "rgba(74,158,219,.18)",
-                  borderRadius:"2px",
-                  boxShadow: isDigesting ? "0 0 10px rgba(74,158,219,.6)" : "none",
-                  transition:"all .4s"
-                }}/>
-              </div>
-              <div style={{fontSize:"9px", color:"rgba(74,158,219,.6)", textAlign:"left", paddingLeft:"30px", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".05em", fontWeight:700}}>
-                ↓ Biogaz produit
-              </div>
+            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative"}}>
+              {/* v25.1.7 — Pipe biogaz descendant en L : sort du dôme du digesteur #1
+                  (gauche), descend verticalement, puis tourne à droite vers la cuve tampon
+                  (premier élément de la chaîne d'injection). Position absolue pour être
+                  visuellement collé aux digesteurs sans perturber le layout flex. */}
+              <svg
+                viewBox="0 0 100 80"
+                preserveAspectRatio="none"
+                style={{position:"absolute", left:"22px", top:"-50px", width:"60px", height:"110px", pointerEvents:"none", overflow:"visible"}}
+              >
+                {/* Tube enveloppe */}
+                <path d="M 8 0 L 8 50 L 60 50"
+                  fill="none" stroke="#1E3848" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M 8 0 L 8 50 L 60 50"
+                  fill="none" stroke="rgba(74,158,219,.42)" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" opacity=".4"/>
+                {/* Flux animé (vert biogaz) si digestion en cours */}
+                <path d="M 8 0 L 8 50 L 60 50"
+                  fill="none"
+                  stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
+                  strokeWidth="4"
+                  strokeDasharray="10 8" strokeLinecap="round"
+                  style={{animation: isDigesting ? "gasFlow 1s linear infinite" : "none"}}/>
+                {/* Flèche d'arrivée vers la cuve */}
+                <polygon points="64,50 56,46 56,54"
+                  fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.4)"}/>
+              </svg>
               {/* Header compact : titre + statut */}
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px", padding:"0 4px"}}>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px", padding:"0 4px", marginTop:"4px"}}>
                 <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
                 {injected
                   ? <span style={{fontSize:"10px", fontWeight:700, color:"#4A9EDB", padding:"2px 8px", borderRadius:"20px", background:"rgba(74,158,219,.17)"}}>✅ Raccordé</span>
@@ -5974,8 +5986,8 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
-  const extraW = 44;
-  const svgW   = totalW + extraW;
+  // v25.1.7 : extraW retiré (servait pour la flèche → épurateur, supprimée).
+  const svgW   = totalW;
   const svgH   = 38;
   const cY     = 14;
   const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
@@ -5983,7 +5995,7 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
 
   return (
     <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{overflow:"visible", display:"block", marginRight:`-${extraW}px`}}>
+      style={{overflow:"visible", display:"block"}}>
 
       {/* Branches vers chaque digesteur */}
       {centers.map((px,i) => (
@@ -6003,15 +6015,9 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
         strokeDasharray="10 8" strokeLinecap="round"
         style={{animation:"gasFlow 1s linear infinite"}}/>
 
-      {/* Sortie → Épurateur */}
-      <rect x={xN} y={cY-4} width={extraW-4} height={8} rx={4}
-        fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
-      <line x1={xN+4} y1={cY} x2={totalW+extraW-12} y2={cY}
-        stroke="rgba(102,238,136,.6)" strokeWidth="4"
-        strokeDasharray="10 8" strokeLinecap="round"
-        style={{animation:"gasFlow .8s linear infinite"}}/>
-      <polygon points={`${totalW+extraW+2},${cY} ${totalW+extraW-8},${cY-5} ${totalW+extraW-8},${cY+5}`}
-        fill="#4A9EDB" opacity=".85"/>
+      {/* v25.1.7 — Sortie horizontale → épurateur SUPPRIMÉE.
+          Le biogaz collecté descend désormais via un pipe vertical (en L) côté gauche,
+          ajouté au niveau du wrapper VUE 1 (cf. .biogas-down-pipe). */}
 
       {/* Badge Biogaz */}
       {digesteurs > 1 && (
