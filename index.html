@@ -4042,7 +4042,7 @@ const WORLD = {
   DUMP_X_RIGHT: 415,               // v25.1.3 : 396→415 (recul de 19 SVG pour que le sprite rotaté ne chevauche pas le bac)
   LANE_TOP:     15,                // y lane retour (tracteur chargé)
   LANE_BOT:     253,               // y lane aller (tracteur vide)
-  DUMP_Y:       120,               // v25.1.3 : 135→120 (sprite tracteur fait 47 SVG ; il faut DUMP_Y ≤ 123 pour que le bottom reste au-dessus du bac top à y=150)
+  DUMP_Y:       65,                // v25.1.4 : 120→65. Ratio CSS/SVG vertical=1.21 → 65 SVG = ~79px CSS depuis top de scène, soit largement au-dessus du bac (qui commence à ~120px CSS avec son label).
   V1_V2:        400,               // frontière vue 1 / vue 2
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
