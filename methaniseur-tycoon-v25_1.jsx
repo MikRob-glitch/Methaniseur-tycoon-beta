@@ -2523,6 +2523,7 @@ function Game({ username, region, maia }) {
         @keyframes paddle-osc{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
         @keyframes paddle-osc-inv{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
         @keyframes gasFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+        @keyframes gasFlowReverse{from{stroke-dashoffset:0}to{stroke-dashoffset:20}}
         @keyframes gasBubbleSvg{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(-32px);opacity:0}}
       `}</style>
 
@@ -5385,39 +5386,8 @@ function DigesteurScene({
               · Top (350px) : digesteurs+bac+tracteur (zone scène SVG MONDE inchangée)
               · Bottom (250px) : chaîne d'injection migrée depuis sous la scène */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", display:"flex", flexDirection:"column"}}>
-            {/* v25.1.10 — PIPE TOP : sort du collecteur biogaz horizontal vers la GAUCHE.
-                Suggère un trajet hors champ qui mène à la cuve tampon (en VUE 1 bottom).
-                Position absolue, niveau du collecteur biogaz au-dessus du digesteur #1. */}
-            <svg
-              width="180" height="40"
-              viewBox="0 0 180 40"
-              style={{
-                position:"absolute", left:"-90px", top:"55px",
-                pointerEvents:"none", zIndex:2, overflow:"visible"
-              }}
-            >
-              {/* Tube enveloppe horizontal */}
-              <path d="M 0 20 L 180 20"
-                fill="none" stroke="#1E3848" strokeWidth="14" strokeLinecap="round"/>
-              <path d="M 0 20 L 180 20"
-                fill="none" stroke="rgba(74,158,219,.4)" strokeWidth="15" strokeLinecap="round" opacity=".5"/>
-              {/* Flux animé (sens : digesteur → gauche, donc dasharray inversé via animation) */}
-              <path d="M 180 20 L 0 20"
-                fill="none"
-                stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
-                strokeWidth="5"
-                strokeDasharray="14 10" strokeLinecap="round"
-                style={{animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
-              {/* Flèche pointant vers la GAUCHE (sortie hors champ) */}
-              <polygon points="0,20 12,14 12,26"
-                fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
-              {/* Label "Biogaz vers la cuve ↓" */}
-              <text x="60" y="14"
-                fontSize="9" fill={isDigesting?"rgba(102,238,136,.85)":"rgba(74,158,219,.5)"}
-                fontWeight="700" letterSpacing=".5">
-                Biogaz vers la cuve ↓
-              </text>
-            </svg>
+            {/* v25.1.11 — Pipe TOP RETIRÉ : remplacé par l'extension du tube collecteur
+                (DigesteurManifold prolonge maintenant jusqu'au bord gauche de l'écran). */}
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -6000,16 +5970,20 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
-  // v25.1.7 : extraW retiré (servait pour la flèche → épurateur, supprimée).
-  const svgW   = totalW;
+  // v25.1.11 : EXTENSION vers la GAUCHE pour que le tube collecteur sorte de l'écran.
+  //   - LEFT_EXT (140px de tube qui prolonge à gauche jusqu'au bord)
+  //   - le SVG démarre à x=-LEFT_EXT côté display (via marginLeft négatif)
+  const LEFT_EXT = 140;
+  const svgW   = totalW + LEFT_EXT;
   const svgH   = 38;
   const cY     = 14;
-  const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
+  // Décale tous les centers de +LEFT_EXT pour réserver l'espace à gauche
+  const centers = Array.from({length:digesteurs}, (_,i) => LEFT_EXT + i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
 
   return (
     <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
-      style={{overflow:"visible", display:"block"}}>
+      style={{overflow:"visible", display:"block", marginLeft:`-${LEFT_EXT}px`}}>
 
       {/* Branches vers chaque digesteur */}
       {centers.map((px,i) => (
@@ -6021,19 +5995,27 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
         </React.Fragment>
       ))}
 
-      {/* Tube collecteur horizontal */}
-      <rect x={x1-4} y={cY-4} width={xN-x1+8} height={8} rx={4}
+      {/* v25.1.11 — Tube collecteur ÉTENDU vers la gauche (x=0 = bord écran)
+          jusqu'aux digesteurs (xN). L'animation va vers la GAUCHE (gasFlowReverse). */}
+      <rect x={0} y={cY-4} width={xN-0+4} height={8} rx={4}
         fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
-      <line x1={x1} y1={cY} x2={xN} y2={cY}
+      <line x1={0} y1={cY} x2={xN} y2={cY}
         stroke="rgba(102,238,136,.6)" strokeWidth="4"
         strokeDasharray="10 8" strokeLinecap="round"
-        style={{animation:"gasFlow 1s linear infinite"}}/>
+        style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
 
-      {/* v25.1.7 — Sortie horizontale → épurateur SUPPRIMÉE.
-          Le biogaz collecté descend désormais via un pipe vertical (en L) côté gauche,
-          ajouté au niveau du wrapper VUE 1 (cf. .biogas-down-pipe). */}
+      {/* Flèche pointant vers la GAUCHE (sortie hors champ vers la cuve) */}
+      <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
+        fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
 
-      {/* Badge Biogaz */}
+      {/* Label "Biogaz vers la cuve ↓" au-dessus de l'extension */}
+      <text x={LEFT_EXT/2} y={cY-9} textAnchor="middle"
+        fontSize="8" fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}
+        fontWeight="700" letterSpacing=".3">
+        Biogaz vers la cuve ↓
+      </text>
+
+      {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
       {digesteurs > 1 && (
         <React.Fragment>
           <rect x={(x1+xN)/2-19} y={0} width={38} height={12} rx={6}
