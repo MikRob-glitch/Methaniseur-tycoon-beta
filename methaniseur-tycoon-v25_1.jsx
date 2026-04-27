@@ -4002,23 +4002,21 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 // v23.15 : LANE_LEFT décalée de 10 → 30 pour que le tracteur pivoté à 90° soit
 //          entièrement visible (le tracteur fait 48 de large après rotation).
 // v25.1 — INVERSION DU LAYOUT VUE 1 :
-//   Avant : BAC à gauche, DIGESTEURS à droite, tracteur décharge en LANE_LEFT (x=30)
-//   Après : DIGESTEURS à gauche, BAC à droite (côté gisement), tracteur décharge
-//           AU-DESSUS du centre du bac (DUMP_X = centre horizontal du bac).
+//   DIGESTEURS à gauche, BAC à droite (côté gisement), tracteur décharge AU-DESSUS du bac.
 //
-//   Path en U complet conçu pour NE JAMAIS traverser le bac visuellement :
-//     - DUMP_X (346)       = au-dessus du centre du bac (point de décharge)
-//     - DUMP_X_RIGHT (396) = lane verticale À DROITE du bac (côté gisement, vers VUE 2)
-//     - Le tracteur sort en glissant à droite (au-dessus du bac), descend à droite du bac
-//     - Lane top/bot continuent vers VUE 2 (zones d'approvisionnement)
-//   Avantage : pas de traversée VUE 1, le tracteur reste au plus court entre bac et zones.
+//   Path en U complet conçu pour NE JAMAIS chevaucher le bac visuellement.
+//   IMPORTANT : le sprite tracteur fait ~47 SVG de hauteur et ~73 SVG de largeur (avec
+//   pivot à 48,24). Les valeurs ci-dessous incluent une marge pour cette taille :
+//     - DUMP_Y (120)       : sprite bottom à y=147, bac top à y≈150 → marge 3 SVG
+//     - DUMP_X_RIGHT (415) : sprite (rotaté 90° en montée) gauche à x=388, bac droit à x≈394 → marge 6 SVG
+//     - DUMP_X (346)       : centre horizontal du bac (point de décharge)
 const WORLD = {
   W: 800, H: 280,
-  DUMP_X:       346,               // v25.1 : centre horizontal du bac (point de décharge AU-DESSUS du bac)
-  DUMP_X_RIGHT: 396,               // v25.1 : lane verticale à DROITE du bac (côté zones, sans traverser le bac)
+  DUMP_X:       346,               // centre horizontal du bac (point de décharge AU-DESSUS du bac)
+  DUMP_X_RIGHT: 415,               // v25.1.3 : 396→415 (recul de 19 SVG pour que le sprite rotaté ne chevauche pas le bac)
   LANE_TOP:     15,                // y lane retour (tracteur chargé)
   LANE_BOT:     253,               // y lane aller (tracteur vide)
-  DUMP_Y:       135,               // v25.1 : juste au-dessus du top du bac (~150 SVG)
+  DUMP_Y:       120,               // v25.1.3 : 135→120 (sprite tracteur fait 47 SVG ; il faut DUMP_Y ≤ 123 pour que le bottom reste au-dessus du bac top à y=150)
   V1_V2:        400,               // frontière vue 1 / vue 2
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
