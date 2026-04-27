@@ -3069,6 +3069,14 @@ function Game({ username, region, maia }) {
             setStockComposition={setStockComposition}
             stockComposition={stockComposition}
             stockYield={stockYield}
+            // v25.1.6 — Props nécessaires pour la chaîne d'injection migrée en VUE 1 bottom
+            // et le placeholder réseau aval en VUE 2 bottom (chantier C pré-câblé).
+            unlockAnim={unlockAnim}
+            bufferPct={bufferPct}
+            bm={bm}
+            burnRate={burnRate}
+            gnvStations={gnvStations}
+            canConnect={canConnect}
           />
 
           {/* v25.1.5 — Compteur biométhane retiré (cf. demande Mika : info pas globale,
@@ -5270,7 +5278,9 @@ function DigesteurScene({
   // v25.0 — yield engine (mix pondéré stock/charge)
   stockRef, stockYieldRef, setStockYield, setStockComposition,
   // v25.0.9 — composition par intrant (popup pédago)
-  stockComposition, stockYield
+  stockComposition, stockYield,
+  // v25.1.6 — Props pour chaîne d'injection migrée + placeholder réseau aval
+  unlockAnim, bufferPct, bm, burnRate, gnvStations, canConnect,
 }) {
   // v25.0.9 — popup détail composition BAC (pédagogie yield mix)
   const [bacPopupOpen, setBacPopupOpen] = useState(false);
