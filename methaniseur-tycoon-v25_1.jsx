@@ -5240,6 +5240,235 @@ function ZoneBuilding({ label, locked, active, icon }) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// ANCHOR SYSTEM (v25.1.20)
+// ────────────────────────────────────────────────────────────────────────────
+// Permet aux composants UI (Bac, Digesteur, Cuve...) d'exposer des "points de
+// connexion" nommés. Le composant <Pipe> les lit dynamiquement via
+// getBoundingClientRect() et se dessine entre eux. Plus besoin d'estimer les
+// pixels manuellement à chaque modification.
+//
+// Usage :
+//   <AnchorProvider>
+//     <Anchor name="bac.bottom"><div ref>...le bac...</div></Anchor>
+//     <Anchor name="digesteur.0.top"><div ref>...le digesteur...</div></Anchor>
+//     <Pipe from="bac.bottom" to="digesteur.0.top" mode="L-down" />
+//   </AnchorProvider>
+//
+// Modes de Pipe : "L-down" (coude vers le bas), "L-up" (coude vers le haut),
+//                 "straight" (ligne droite), "off-left" (sort à gauche),
+//                 "off-right" (sort à droite).
+// ════════════════════════════════════════════════════════════════════════════
+
+const AnchorContext = createContext(null);
+
+function AnchorProvider({ children }) {
+  // Wrapper transparent : display:contents ne crée pas de box, donc les enfants
+  // s'inscrivent directement dans le layout du parent (flex VUE 1 dans notre cas).
+  // MAIS pour avoir une coords-base pour getBoundingClientRect, on a besoin d'un
+  // élément DOM. Solution : un wrapper position:absolute qui couvre tout le parent
+  // et sert juste de référentiel pour les calculs (les pipes y sont dessinés).
+  const containerRef = useRef(null);
+  const registryRef = useRef(new Map());
+  const [tick, setTick] = useState(0);
+
+  const register = useCallback((name, ref, side) => {
+    registryRef.current.set(name, { ref, side });
+    setTick(t => t + 1);
+    return () => {
+      registryRef.current.delete(name);
+      setTick(t => t + 1);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setTick(t => t + 1);
+    window.addEventListener('resize', onResize);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (ro) ro.disconnect();
+    };
+  }, []);
+
+  // Le containerRef pointe sur le PARENT du AnchorProvider (l'ancêtre flex).
+  // On l'attache via un effet qui remonte le DOM.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (sentinelRef.current && sentinelRef.current.parentElement) {
+      containerRef.current = sentinelRef.current.parentElement;
+      setTick(t => t + 1);
+    }
+  }, []);
+
+  const getAnchor = useCallback((name) => {
+    const entry = registryRef.current.get(name);
+    if (!entry || !entry.ref.current || !containerRef.current) return null;
+    const elBox = entry.ref.current.getBoundingClientRect();
+    const ctBox = containerRef.current.getBoundingClientRect();
+    // Si l'élément n'a pas de taille (display:contents par exemple), elBox sera 0.
+    if (elBox.width === 0 && elBox.height === 0) return null;
+    const side = entry.side || 'center';
+    let x, y;
+    switch (side) {
+      case 'top':         x = elBox.left + elBox.width/2; y = elBox.top; break;
+      case 'bottom':      x = elBox.left + elBox.width/2; y = elBox.bottom; break;
+      case 'left':        x = elBox.left;                 y = elBox.top + elBox.height/2; break;
+      case 'right':       x = elBox.right;                y = elBox.top + elBox.height/2; break;
+      case 'top-left':    x = elBox.left;                 y = elBox.top; break;
+      case 'top-right':   x = elBox.right;                y = elBox.top; break;
+      case 'bottom-left': x = elBox.left;                 y = elBox.bottom; break;
+      case 'bottom-right':x = elBox.right;                y = elBox.bottom; break;
+      default:            x = elBox.left + elBox.width/2; y = elBox.top + elBox.height/2;
+    }
+    return { x: x - ctBox.left, y: y - ctBox.top, side, _tick: tick };
+  }, [tick]);
+
+  return (
+    <AnchorContext.Provider value={{ register, getAnchor, containerRef }}>
+      {/* Sentinelle invisible : sert juste à attraper le parent pour containerRef.
+          Pas de display:contents (qui casserait le sentinel itself). */}
+      <span ref={sentinelRef} style={{display:"none"}}/>
+      {children}
+    </AnchorContext.Provider>
+  );
+}
+
+// Hook pour qu'un composant expose une ancre
+function useAnchor(name, side) {
+  const ctx = useContext(AnchorContext);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ctx) return;
+    return ctx.register(name, ref, side);
+  }, [ctx, name, side]);
+  return ref;
+}
+
+// Composant <Anchor> qui wrappe un enfant et l'enregistre comme point de connexion.
+// IMPORTANT : on utilise display:contents par défaut pour que l'Anchor soit
+// "transparente" au layout du parent. Mais comme display:contents fait que le div
+// lui-même n'a pas de bounding box, on bascule sur le bbox du PREMIER ENFANT.
+function Anchor({ name, side, style, children }) {
+  const ref = useRef(null);
+  const ctx = useContext(AnchorContext);
+  // Wrapper qui pointe sur le premier enfant DOM via firstElementChild
+  // (le ref principal pointe sur le wrapper, mais on registre une "shim ref"
+  // qui retourne le premier enfant pour la mesure).
+  useEffect(() => {
+    if (!ctx) return;
+    const shimRef = {
+      get current() {
+        return ref.current?.firstElementChild || ref.current;
+      }
+    };
+    return ctx.register(name, shimRef, side);
+  }, [ctx, name, side]);
+  return <div ref={ref} style={{display:"contents", ...style}}>{children}</div>;
+}
+
+// ─── PIPE — dessine un tube SVG entre deux ancres nommées ────────────────────
+// Modes : "L-down"  : du A descend puis va vers B (A en haut, B en bas-droite/gauche)
+//         "L-up"    : du A va horizontal puis monte vers B (A en bas, B en haut)
+//         "U-down"  : du A descend, va horizontal sous, remonte à B
+//         "straight": ligne droite (horiz/vert auto-détecté)
+//         "off-left": part de A et sort hors champ à gauche (avec flèche)
+function Pipe({ from, to, mode = "straight", color = "#4A9EDB", flowColor = "#27a85a",
+                active = true, animate = "flow", animSpeed = "1.4s",
+                strokeWidth = 12, label = null, labelOffset = -10, zIndex = 2 }) {
+  const ctx = useContext(AnchorContext);
+  if (!ctx) return null;
+  const A = ctx.getAnchor(from);
+  // "off-left"/"off-right" n'ont pas de B, on synthétise une cible hors champ
+  let B = null;
+  if (typeof to === 'string') B = ctx.getAnchor(to);
+  else if (to) B = to;
+  if (!A) return null;
+
+  // Calcul du path selon le mode
+  let pathD = "";
+  let arrowAngle = 0;
+  let arrowPos = null;
+  let labelPos = null;
+
+  if (mode === "off-left") {
+    // Part de A et sort à gauche (x = -50)
+    const xEnd = -50;
+    pathD = `M ${A.x} ${A.y} L ${xEnd} ${A.y}`;
+    arrowPos = { x: xEnd + 6, y: A.y };
+    arrowAngle = 180;
+    labelPos = { x: (A.x + xEnd) / 2, y: A.y + labelOffset };
+  } else if (mode === "off-right") {
+    const xEnd = (ctx.containerRef.current?.getBoundingClientRect().width || 400) + 50;
+    pathD = `M ${A.x} ${A.y} L ${xEnd} ${A.y}`;
+    arrowPos = { x: xEnd - 6, y: A.y };
+    arrowAngle = 0;
+    labelPos = { x: (A.x + xEnd) / 2, y: A.y + labelOffset };
+  } else if (B) {
+    if (mode === "straight") {
+      pathD = `M ${A.x} ${A.y} L ${B.x} ${B.y}`;
+      arrowPos = { x: B.x, y: B.y };
+      arrowAngle = Math.atan2(B.y - A.y, B.x - A.x) * 180 / Math.PI;
+      labelPos = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 + labelOffset };
+    } else if (mode === "L-down") {
+      // A en haut → descend puis horizontal vers B
+      pathD = `M ${A.x} ${A.y} L ${A.x} ${B.y} L ${B.x} ${B.y}`;
+      arrowPos = { x: B.x, y: B.y };
+      arrowAngle = B.x > A.x ? 0 : 180;
+      labelPos = { x: A.x + (B.x - A.x) / 2, y: B.y + labelOffset };
+    } else if (mode === "L-up") {
+      // A en bas → horizontal vers B.x puis monte vers B
+      pathD = `M ${A.x} ${A.y} L ${B.x} ${A.y} L ${B.x} ${B.y}`;
+      arrowPos = { x: B.x, y: B.y };
+      arrowAngle = -90;
+      labelPos = { x: (A.x + B.x) / 2, y: A.y + labelOffset };
+    }
+  }
+  if (!pathD) return null;
+
+  const animationName = animate === "flow" ? "gasFlow"
+                      : animate === "flow-reverse" ? "gasFlowReverse"
+                      : animate === "auger" ? "augerSpin"
+                      : "none";
+
+  return (
+    <svg style={{
+      position:"absolute", inset:0, width:"100%", height:"100%",
+      pointerEvents:"none", zIndex, overflow:"visible"
+    }}>
+      {/* Tube enveloppe */}
+      <path d={pathD}
+        fill="none" stroke="#1E3848" strokeWidth={strokeWidth}
+        strokeLinecap="round" strokeLinejoin="round"/>
+      <path d={pathD}
+        fill="none" stroke={`${color}66`} strokeWidth={strokeWidth+1}
+        strokeLinecap="round" strokeLinejoin="round" opacity=".4"/>
+      {/* Flux animé */}
+      <path d={pathD}
+        fill="none"
+        stroke={active ? flowColor : `${color}33`}
+        strokeWidth={Math.max(3, strokeWidth - 7)}
+        strokeDasharray="12 8" strokeLinecap="round"
+        style={{animation: active && animationName !== "none" ? `${animationName} ${animSpeed} linear infinite` : "none"}}/>
+      {/* Flèche d'arrivée */}
+      {arrowPos && (
+        <polygon points="0,-6 10,0 0,6"
+          fill={active ? flowColor : `${color}66`}
+          transform={`translate(${arrowPos.x},${arrowPos.y}) rotate(${arrowAngle})`}/>
+      )}
+      {/* Label */}
+      {label && labelPos && (
+        <text x={labelPos.x} y={labelPos.y} textAnchor="middle"
+          fontSize="10" fontWeight="700" letterSpacing=".3"
+          fill={active ? flowColor : `${color}99`}>
+          {label}
+        </text>
+      )}
+    </svg>
+  );
+}
+
 // ─── DIGESTEUR SCENE — viewport 2 vues swipeable + ville ─────────────────────
 function DigesteurScene({
   digesteurs, sceneZoomAnim, bubbles, chargePct, chargeMaxEff, isDigesting,
@@ -5391,8 +5620,10 @@ function DigesteurScene({
               car scène = 200%). Sans ça, sur Android la VUE 1 prenait > 50% et poussait la VUE 2
               hors écran. */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
-            {/* v25.1.11 — Pipe TOP RETIRÉ : remplacé par l'extension du tube collecteur
-                (DigesteurManifold prolonge maintenant jusqu'au bord gauche de l'écran). */}
+            {/* v25.1.20 — AnchorProvider englobe toute la VUE 1 : permet aux pipes
+                de se positionner dynamiquement entre bac, digesteurs, cuve, etc.
+                Plus besoin d'estimer les pixels manuellement. */}
+            <AnchorProvider>
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -5407,6 +5638,9 @@ function DigesteurScene({
                 Total : 36px supplémentaires pour la zone digesteurs. */}
             <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"6px", height:"100%", padding:"38px 4px 38px 4px"}}>
               {/* ── BAC D'INTRANTS ── */}
+              {/* v25.1.20 — Anchor "bac.bottom" pour que le pipe vis sans fin
+                  puisse se connecter dynamiquement au pied du bac. */}
+              <Anchor name="bac.bottom" side="bottom">
               <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
@@ -5414,12 +5648,10 @@ function DigesteurScene({
                 <div
                   onClick={() => setBacPopupOpen(true)}
                   style={{
-                    /* v25.1 : pivot et déversement inversés (le bac penche vers la GAUCHE
-                       maintenant que le digesteur est à gauche). transformOrigin bottom right
-                       + signes négatifs pour binRotate/binTransX. */
-                    transformOrigin:"bottom right",
-                    transform:`rotate(${-binRotate}deg) translateX(${-binTransX}px)`,
-                    transition: pouring ? "none" : "transform .4s ease",
+                    /* v25.1.18 — Animation de bascule du bac SUPPRIMÉE.
+                       Le déversement est désormais matérialisé par la vis sans fin
+                       du DigesteurFeeder (sous les digesteurs). Le bac reste immobile,
+                       la vis qui tourne suffit à indiquer le flux. */
                     cursor: "pointer"
                   }}
                   title="Voir la composition du BAC"
@@ -5608,26 +5840,15 @@ function DigesteurScene({
                 </div>
               )}
 
+              </Anchor>
               {/* ── PIPE BAC → DIGESTEURS ── */}
               {/* v25.1.6 : label "Intrants" pour clarifier qu'il s'agit du flux solide
                   bac→digesteurs (pas du biogaz ; le biogaz lui sort par le bas vers la cuve tampon). */}
               {/* v25.1.17 : largeur 28→22px (resserrement) */}
-              <div style={{flex:"0 0 22px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px", gap:"2px"}}>
-                <div style={{fontSize:"7px", color:pouring?"rgba(255,255,255,.55)":"rgba(255,255,255,.25)", textTransform:"uppercase", letterSpacing:".04em", fontWeight:700, transition:"color .3s"}}>
-                  Intrants
-                </div>
-                <div style={{
-                  width:"24px", height:"10px", borderRadius:"5px",
-                  background: pouring ? "linear-gradient(90deg,#3A8ECB,#6DB5EC,#3A8ECB)" : "rgba(74,158,219,.14)",
-                  boxShadow: pouring ? "0 0 14px rgba(74,158,219,.7)" : "none",
-                  transition:"all .3s", overflow:"hidden", position:"relative"
-                }}>
-                  {pouring && [0,1].map(i => (
-                    <div key={i} style={{position:"absolute",top:"2px",left:`${15+i*35}%`,width:"6px",height:"5px",borderRadius:"3px",background:"rgba(255,255,255,.5)",animation:`flowDot .6s ease ${i*.2}s infinite`}}/>
-                  ))}
-                </div>
-                <div style={{fontSize:"14px", opacity:pouring?1:.25, transition:"opacity .3s", filter:pouring?"drop-shadow(0 0 6px rgba(74,158,219,.8))":"none"}}>←</div>
-              </div>
+              {/* v25.1.20 : pipe inline supprimé, remplacé par <Pipe from="bac.bottom"
+                  to="digesteur.0.top-feed" mode="L-up"/> au niveau de la VUE 1.
+                  On garde un placeholder vide pour préserver la grille flex. */}
+              <div style={{flex:"0 0 22px"}}/>
 
               {/* ── DIGESTEURS ── */}
               <div style={{
@@ -5639,23 +5860,35 @@ function DigesteurScene({
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
                   Digesteur{digesteurs>1?"s":""} ×{digesteurs}
                 </div>
-                {isDigesting && (<DigesteurManifold digesteurs={digesteurs} isDigesting={isDigesting} />)}
+                {/* v25.1.20 — DigesteurManifold et DigesteurFeeder remplacés par
+                    des <Pipe> ancrés au niveau du wrapper VUE 1 (cf. plus bas).
+                    Les SingleDigesteur exposent maintenant 2 ancres :
+                    · `digesteur.{i}.top`      = sortie biogaz (haut du dôme)
+                    · `digesteur.{i}.top-feed` = entrée intrants (haut latéral) */}
                 <div style={{display:"flex", gap:digesteurs===3?"4px":"8px", alignItems:"flex-end", justifyContent:"center"}}>
                   {Array.from({length:digesteurs}).map((_,di) => (
-                    <SingleDigesteur
-                      key={di}
-                      index={di}
-                      total={digesteurs}
-                      bubbles={di===0 ? bubbles : []}
-                      chargePct={chargePct}
-                      isDigesting={isDigesting}
-                      bmPerHour={bmPerHour}
-                      isNew={di === digesteurs - 1}
-                    />
+                    <div key={di} style={{position:"relative", display:"flex", flexDirection:"column", alignItems:"center"}}>
+                      {/* Ancre TOP (sortie biogaz, centre haut du dôme) */}
+                      <Anchor name={`digesteur.${di}.top`} side="top">
+                        <div style={{width:"1px", height:"1px"}}/>
+                      </Anchor>
+                      {/* Ancre TOP-FEED (entrée intrants, top du dôme aussi mais sémantique
+                          différente — pourra être déplacée latéralement si besoin) */}
+                      <Anchor name={`digesteur.${di}.top-feed`} side="top">
+                        <div style={{width:"1px", height:"1px"}}/>
+                      </Anchor>
+                      <SingleDigesteur
+                        index={di}
+                        total={digesteurs}
+                        bubbles={di===0 ? bubbles : []}
+                        chargePct={chargePct}
+                        isDigesting={isDigesting}
+                        bmPerHour={bmPerHour}
+                        isNew={di === digesteurs - 1}
+                      />
+                    </div>
                   ))}
                 </div>
-                {/* v25.1.18 — Vis sans fin distributeur d'intrants (active pendant pouring) */}
-                <DigesteurFeeder digesteurs={digesteurs} pouring={pouring} />
                 <div style={{width:"100%", display:"flex", flexDirection:"column", gap:"5px", marginTop:"2px"}}>
                   <div style={{
                     background: isDigesting?"rgba(74,158,219,.12)":"rgba(255,255,255,.09)",
@@ -5740,8 +5973,12 @@ function DigesteurScene({
                 }
               </div>
               {/* Schéma compact (PipelineGraphic existant, taille auto) */}
-              <div style={{flex:1, minHeight:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
-                <PipelineGraphic injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
+              {/* v25.1.20 — Anchor "cuve.left" sur le bord gauche pour que le pipe biogaz
+                  arrive précisément à l'entrée de la cuve tampon (premier élément). */}
+              <div style={{flex:1, minHeight:0, display:"flex", alignItems:"center", justifyContent:"center", position:"relative"}}>
+                <Anchor name="cuve.left" side="left" style={{display:"block", width:"100%"}}>
+                  <PipelineGraphic injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
+                </Anchor>
               </div>
               {/* Bandeau d'injection (si raccordé) */}
               {injected && (
@@ -5756,6 +5993,28 @@ function DigesteurScene({
                 </div>
               )}
             </div>
+            {/* v25.1.20 — Pipes globaux qui utilisent les ancres déclarées dans la VUE 1.
+                Ils se redessinent automatiquement au resize / changement de layout.
+                Position absolute sur tout le wrapper VUE 1, dessinés par-dessus les éléments. */}
+            {/* Pipe COLLECTEUR BIOGAZ : sortie hors champ vers la gauche */}
+            <Pipe from="digesteur.0.top" to={null} mode="off-left"
+              color="#4A9EDB" flowColor="#27a85a"
+              active={isDigesting} animate="flow-reverse" animSpeed="1.4s"
+              strokeWidth={10}
+              label="◀ Biogaz vers la cuve"/>
+            {/* Pipe BIOGAZ → CUVE (entrée par la gauche dans la zone bottom) */}
+            <Pipe from={null} to="cuve.left" mode="off-right"
+              color="#4A9EDB" flowColor="#27a85a"
+              active={isDigesting} animate="flow" animSpeed="1.4s"
+              strokeWidth={10}
+              label="↓ Biogaz"/>
+            {/* Pipe VIS SANS FIN : du bac (bottom) vers le digesteur #0 (top) en L-up */}
+            <Pipe from="bac.bottom" to="digesteur.0.top-feed" mode="L-up"
+              color="#E8A020" flowColor="#F5BE50"
+              active={pouring} animate="auger" animSpeed=".35s"
+              strokeWidth={10}
+              label={null}/>
+            </AnchorProvider>
           </div>
 
           {/* ════════ VUE 2 : VILLE + RÉSEAU AVAL ════════ */}
@@ -6063,20 +6322,27 @@ function DigesteurFeeder({ digesteurs, pouring }) {
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
-  // Extension vers la DROITE (vers le bac d'intrants)
-  const RIGHT_EXT = 50;
+  // v25.1.18 — Extension vers la DROITE jusqu'au bac d'intrants.
+  //   · RIGHT_EXT (180px) : longueur horizontale jusqu'au bas du bac
+  //   · UP_EXT (95px)     : remontée verticale jusqu'au pied du bac (coude vers le haut)
+  //   La vis sans fin parcourt l'horizontal puis le vertical.
+  const RIGHT_EXT = 180;
+  const UP_EXT    = 95;
   const svgW   = totalW + RIGHT_EXT;
   const svgH   = 22;
   const cY     = 8;
   const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
+  // Coordonnées du coude horizontal/vertical
+  const cornerX = totalW + RIGHT_EXT - 8;   // x du virage
+  const lineY   = cY + 4.5;                  // y centre du tube horizontal
 
   return (
     // Wrapper avec width = totalW (sans extension) pour pas forcer le layout flex.
-    // Le SVG en absolu déborde à droite via overflow:visible.
+    // Hauteur étendue au-dessus pour le coude vertical (overflow:visible).
     <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
-      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
-        style={{position:"absolute", left:0, top:0, overflow:"visible", display:"block"}}>
+      <svg width={svgW} height={svgH + UP_EXT} viewBox={`0 ${-UP_EXT} ${svgW} ${svgH + UP_EXT}`}
+        style={{position:"absolute", left:0, top:`${-UP_EXT}px`, overflow:"visible", display:"block"}}>
 
         {/* Branches MONTANTES vers chaque digesteur (depuis le tube vers les cuves) */}
         {centers.map((px,i) => (
@@ -6089,26 +6355,33 @@ function DigesteurFeeder({ digesteurs, pouring }) {
           </React.Fragment>
         ))}
 
-        {/* Tube horizontal distributeur (s'étend du digesteur #1 jusqu'à RIGHT_EXT) */}
-        <rect x={x1-4} y={cY} width={(xN-x1)+8+RIGHT_EXT} height={9} rx={4}
+        {/* TUBE horizontal (du digesteur #1 jusqu'au coude) — fait office de fond du tube */}
+        <rect x={x1-4} y={cY} width={cornerX - (x1-4)} height={9} rx={4}
           fill="#3a2c10" stroke="rgba(232,160,32,.42)" strokeWidth="1.5"/>
 
-        {/* VIS SANS FIN : motif chevrons défilants `<<<` (visuel hélicoïdal en 2D) */}
-        <line x1={x1-2} y1={cY+4.5} x2={xN+RIGHT_EXT+2} y2={cY+4.5}
-          stroke="rgba(245,190,80,.85)" strokeWidth="2.5"
+        {/* COUDE vertical (du tube horizontal vers le bac) — descend du bac vers le tube */}
+        <rect x={cornerX} y={cY - UP_EXT} width={9} height={UP_EXT + 9} rx={4}
+          fill="#3a2c10" stroke="rgba(232,160,32,.42)" strokeWidth="1.5"/>
+
+        {/* VIS SANS FIN — path en L : horizontal du tube puis vertical du coude */}
+        {/* Le path part du digesteur #1, va à droite jusqu'au coude, puis remonte vers le bac.
+            Une fois "défilé" via stroke-dashoffset, donne l'illusion d'une vis qui pousse les
+            intrants depuis le bac (haut-droite) vers les digesteurs (bas-gauche). */}
+        <path d={`M ${x1-2} ${lineY} L ${cornerX + 4.5} ${lineY} L ${cornerX + 4.5} ${cY - UP_EXT + 4}`}
+          fill="none" stroke="rgba(245,190,80,.85)" strokeWidth="2.5"
           strokeDasharray="3 5" strokeLinecap="round"
           style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
-        {/* Deuxième passe décalée pour donner l'effet hélicoïdal (2 brins de vis) */}
-        <line x1={x1-2} y1={cY+4.5} x2={xN+RIGHT_EXT+2} y2={cY+4.5}
-          stroke="rgba(232,160,32,.6)" strokeWidth="1.5"
+        {/* Brin secondaire décalé pour effet hélicoïdal */}
+        <path d={`M ${x1-2} ${lineY} L ${cornerX + 4.5} ${lineY} L ${cornerX + 4.5} ${cY - UP_EXT + 4}`}
+          fill="none" stroke="rgba(232,160,32,.6)" strokeWidth="1.5"
           strokeDasharray="2 6" strokeDashoffset="3" strokeLinecap="round"
           style={{animation: pouring ? "augerSpin .35s linear infinite" : "none"}}/>
 
-        {/* Embout droit (entrée des intrants depuis le bac) */}
-        <rect x={xN+RIGHT_EXT-2} y={cY-2} width={6} height={13} rx={2}
+        {/* Embout HAUT (connexion au pied du bac) — petit collier de raccordement */}
+        <rect x={cornerX - 2} y={cY - UP_EXT - 2} width={13} height={6} rx={2}
           fill="#5a4520" stroke="rgba(232,160,32,.6)" strokeWidth=".8"/>
 
-        {/* Badge "Intrants" centré sur le tube (visible si > 1 digesteur) */}
+        {/* Badge "Intrants" centré sur le tube horizontal (visible si > 1 digesteur) */}
         {digesteurs > 1 && (
           <React.Fragment>
             <rect x={(x1+xN)/2-22} y={cY+13} width={44} height={9} rx={4}
