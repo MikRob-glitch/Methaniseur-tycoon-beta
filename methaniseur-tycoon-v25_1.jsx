@@ -6008,11 +6008,13 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
       <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
         fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
 
-      {/* Label "Biogaz vers la cuve ↓" au-dessus de l'extension */}
-      <text x={LEFT_EXT/2} y={cY-9} textAnchor="middle"
-        fontSize="8" fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}
+      {/* Label "Biogaz vers la cuve ↓" — positionné côté DROIT de l'extension
+          (près du digesteur #1) pour rester dans la zone visible de l'écran.
+          v25.1.13 : x=LEFT_EXT-50 au lieu de LEFT_EXT/2 (sinon coupé hors champ). */}
+      <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
+        fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
         fontWeight="700" letterSpacing=".3">
-        Biogaz vers la cuve ↓
+        ◀ Biogaz vers la cuve
       </text>
 
       {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
