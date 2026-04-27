@@ -3071,7 +3071,9 @@ function Game({ username, region, maia }) {
             stockYield={stockYield}
           />
 
-          <GasMeter value={injected?bm:buffer} isActive={isDigesting}/>
+          {/* v25.1.5 — Compteur biométhane retiré (cf. demande Mika : info pas globale,
+              libère ~110px verticaux). Si besoin de réintroduction future, voir composant
+              GasMeter (toujours défini, juste plus instancié ici). */}
 
           {/* Progression raccordement */}
           {!injected&&(
@@ -4042,18 +4044,22 @@ const WORLD = {
   DUMP_X_RIGHT: 415,               // v25.1.3 : 396→415 (recul de 19 SVG pour que le sprite rotaté ne chevauche pas le bac)
   LANE_TOP:     15,                // y lane retour (tracteur chargé)
   LANE_BOT:     253,               // y lane aller (tracteur vide)
-  DUMP_Y:       65,                // v25.1.4 : 120→65. Ratio CSS/SVG vertical=1.21 → 65 SVG = ~79px CSS depuis top de scène, soit largement au-dessus du bac (qui commence à ~120px CSS avec son label).
+  DUMP_Y:       30,                // v25.1.5 : 65→30. Placé dans le tier supérieur de la scène (~36px CSS du top), bien séparé visuellement du bac qui occupe la partie basse.
   V1_V2:        400,               // frontière vue 1 / vue 2
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
 // zone → charge → remonte → lane haut → retour lane gauche → DUMP point
-// v25.1 — Path conçu pour NE JAMAIS traverser le bac (cf. schéma WORLD plus haut).
-//   Aller : DUMP (au-dessus du bac) → glisse à DROITE du bac → descend → lane top → zone
-//   Retour : zone → lane bot → remonte à DROITE du bac → glisse à gauche au-dessus du bac → DUMP
+// v25.1.5 — Path simplifié : pas de niveau intermédiaire DUMP_Y séparé de LANE_TOP.
+//   DUMP est placé proche de LANE_TOP, le tracteur fait directement DUMP↔LANE_TOP↔zones.
+//   - DUMP_X (346)       : centre horizontal du bac (point de décharge AU-DESSUS du bac)
+//   - DUMP_X_RIGHT (415) : à droite du bac (transit montée/descente sans chevauchement)
+//   - DUMP_Y (30)        : niveau haut de scène, bien au-dessus du bac
+//   Path : DUMP → glisse droite (DUMP_X_RIGHT) → monte légèrement à LANE_TOP → zones →
+//          retour par lane bot → remonte à DUMP_X_RIGHT → DUMP_Y → glisse gauche au DUMP
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
-  const zoneX  = WORLD.V1_V2 + z.x;       // coord scène monde (x>400 = vue 2)
-  const routeX = WORLD.V1_V2 + z.routeX;  // route verticale de la parcelle
+  const zoneX  = WORLD.V1_V2 + z.x;
+  const routeX = WORLD.V1_V2 + z.routeX;
   const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
   return `
     M ${DUMP_X} ${DUMP_Y}
