@@ -1,11 +1,13 @@
 
 // Source de vérité — Méthaniseur Tycoon v25.1
 // Workflow : modifier ce fichier → ./build.sh → push index.html
-// v25.1 : RÉÉQUILIBRAGE ÉCO + UI PÉDAGO
+// v25.1 : RÉÉQUILIBRAGE ÉCO + UI PÉDAGO + LAYOUT INVERSÉ
 //         · Pacing pré-raccordement : seuils ×1,6-2 (épurateur 1k / compresseur 4k / raccordement 8k)
 //         · Big bang post-raccordement : prime de 5 000 € + CIVE/Biogaz+ ÷2
 //         · Paliers structurants : tracteurs/digesteurs/GNV recalibrés (ROI cohérent)
-//         · UI pédago shop : m³/s live + preview + payback time sur chaque carte intrant
+//         · UI pédago shop : m³/s live + preview après achat sur chaque carte intrant
+//         · Layout VUE 1 INVERSÉ : digesteurs à gauche, bac à droite (côté gisement)
+//           → tracteur décharge AU-DESSUS du bac, plus de traversée VUE 1, fix décalage 3 digesteurs
 // v25.0 : YIELD ENGINE — production = masse × yield mix pondéré (m³ CH₄/t)
 //         + tracteur capacité finie (= bagCap) + fix fuite stockMax
 //         + catch-up offline avec yield mix + migration save auto
@@ -3537,16 +3539,6 @@ const GRDF_REGIONS = {
 
 const REGION_CENTERS = {"Nord-Ouest":[185,50],"Île-de-France":[237,76],"Est":[322,96],"Centre-Ouest":[128,108],"Sud-Ouest":[196,190],"Sud-Est":[322,170]};
 
-// v25.1 — Helper pédago : formate un délai de retour sur investissement
-//          Source de vérité du signal "ce que je gagne en achetant maintenant"
-const fmtPayback = (s) => {
-  if (s == null || !isFinite(s) || s <= 0) return "—";
-  if (s < 1)    return "instantané";
-  if (s < 60)   return Math.round(s) + " s";
-  if (s < 3600) return Math.floor(s/60) + " min " + (Math.round(s%60) > 0 ? Math.round(s%60) + " s" : "");
-  return Math.floor(s/3600) + " h " + Math.floor((s%3600)/60) + " min";
-};
-
 // ─── SHOP TAB (cards + quick buy) ─────────────────────────────────────────────
 function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injected, epurateurOk, compresseurOk, tutStep, fmtETA, region }) {
   const [qtyMode, setQtyMode] = useState(1);
@@ -3762,15 +3754,12 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                     const bonusPct = Math.round((getIntrantBonus(qty) - 1) * 100);
                     const next = getNextStarThreshold(qty);
                     const effFill = fillFor(i, qty);
-                    // v25.1 — Calculs pédago : production live, preview après achat, payback
+                    // v25.1 — Pédago : production live + preview après achat
                     const realYield = upg.realYield;
                     const m3sCurrent = effFill * realYield;
                     const previewQty = qty + (displayCount > 0 ? displayCount : 1);
                     const m3sPreview = fillFor(i, previewQty) * realYield;
                     const m3sDelta   = m3sPreview - m3sCurrent;
-                    const cashRate   = injected ? m3sDelta * BM_TO_EUR : m3sDelta;
-                    const paybackSec = m3sDelta > 0 && displayCost > 0 && cashRate > 0
-                      ? displayCost / cashRate : null;
                     return (
                       <div style={{ marginTop: "4px" }}>
                         <div style={{ display: "flex", gap: "6px", fontSize: "10px", flexWrap: "wrap", alignItems: "center" }}>
@@ -3801,7 +3790,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                             <span style={{ fontSize: "8px", color: "#F5BE50", fontWeight: 700 }}>MAÎTRISE TOTALE</span>
                           )}
                         </div>
-                        {/* v25.1 — Pédago : m³/s actuel → preview après achat · payback */}
+                        {/* v25.1 — Pédago : production live → preview après achat */}
                         <div style={{
                           display: "flex", alignItems: "center", gap: "5px", marginTop: "4px",
                           fontSize: "9px", flexWrap: "wrap",
@@ -3814,8 +3803,6 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                             <>
                               <span style={{ color: "rgba(255,255,255,.3)" }}>→</span>
                               <span style={{ color: "#27a85a", fontWeight: 800 }}>{fmt(m3sPreview)}/s</span>
-                              <span style={{ color: "rgba(255,255,255,.18)" }}>·</span>
-                              <span style={{ color: "rgba(255,255,255,.55)" }}>retour {fmtPayback(paybackSec)}</span>
                             </>
                           )}
                           {m3sDelta > 0 && !canAfford && (
@@ -3829,11 +3816,9 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                     );
                   })()}
                   {avail && qty === 0 && (() => {
-                    // v25.1 — Pédago : 1ʳᵉ unité — production attendue + payback
+                    // v25.1 — Pédago : 1ʳᵉ unité — production attendue
                     const realYield = upg.realYield;
                     const m3sFirst  = fillFor(i, 1) * realYield;
-                    const cashRate  = injected ? m3sFirst * BM_TO_EUR : m3sFirst;
-                    const paybackSec = displayCost > 0 && cashRate > 0 ? displayCost / cashRate : null;
                     return (
                       <div style={{ marginTop: "3px" }}>
                         <div style={{ fontSize: "10px", color: "#E8A020", fontWeight: 600 }}>
@@ -3841,15 +3826,9 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                         </div>
                         <div style={{
                           display: "flex", alignItems: "center", gap: "5px", marginTop: "3px",
-                          fontSize: "9px", flexWrap: "wrap"
+                          fontSize: "9px"
                         }}>
                           <span style={{ color: "#27a85a", fontWeight: 800 }}>+{fmt(m3sFirst)}/s</span>
-                          {paybackSec != null && (
-                            <>
-                              <span style={{ color: "rgba(255,255,255,.18)" }}>·</span>
-                              <span style={{ color: "rgba(255,255,255,.55)" }}>retour {fmtPayback(paybackSec)}</span>
-                            </>
-                          )}
                         </div>
                       </div>
                     );
@@ -4022,53 +4001,62 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 // Plus de segment horizontal qui traversait le bac HTML.
 // v23.15 : LANE_LEFT décalée de 10 → 30 pour que le tracteur pivoté à 90° soit
 //          entièrement visible (le tracteur fait 48 de large après rotation).
+// v25.1 — INVERSION DU LAYOUT VUE 1 :
+//   Avant : BAC à gauche, DIGESTEURS à droite, tracteur décharge en LANE_LEFT (x=30)
+//   Après : DIGESTEURS à gauche, BAC à droite (côté gisement), tracteur décharge
+//           AU-DESSUS du bac (DUMP_X juste à gauche du bord gauche du bac).
+//   Logique narrative : zones (VUE 2) → BAC → DIGESTEUR (gauche, transformation).
+//   Bonus : le tracteur ne traverse plus toute la VUE 1, déchargement plus rapide.
 const WORLD = {
   W: 800, H: 280,
-  LANE_LEFT: 30,                   // x de la route gauche en vue 1 (dans le padding)
+  DUMP_X:    200,                  // v25.1 : était LANE_LEFT=30. À gauche du bac qui est maintenant à droite.
   LANE_TOP:  15,                   // y lane retour (tracteur chargé)
   LANE_BOT:  253,                  // y lane aller (tracteur vide)
-  DUMP_Y:    140,                  // y où le tracteur s'arrête sur la lane gauche pour décharger
+  DUMP_Y:    130,                  // v25.1 : 140→130. Juste au-dessus du top du bac (~150 SVG).
   V1_V2:     400,                  // frontière vue 1 / vue 2
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
 // zone → charge → remonte → lane haut → retour lane gauche → DUMP point
+// v25.1 — Path inversé : DUMP_X à droite du milieu (200), bac à droite de VUE 1.
+//          SORTIE par LANE_TOP (vide, monte), RETOUR par LANE_BOT (chargé, descend).
+//          Le tracteur ne traverse plus la VUE 1 ; il fait l'AR directement zone↔bac.
 function buildMissionPath(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;       // coord scène monde (x>400 = vue 2)
   const routeX = WORLD.V1_V2 + z.routeX;  // route verticale de la parcelle
-  const { LANE_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  const { DUMP_X, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
   return `
-    M ${LANE_LEFT} ${DUMP_Y}
-    L ${LANE_LEFT} ${LANE_BOT}
-    L ${routeX} ${LANE_BOT}
+    M ${DUMP_X} ${DUMP_Y}
+    L ${DUMP_X} ${LANE_TOP}
+    L ${routeX} ${LANE_TOP}
     L ${routeX} ${z.y}
     L ${zoneX} ${z.y}
     L ${routeX} ${z.y}
-    L ${routeX} ${LANE_TOP}
-    L ${LANE_LEFT} ${LANE_TOP}
-    L ${LANE_LEFT} ${DUMP_Y}
+    L ${routeX} ${LANE_BOT}
+    L ${DUMP_X} ${LANE_BOT}
+    L ${DUMP_X} ${DUMP_Y}
   `.trim().replace(/\s+/g,' ');
 }
 
 // Calcule la fraction du path (0..1) à laquelle le tracteur atteint la zone
-// (fin du segment 4 dans le nouveau path v23.10).
+// (fin du segment 4 dans le path v25.1).
 // Utilisé pour que t.progress s'arrête pile sur le bâtiment pendant "loading".
 function computeZoneProgress(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { LANE_LEFT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
-  // Mêmes waypoints que buildMissionPath v23.10 (9 points, 8 segments)
+  const { DUMP_X, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  // Mêmes waypoints que buildMissionPath v25.1 (9 points, 8 segments)
   const pts = [
-    [LANE_LEFT, DUMP_Y],     // 0 : départ DUMP
-    [LANE_LEFT, LANE_BOT],   // 1
-    [routeX, LANE_BOT],      // 2
-    [routeX, z.y],           // 3
+    [DUMP_X, DUMP_Y],        // 0 : départ DUMP
+    [DUMP_X, LANE_TOP],      // 1 : monte sur lane haut
+    [routeX, LANE_TOP],      // 2 : va à droite vers la zone
+    [routeX, z.y],           // 3 : descend vers la zone
     [zoneX, z.y],            // 4 ← CHARGE ici (fin du segment 4)
     [routeX, z.y],           // 5
-    [routeX, LANE_TOP],      // 6
-    [LANE_LEFT, LANE_TOP],   // 7
-    [LANE_LEFT, DUMP_Y],     // 8 ← DUMP ici (fin du segment 8 = fin du path)
+    [routeX, LANE_BOT],      // 6 : descend sur lane bas
+    [DUMP_X, LANE_BOT],      // 7 : retour vers VUE 1 par lane bas
+    [DUMP_X, DUMP_Y],        // 8 ← DUMP ici (remonte au point de décharge)
   ];
   let totalL = 0, loadL = 0;
   for (let i = 1; i < pts.length; i++) {
@@ -5387,11 +5375,12 @@ function DigesteurScene({
         >
           {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
-            {/* v23.14/15 : vue agrandie (340px) + padding plus généreux pour que
-                les routes (y=15 et y=253 en SVG 280) aient plus de marge avec le HTML.
-                Ratio 340/280 ≈ 1.21 → y=15 ≈ 18px (haut), y=253 ≈ 307px (bas).
-                padding-left augmenté (30px) pour laisser place à la route verticale à x=30. */}
-            <div style={{display:"flex", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px 30px"}}>
+            {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
+                Avant : BAC à gauche, DIGESTEURS à droite (lane tracteur à gauche).
+                Après : DIGESTEURS à gauche, BAC à droite (côté gisement, plus pédago).
+                Padding inversé : lane verticale tracteur passe à x=DUMP_X=200,
+                et le bac est juste à droite de cette lane. */}
+            <div style={{display:"flex", flexDirection:"row-reverse", alignItems:"flex-end", gap:"10px", height:"100%", padding:"38px 6px 38px 6px"}}>
               {/* ── BAC D'INTRANTS ── */}
               <div style={{flex:"0 0 96px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
@@ -5400,8 +5389,11 @@ function DigesteurScene({
                 <div
                   onClick={() => setBacPopupOpen(true)}
                   style={{
-                    transformOrigin:"bottom left",
-                    transform:`rotate(${binRotate}deg) translateX(${binTransX}px)`,
+                    /* v25.1 : pivot et déversement inversés (le bac penche vers la GAUCHE
+                       maintenant que le digesteur est à gauche). transformOrigin bottom right
+                       + signes négatifs pour binRotate/binTransX. */
+                    transformOrigin:"bottom right",
+                    transform:`rotate(${-binRotate}deg) translateX(${-binTransX}px)`,
                     transition: pouring ? "none" : "transform .4s ease",
                     cursor: "pointer"
                   }}
@@ -5592,6 +5584,8 @@ function DigesteurScene({
               )}
 
               {/* ── PIPE BAC → DIGESTEURS ── */}
+              {/* v25.1 : flèche inversée (←) car le bac est désormais à droite
+                  (visuel après row-reverse) et déverse vers les digesteurs à gauche. */}
               <div style={{flex:"0 0 28px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingBottom:"44px"}}>
                 <div style={{
                   width:"24px", height:"10px", borderRadius:"5px",
@@ -5603,7 +5597,7 @@ function DigesteurScene({
                     <div key={i} style={{position:"absolute",top:"2px",left:`${15+i*35}%`,width:"6px",height:"5px",borderRadius:"3px",background:"rgba(255,255,255,.5)",animation:`flowDot .6s ease ${i*.2}s infinite`}}/>
                   ))}
                 </div>
-                <div style={{fontSize:"14px", opacity:pouring?1:.25, transition:"opacity .3s", filter:pouring?"drop-shadow(0 0 6px rgba(74,158,219,.8))":"none"}}>→</div>
+                <div style={{fontSize:"14px", opacity:pouring?1:.25, transition:"opacity .3s", filter:pouring?"drop-shadow(0 0 6px rgba(74,158,219,.8))":"none"}}>←</div>
               </div>
 
               {/* ── DIGESTEURS ── */}
@@ -5674,7 +5668,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"340px"}}>
             {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
-              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.0
+              Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
             <svg
@@ -5729,11 +5723,12 @@ function DigesteurScene({
           >
             {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
             <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              {/* VUE 1 — périmètre en U ouvert à droite (pas de crochet horizontal vers le bac,
-                  le tracteur s'arrête directement SUR la route verticale gauche à y=DUMP_Y) */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_TOP} L ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.LANE_LEFT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              {/* v25.1 — VUE 1 : périmètre en U ouvert à GAUCHE (le tracteur s'arrête
+                  sur la route verticale DROITE à x=DUMP_X, juste à gauche du bac).
+                  Le bac est désormais à droite de VUE 1, le tracteur ne traverse plus VUE 1. */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X} ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.DUMP_X} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
 
               {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
