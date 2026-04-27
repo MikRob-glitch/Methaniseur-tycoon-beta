@@ -5357,6 +5357,32 @@ function AnchorProvider({ children }) {
           Pas de display:contents (qui casserait le sentinel itself). */}
       <span ref={sentinelRef} style={{display:"none"}}/>
       {children}
+      {/* DEBUG : affiche un cercle + label sur chaque ancre quand ?debug=anchors */}
+      {ANCHOR_DEBUG && (() => {
+        const debugItems = [];
+        registryRef.current.forEach((entry, name) => {
+          const a = getAnchor(name);
+          if (a) debugItems.push({ name, ...a });
+        });
+        return (
+          <svg style={{
+            position:"absolute", inset:0, width:"100%", height:"100%",
+            pointerEvents:"none", zIndex:9999, overflow:"visible"
+          }}>
+            {debugItems.map(({name, x, y}) => (
+              <g key={name}>
+                <circle cx={x} cy={y} r={6}
+                  fill="rgba(255,0,128,.85)" stroke="white" strokeWidth="2"/>
+                <text x={x+10} y={y-6} fontSize="9" fill="white"
+                  fontWeight="800"
+                  style={{paintOrder:"stroke", stroke:"black", strokeWidth:"3px"}}>
+                  {name}
+                </text>
+              </g>
+            ))}
+          </svg>
+        );
+      })()}
     </AnchorContext.Provider>
   );
 }
@@ -5373,26 +5399,44 @@ function useAnchor(name, side) {
 }
 
 // Composant <Anchor> qui wrappe un enfant et l'enregistre comme point de connexion.
-// IMPORTANT : on utilise display:contents par défaut pour que l'Anchor soit
-// "transparente" au layout du parent. Mais comme display:contents fait que le div
-// lui-même n'a pas de bounding box, on bascule sur le bbox du PREMIER ENFANT.
-function Anchor({ name, side, style, children }) {
-  const ref = useRef(null);
+// IMPORTANT : display:contents fait que le wrapper lui-même n'a pas de bounding box.
+// Donc on délègue toujours la mesure à un descendant DOM réel :
+//   · Si `targetSelector` fourni : on prend le premier élément qui matche
+//   · Sinon : on prend le premier descendant qui a une bbox non-vide
+function Anchor({ name, side, targetSelector, debug, style, children }) {
+  const wrapperRef = useRef(null);
   const ctx = useContext(AnchorContext);
-  // Wrapper qui pointe sur le premier enfant DOM via firstElementChild
-  // (le ref principal pointe sur le wrapper, mais on registre une "shim ref"
-  // qui retourne le premier enfant pour la mesure).
   useEffect(() => {
     if (!ctx) return;
     const shimRef = {
       get current() {
-        return ref.current?.firstElementChild || ref.current;
+        const w = wrapperRef.current;
+        if (!w) return null;
+        if (targetSelector) {
+          return w.querySelector(targetSelector) || w.firstElementChild || w;
+        }
+        // Cherche le premier descendant avec une bbox non-vide
+        let el = w.firstElementChild;
+        while (el) {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) return el;
+          el = el.nextElementSibling;
+        }
+        return w.firstElementChild || w;
       }
     };
     return ctx.register(name, shimRef, side);
-  }, [ctx, name, side]);
-  return <div ref={ref} style={{display:"contents", ...style}}>{children}</div>;
+  }, [ctx, name, side, targetSelector]);
+  return (
+    <div ref={wrapperRef} data-anchor={name} style={{display:"contents", ...style}}>
+      {children}
+    </div>
+  );
 }
+
+// Mode debug global : ajouter ?debug=anchors à l'URL pour visualiser
+const ANCHOR_DEBUG = typeof window !== 'undefined'
+  && window.location.search.includes('debug=anchors');
 
 // ─── PIPE — dessine un tube SVG entre deux ancres nommées ────────────────────
 // Modes : "L-down"  : du A descend puis va vers B (A en haut, B en bas-droite/gauche)
@@ -5893,26 +5937,23 @@ function DigesteurScene({
                     · `digesteur.{i}.top-feed` = entrée intrants (haut latéral) */}
                 <div style={{display:"flex", gap:digesteurs===3?"4px":"8px", alignItems:"flex-end", justifyContent:"center"}}>
                   {Array.from({length:digesteurs}).map((_,di) => (
-                    <div key={di} style={{position:"relative", display:"flex", flexDirection:"column", alignItems:"center"}}>
-                      {/* Ancre TOP (sortie biogaz, centre haut du dôme) */}
-                      <Anchor name={`digesteur.${di}.top`} side="top">
-                        <div style={{width:"1px", height:"1px"}}/>
-                      </Anchor>
-                      {/* Ancre TOP-FEED (entrée intrants, top du dôme aussi mais sémantique
-                          différente — pourra être déplacée latéralement si besoin) */}
+                    /* v25.1.20 — Wrapper Anchor sur le SingleDigesteur lui-même.
+                       2 ancres pour le même élément : `top` (sortie biogaz) et
+                       `top-feed` (entrée intrants). Sémantique différente, position identique
+                       pour l'instant — pourra évoluer si on ajoute un point d'entrée latéral. */
+                    <Anchor key={di} name={`digesteur.${di}.top`} side="top">
                       <Anchor name={`digesteur.${di}.top-feed`} side="top">
-                        <div style={{width:"1px", height:"1px"}}/>
+                        <SingleDigesteur
+                          index={di}
+                          total={digesteurs}
+                          bubbles={di===0 ? bubbles : []}
+                          chargePct={chargePct}
+                          isDigesting={isDigesting}
+                          bmPerHour={bmPerHour}
+                          isNew={di === digesteurs - 1}
+                        />
                       </Anchor>
-                      <SingleDigesteur
-                        index={di}
-                        total={digesteurs}
-                        bubbles={di===0 ? bubbles : []}
-                        chargePct={chargePct}
-                        isDigesting={isDigesting}
-                        bmPerHour={bmPerHour}
-                        isNew={di === digesteurs - 1}
-                      />
-                    </div>
+                    </Anchor>
                   ))}
                 </div>
                 <div style={{width:"100%", display:"flex", flexDirection:"column", gap:"5px", marginTop:"2px"}}>
@@ -6020,26 +6061,21 @@ function DigesteurScene({
               )}
             </div>
             {/* v25.1.20 — Pipes globaux qui utilisent les ancres déclarées dans la VUE 1.
-                Ils se redessinent automatiquement au resize / changement de layout.
-                Position absolute sur tout le wrapper VUE 1, dessinés par-dessus les éléments. */}
-            {/* Pipe COLLECTEUR BIOGAZ : sortie hors champ vers la gauche */}
+                Ils se redessinent automatiquement au resize / changement de layout. */}
+            {/* Pipe COLLECTEUR BIOGAZ : sort du dôme du digesteur #0 vers la gauche,
+                hors champ (suggère un trajet vers la cuve tampon en VUE 1 bottom). */}
             <Pipe from="digesteur.0.top" to={null} mode="off-left"
               color="#4A9EDB" flowColor="#27a85a"
               active={isDigesting} animate="flow-reverse" animSpeed="1.4s"
               strokeWidth={10}
               label="◀ Biogaz vers la cuve"/>
-            {/* Pipe BIOGAZ → CUVE (entrée par la gauche dans la zone bottom) */}
-            <Pipe from={null} to="cuve.left" mode="off-right"
-              color="#4A9EDB" flowColor="#27a85a"
-              active={isDigesting} animate="flow" animSpeed="1.4s"
-              strokeWidth={10}
-              label="↓ Biogaz"/>
-            {/* Pipe VIS SANS FIN : du bac (bottom) vers le digesteur #0 (top) en L-up */}
+            {/* Pipe VIS SANS FIN : du bac (bottom) vers le digesteur #0 (top) en L-up.
+                Active uniquement pendant le déversement (pouring=true). */}
             <Pipe from="bac.bottom" to="digesteur.0.top-feed" mode="L-up"
               color="#E8A020" flowColor="#F5BE50"
               active={pouring} animate="auger" animSpeed=".35s"
               strokeWidth={10}
-              label={null}/>
+              label={pouring ? "Intrants ↓" : null}/>
             </AnchorProvider>
           </div>
 
