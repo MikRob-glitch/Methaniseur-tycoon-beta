@@ -5867,39 +5867,40 @@ function DigesteurScene({
             </div>
           </div>
 
-          {/* ════════ SVG MONDE (superposé aux 2 vues) ════════ */}
-          {/* Routes jaunes + tracteurs. viewBox 800×280 = 2 vues collées.
-              v23.2 : routes AU PÉRIMÈTRE en vue 1 (pas de chevauchement avec
-              bac/digesteur) + lanes centrales en vue 2. */}
+          {/* ════════ SVG MONDE (superposé à la zone TOP des 2 vues) ════════ */}
+          {/* v25.1.13 — Limité à height:350px (zone TOP) :
+              · Avant : étiré sur 600px → tracteurs déformés ×1.77 + routes débordent en bas
+              · Après : 350px → ratio CSS/SVG = 1.25 (=identique à avant 25.1.6, no distorsion)
+              v25.1.13 — Rendu route amélioré : asphalte gris foncé + marquage central jaune
+              pointillé (sémantique route universellement reconnaissable). */}
           <svg
             viewBox="0 0 800 280"
             preserveAspectRatio="none"
-            style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none"}}
+            style={{position:"absolute", left:0, top:0, width:"100%", height:"350px", pointerEvents:"none"}}
           >
-            {/* ── ROUTES JAUNES EN POINTILLÉS ── */}
-            <g stroke="#E8A020" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity=".55" strokeDasharray="7 5">
-              {/* v25.1 — VUE 1 : lane verticale à DROITE du bac (DUMP_X_RIGHT) +
-                  petit segment horizontal au-dessus du bac (DUMP_X → DUMP_X_RIGHT à y=DUMP_Y).
-                  Le tracteur stationne à DUMP_X (au-dessus du centre du bac) pour décharger,
-                  mais il transit via DUMP_X_RIGHT (côté gisement) pour ne JAMAIS traverser le bac. */}
+            {/* Couche 1 : ASPHALTE (gris foncé épais) — donne le visuel "route" */}
+            <g stroke="#1a2538" strokeWidth="9" fill="none" strokeLinecap="round" opacity=".95">
+              {/* VUE 1 — lane droite du bac + segment au-dessus du bac */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
-              {/* Segment horizontal au-dessus du bac : route entre la lane verticale gauche
-                  et le DUMP point (au-dessus du centre du bac). */}
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-
               {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
-              {/* Route verticale colonne gauche (x=175 en vue 2 = 575 monde) */}
               <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
-              {/* Route verticale colonne droite (x=345 en vue 2 = 745 monde) */}
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-
-              {/* v23.8 : PAS d'embranchement horizontal dans la parcelle — ça coupait les
-                  bâtiments visuellement. Le tracteur fait toujours le détour dans le path,
-                  mais on ne dessine pas ce détour en jaune. */}
+            </g>
+            {/* Couche 2 : MARQUAGE CENTRAL pointillé jaune (signe universel "route") */}
+            <g stroke="#F5D888" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 6" opacity=".75">
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
             </g>
 
             {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
