@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-1-27';   // ← anciennement v24-3 ou similaire
+const CACHE_NAME = 'methaniseur-tycoon-v25-2-1';   // ← anciennement v24-3 ou similaire
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
