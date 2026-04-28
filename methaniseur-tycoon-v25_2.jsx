@@ -1533,6 +1533,27 @@ function Game({ username, region, maia }) {
           setCloudOfflineGains(cg);
           if (cg.elapsedSec >= 30) setOfflineModal(true);
         }
+
+        // ── Reconciliation seenRewards post-load (v25.2.3) ─────────────────
+        // seenRewards n'est PAS persisté côté Supabase (uniquement localStorage).
+        // Si localStorage est vide (clear data, nouveau device, mode incognito),
+        // les cinématiques déjà vues se redéclenchent. On infère depuis les
+        // valeurs cloud : si la condition d'un reward est remplie, il a forcément
+        // déjà été déclenché → on l'ajoute à seenRewards en pré-load.
+        const _ts = (d.score_network || 0) + (d.gnv_bm || 0);
+        const _inferred = [];
+        if (d.is_connected && _ts >= 100)              _inferred.push("go_mwh");
+        if (d.is_connected && _ts >= 10000)            _inferred.push("cpb");
+        if (d.is_connected && (d.digesteurs || 1) >= 2) _inferred.push("quali");
+        if (_ts >= 1000000)   _inferred.push("foyers100");
+        if (_ts >= 10000000)  _inferred.push("foyers1k");
+        if (_ts >= 100000000) _inferred.push("vert");
+        if (_inferred.length > 0) {
+          setSeenRewards(prev => {
+            const merged = new Set([...prev, ..._inferred]);
+            return merged.size === prev.length ? prev : Array.from(merged);
+          });
+        }
       }
     }).finally(() => setCloudSynced(true));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1705,11 +1726,15 @@ function Game({ username, region, maia }) {
   }, [saveGame]);
 
   // ── BADGES : détecte les transitions locked→unlocked et alimente la file ─
+  // v25.2.3 — gate sur cloudSynced : on ne snapshot la référence qu'APRÈS
+  //           le chargement Supabase, sinon recharger l'app avec une save cloud
+  //           déclenche tous les badges déjà acquis (diff vs état initial vide).
   useEffect(() => {
+    if (!cloudSynced) return;
     const list = computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump });
     const doneNow = new Set(list.filter(b => b.done).map(b => b.id));
     if (prevBadgeDoneRef.current === null) {
-      // 1er run : on enregistre l'état initial sans célébrer (sinon recharger = feu d'artifice)
+      // 1er run post-chargement : on enregistre l'état réel sans célébrer
       prevBadgeDoneRef.current = doneNow;
       return;
     }
@@ -1718,7 +1743,7 @@ function Game({ username, region, maia }) {
       setBadgeQueue(q => [...q, ...newlyDone]);
     }
     prevBadgeDoneRef.current = doneNow;
-  }, [owned, digesteurs, gnvStations, tractorGnv, autoDump]);
+  }, [cloudSynced, owned, digesteurs, gnvStations, tractorGnv, autoDump]);
 
   // Consomme la file : affiche un badge à la fois
   useEffect(() => {
