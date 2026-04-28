@@ -3,15 +3,24 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#0a1628"/>
+  <meta name="theme-color" content="#0B1623"/>
   <title>Méthaniseur Tycoon – GRDF</title>
   <link rel="manifest" href="manifest.json"/>
+  <!-- Favicons & icônes PWA -->
+  <link rel="icon" type="image/svg+xml" href="icon.svg"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
+  <!-- iOS Safari (ignore le manifest, exige apple-touch-icon en PNG) -->
+  <link rel="apple-touch-icon" href="icon-180.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Méthaniseur"/>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0a1628;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    body{background:#0B1623;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
     #root{min-height:100dvh}
   </style>
 </head>
