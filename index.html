@@ -5140,42 +5140,33 @@ function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabe
             )}
           </g>
         )}
-        {/* v25.1.26 — Overlay panne AGRANDI pour mobile (tailles +40%) :
-            · Carte 80×56 (vs 64×48 avant) → plus de surface tappable
-            · Coût en 13pt (vs 9pt) avec halo lumineux quand payable
-            · Bouton "RELANCER" en 8pt (vs 6.5pt), plus haut, avec icône clé
-            · Glow externe quand affordable pour attirer l'œil */}
+        {/* v25.1.27 — Overlay panne SIMPLIFIÉ : moins d'effets, plus lisible.
+            · Une seule carte sobre (pas de glow externe + bordure + pulse simultanés)
+            · Hiérarchie claire : "PANNE" en haut, coût au centre, bouton en bas
+            · Bouton ambre pulse subtilement quand affordable (seul effet) */}
         {isOffline && (
           <g style={{pointerEvents:"all", cursor: relaunchAffordable ? "pointer" : "not-allowed"}}
              onClick={(e) => { e.stopPropagation(); if (relaunchAffordable) onRelaunch(zone.upgradeId); }}>
-            {/* Glow externe pulsant quand affordable (attire le regard) */}
-            {relaunchAffordable && (
-              <rect x={-42} y={-30} width={84} height={64} rx={9}
-                fill="none" stroke="#F5BE50" strokeWidth="2" opacity=".6"
-                style={{animation:'satPulse 1.4s ease-in-out infinite'}}/>
-            )}
-            {/* Fond carte panne — agrandie 80×56 */}
-            <rect x={-40} y={-28} width={80} height={56} rx={7}
-              fill={relaunchAffordable ? "rgba(232,160,32,.22)" : "rgba(224,88,88,.2)"}
-              stroke={relaunchAffordable ? "#F5BE50" : "#E05858"} strokeWidth="1.8"/>
-            {/* Bandeau supérieur : ⚠ PANNE + timer */}
-            <text y={-17} textAnchor="middle" fontSize="7" fill="#E05858" fontWeight={900} letterSpacing=".5">⚠ PANNE</text>
-            <text y={-9} textAnchor="middle" fontSize="6" fill="rgba(255,255,255,.7)" fontWeight={600}>{panneTimeStr}</text>
-            {/* Coût (info principale, GROS) */}
-            <text y={4} textAnchor="middle" fontSize="13"
-              fill={relaunchAffordable ? "#F5BE50" : "rgba(255,255,255,.4)"}
-              fontWeight={900}
-              style={{filter: relaunchAffordable ? "drop-shadow(0 0 5px rgba(245,190,80,.7))" : "none"}}>
+            {/* Carte unique : fond sombre + bordure rouge sobre */}
+            <rect x={-38} y={-26} width={76} height={52} rx={6}
+              fill="rgba(11,22,35,.92)" stroke="#E05858" strokeWidth="1.4"/>
+            {/* Bandeau supérieur : "⚠ PANNE" + timer compact */}
+            <text y={-15} textAnchor="middle" fontSize="6.5" fill="#E05858" fontWeight={800} letterSpacing=".4">⚠ PANNE · {panneTimeStr}</text>
+            {/* Coût : info principale, gros et clair */}
+            <text y={2} textAnchor="middle" fontSize="11"
+              fill={relaunchAffordable ? "#F5BE50" : "rgba(255,255,255,.45)"}
+              fontWeight={900}>
               {canPayLabel}
             </text>
-            {/* CTA : "🔧 RELANCER" — plus haut, plus contrasté */}
-            <rect x={-34} y={11} width={68} height={16} rx={5}
-              fill={relaunchAffordable ? "#E8A020" : "rgba(255,255,255,.08)"}
-              stroke={relaunchAffordable ? "rgba(255,255,255,.4)" : "rgba(255,255,255,.15)"}
-              strokeWidth="1"/>
-            <text y={22} textAnchor="middle" fontSize="8"
-              fill={relaunchAffordable ? "#0a1628" : "rgba(255,255,255,.45)"}
-              fontWeight={900} letterSpacing=".6">
+            {/* Bouton RELANCER : seul élément qui pulse (signale qu'on peut cliquer) */}
+            <rect x={-32} y={9} width={64} height={14} rx={4}
+              fill={relaunchAffordable ? "#E8A020" : "rgba(255,255,255,.06)"}
+              stroke="rgba(255,255,255,.2)"
+              strokeWidth=".8"
+              style={relaunchAffordable ? {animation:'satPulse 1.6s ease-in-out infinite'} : {}}/>
+            <text y={19} textAnchor="middle" fontSize="7"
+              fill={relaunchAffordable ? "#0a1628" : "rgba(255,255,255,.4)"}
+              fontWeight={900} letterSpacing=".4">
               🔧 RELANCER
             </text>
           </g>
