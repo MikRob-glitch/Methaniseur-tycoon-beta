@@ -1403,6 +1403,8 @@ function Game({ username, region, maia }) {
   const [zoneState,      setZoneState]      = useState(() => offlineGains?.resetZoneState      ?? (Array.isArray(saved?.zoneState)      && saved.zoneState.length === 7      ? saved.zoneState      : ["ok","ok","ok","ok","ok","ok","ok"]));
   const [saturatedSince, setSaturatedSince] = useState(() => offlineGains?.resetSaturatedSince ?? (Array.isArray(saved?.saturatedSince) && saved.saturatedSince.length === 7 ? saved.saturatedSince : [null,null,null,null,null,null,null]));
   const [offlineUntil,   setOfflineUntil]   = useState(() => offlineGains?.resetOfflineUntil   ?? (Array.isArray(saved?.offlineUntil)   && saved.offlineUntil.length === 7   ? saved.offlineUntil   : [null,null,null,null,null,null,null]));
+  // v25.1.25 — Animation au paiement de la relance (timestamp par zone, null si pas d'anim active)
+  const [relaunchAnim,   setRelaunchAnim]   = useState([null,null,null,null,null,null,null]);
   const [reliability,    setReliability]    = useState(() => typeof saved?.reliability === 'number' ? saved.reliability : 100);
   // Migration v16 : pré-remplir seenRewards pour sauvegardes existantes
   const [seenRewards, setSeenRewards] = useState(() => {
@@ -2455,6 +2457,11 @@ function Game({ username, region, maia }) {
     setSaturatedSince(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
     setLocalStock(prev => { const n = [...prev]; n[upgradeId] = 0; return n; });
     setReliability(r => Math.max(RELIABILITY_RESET_ON_RELAUNCH, r));
+    // v25.1.25 — Déclenche l'animation visuelle de relance (1.2s)
+    setRelaunchAnim(prev => { const n = [...prev]; n[upgradeId] = Date.now(); return n; });
+    setTimeout(() => {
+      setRelaunchAnim(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
+    }, 1200);
     showNotif(`✓ ${UPGRADES[upgradeId].name} relancé`, 'success', `Production reprise · Fiabilité restaurée`);
   };
 
@@ -2550,7 +2557,19 @@ function Game({ username, region, maia }) {
         @keyframes paddle-osc-inv{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
         @keyframes gasFlow{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
         @keyframes gasFlowReverse{from{stroke-dashoffset:0}to{stroke-dashoffset:20}}
-        @keyframes augerSpin{from{stroke-dashoffset:0}to{stroke-dashoffset:-16}}
+        @keyframes augerSpin{from{stroke-dashoffset:0}to{stroke-dashoffset:16}}
+        @keyframes relaunchPulse{0%{r:8;opacity:1;stroke-width:4}100%{r:34;opacity:0;stroke-width:1}}
+        @keyframes relaunchSparkle{
+          0%{opacity:0;transform:scale(0) rotate(0deg)}
+          30%{opacity:1;transform:scale(1.3) rotate(180deg)}
+          100%{opacity:0;transform:scale(0.6) rotate(360deg)}
+        }
+        @keyframes relaunchFloat{
+          0%{opacity:0;transform:translateY(0) scale(.7)}
+          25%{opacity:1;transform:translateY(-8px) scale(1.1)}
+          75%{opacity:1;transform:translateY(-18px) scale(1)}
+          100%{opacity:0;transform:translateY(-28px) scale(.9)}
+        }
         @keyframes gasBubbleSvg{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(-32px);opacity:0}}
       `}</style>
 
@@ -3079,6 +3098,7 @@ function Game({ username, region, maia }) {
             burnRate={burnRate}
             gnvStations={gnvStations}
             canConnect={canConnect}
+            relaunchAnim={relaunchAnim}
           />
 
           {/* v25.1.5 — Compteur biométhane retiré (cf. demande Mika : info pas globale,
@@ -5065,7 +5085,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
 // ─── CITY ZONE — une zone d'intrant sur la vue ville (SVG) ───────────────────
 // Rend une zone stylisée + pin de priorité. Les animations sont des CSS
 // transform/opacity (légères, OK sur mobile).
-function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabel, iconEmoji, zoneState, fillPct, offlineUntil, onRelaunch, relaunchCost, relaunchAffordable, canPayLabel }) {
+function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabel, iconEmoji, zoneState, fillPct, offlineUntil, onRelaunch, relaunchCost, relaunchAffordable, canPayLabel, relaunchAnim }) {
   const { x, y, label } = zone;
   const locked = !upgradeUnlocked;
   const activeBuilding = !locked && owned > 0;
@@ -5120,14 +5140,77 @@ function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabe
             )}
           </g>
         )}
-        {/* v24 : overlay panne + bouton relance */}
+        {/* v25.1.26 — Overlay panne AGRANDI pour mobile (tailles +40%) :
+            · Carte 80×56 (vs 64×48 avant) → plus de surface tappable
+            · Coût en 13pt (vs 9pt) avec halo lumineux quand payable
+            · Bouton "RELANCER" en 8pt (vs 6.5pt), plus haut, avec icône clé
+            · Glow externe quand affordable pour attirer l'œil */}
         {isOffline && (
-          <g style={{pointerEvents:"all", cursor: relaunchAffordable ? "pointer" : "not-allowed"}} onClick={(e) => { e.stopPropagation(); if (relaunchAffordable) onRelaunch(zone.upgradeId); }}>
-            <rect x={-28} y={-20} width={56} height={40} rx={5} fill="rgba(224,88,88,.22)" stroke="#E05858" strokeWidth="1.2" strokeDasharray="3 2"/>
-            <text y={-6} textAnchor="middle" fontSize="7" fill="#E05858" fontWeight={700}>⚠ PANNE</text>
-            <text y={3} textAnchor="middle" fontSize="6" fill="rgba(255,255,255,.85)">{panneTimeStr}</text>
-            <text y={12} textAnchor="middle" fontSize="5.5" fill={relaunchAffordable ? "#E8A020" : "rgba(255,255,255,.4)"} fontWeight={700}>
-              RELANCE {canPayLabel}
+          <g style={{pointerEvents:"all", cursor: relaunchAffordable ? "pointer" : "not-allowed"}}
+             onClick={(e) => { e.stopPropagation(); if (relaunchAffordable) onRelaunch(zone.upgradeId); }}>
+            {/* Glow externe pulsant quand affordable (attire le regard) */}
+            {relaunchAffordable && (
+              <rect x={-42} y={-30} width={84} height={64} rx={9}
+                fill="none" stroke="#F5BE50" strokeWidth="2" opacity=".6"
+                style={{animation:'satPulse 1.4s ease-in-out infinite'}}/>
+            )}
+            {/* Fond carte panne — agrandie 80×56 */}
+            <rect x={-40} y={-28} width={80} height={56} rx={7}
+              fill={relaunchAffordable ? "rgba(232,160,32,.22)" : "rgba(224,88,88,.2)"}
+              stroke={relaunchAffordable ? "#F5BE50" : "#E05858"} strokeWidth="1.8"/>
+            {/* Bandeau supérieur : ⚠ PANNE + timer */}
+            <text y={-17} textAnchor="middle" fontSize="7" fill="#E05858" fontWeight={900} letterSpacing=".5">⚠ PANNE</text>
+            <text y={-9} textAnchor="middle" fontSize="6" fill="rgba(255,255,255,.7)" fontWeight={600}>{panneTimeStr}</text>
+            {/* Coût (info principale, GROS) */}
+            <text y={4} textAnchor="middle" fontSize="13"
+              fill={relaunchAffordable ? "#F5BE50" : "rgba(255,255,255,.4)"}
+              fontWeight={900}
+              style={{filter: relaunchAffordable ? "drop-shadow(0 0 5px rgba(245,190,80,.7))" : "none"}}>
+              {canPayLabel}
+            </text>
+            {/* CTA : "🔧 RELANCER" — plus haut, plus contrasté */}
+            <rect x={-34} y={11} width={68} height={16} rx={5}
+              fill={relaunchAffordable ? "#E8A020" : "rgba(255,255,255,.08)"}
+              stroke={relaunchAffordable ? "rgba(255,255,255,.4)" : "rgba(255,255,255,.15)"}
+              strokeWidth="1"/>
+            <text y={22} textAnchor="middle" fontSize="8"
+              fill={relaunchAffordable ? "#0a1628" : "rgba(255,255,255,.45)"}
+              fontWeight={900} letterSpacing=".6">
+              🔧 RELANCER
+            </text>
+          </g>
+        )}
+        {/* v25.1.25 — Animation de relance : flash vert + sparkles + texte volant */}
+        {relaunchAnim && (
+          <g style={{pointerEvents:"none"}}>
+            {/* Flash circulaire qui pulse autour du bâtiment */}
+            <circle cx={0} cy={0} r={28}
+              fill="none" stroke="#27a85a" strokeWidth="3"
+              style={{animation:"relaunchPulse 1.2s ease-out forwards", transformOrigin:"center"}}/>
+            {/* Étoiles/sparkles autour du bâtiment */}
+            {[0, 60, 120, 180, 240, 300].map((angle, i) => {
+              const rad = (angle * Math.PI) / 180;
+              const r = 22;
+              return (
+                <text key={i} x={Math.cos(rad)*r} y={Math.sin(rad)*r}
+                  textAnchor="middle" dy="3" fontSize="9"
+                  style={{
+                    animation:`relaunchSparkle 1.2s ease-out ${i*0.05}s forwards`,
+                    transformOrigin:`${Math.cos(rad)*r}px ${Math.sin(rad)*r}px`,
+                    opacity:0
+                  }}>
+                  ✨
+                </text>
+              );
+            })}
+            {/* Texte "+RÉPARÉ !" qui flotte vers le haut */}
+            <text y={-25} textAnchor="middle" fontSize="9" fontWeight="900"
+              fill="#27a85a"
+              style={{
+                animation:"relaunchFloat 1.2s ease-out forwards",
+                filter:"drop-shadow(0 0 4px rgba(39,168,90,.6))"
+              }}>
+              ✓ RÉPARÉ !
             </text>
           </g>
         )}
@@ -5556,6 +5639,8 @@ function DigesteurScene({
   stockComposition, stockYield,
   // v25.1.6 — Props pour chaîne d'injection migrée + placeholder réseau aval
   unlockAnim, bufferPct, bm, burnRate, gnvStations, canConnect,
+  // v25.1.25 — Animation paiement de relance par zone
+  relaunchAnim,
 }) {
   // v25.0.9 — popup détail composition BAC (pédagogie yield mix)
   const [bacPopupOpen, setBacPopupOpen] = useState(false);
@@ -6125,6 +6210,7 @@ function DigesteurScene({
                       relaunchCost={cost}
                       relaunchAffordable={affordable}
                       canPayLabel={costLbl}
+                      relaunchAnim={relaunchAnim[upgId]}
                     />
                   );
                 })}
