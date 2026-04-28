@@ -7678,6 +7678,10 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
     </div>
   );
 }
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement(ThemeProvider, null, React.createElement(App, null))
+);
   </script>
 </body>
 </html>
