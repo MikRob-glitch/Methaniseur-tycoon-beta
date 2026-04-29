@@ -5777,7 +5777,7 @@ function DigesteurScene({
   bmPerHour, fillRate, owned, stock, stockMax, stockPct, stockColor,
   binRotate, binTransX, pouring, handlePour,
   // v23 — flotte & ville
-  tractorCount, tractorSpeedBoost, pinnedZones, onTogglePin,
+  tractorCount, tractorSpeedBoost, tractorTrailers, pinnedZones, onTogglePin,
   cityView, setCityView, injected, epurateurOk, compresseurOk,
   // v24 — gisements
   zoneState, localStock, setLocalStock, setStock, stockMaxRef,
