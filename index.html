@@ -593,6 +593,7 @@ const TRACTOR_UPGRADES = {
   count2:     { cost: 50000,  req: "injected", desc: "Ajoute un 2ᵉ tracteur — double la cadence de chargement" },
   count3:     { cost: 250000, req: "injected", desc: "Ajoute un 3ᵉ tracteur — triple la cadence de chargement" },
   speedBoost: { cost: 120000, req: "injected", desc: "+30% de vitesse sur tous les tracteurs (route goudronnée)" },
+  trailer:    { cost: 25000,  req: "injected", desc: "Remorque individuelle — +50 % de capacité de chargement pour ce tracteur" },
 };
 
 const MOCK_LB = [
@@ -1504,6 +1505,7 @@ function Game({ username, region, maia }) {
   // ── FLOTTE TRACTEURS (v23) ──
   const [tractorCount,      setTractorCount]      = useState(saved?.tractorCount      ?? 1);
   const [tractorSpeedBoost, setTractorSpeedBoost] = useState(saved?.tractorSpeedBoost ?? false);
+  const [tractorTrailers,   setTractorTrailers]   = useState(() => Array.isArray(saved?.tractorTrailers) ? saved.tractorTrailers : [false, false, false]);
   const [pinnedZones,       setPinnedZones]       = useState(() => Array.isArray(saved?.pinnedZones) ? saved.pinnedZones : []);
   const [cityView,          setCityView]          = useState(0); // 0 = digesteur, 1 = ville — non persisté (UI state)
 
@@ -1606,6 +1608,7 @@ function Game({ username, region, maia }) {
         // v23 — flotte tracteurs
         if (d.tractor_count       != null) setTractorCount(d.tractor_count);
         if (d.tractor_speed_boost != null) setTractorSpeedBoost(!!d.tractor_speed_boost);
+        if (Array.isArray(d.tractor_trailers)) setTractorTrailers(d.tractor_trailers);
         if (d.pinned_zones        != null) {
           const pz = Array.isArray(d.pinned_zones) ? d.pinned_zones : (typeof d.pinned_zones === 'string' ? (()=>{try{return JSON.parse(d.pinned_zones);}catch{return [];}})() : []);
           setPinnedZones(pz);
@@ -1732,7 +1735,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1789,6 +1792,7 @@ function Game({ username, region, maia }) {
       // v23 — flotte tracteurs
       tractor_count:       stateRef.current.tractorCount,
       tractor_speed_boost: stateRef.current.tractorSpeedBoost,
+      tractor_trailers:    stateRef.current.tractorTrailers,
       pinned_zones:        stateRef.current.pinnedZones,
       // v24 — gisements locaux
       local_stock:         stateRef.current.localStock,
@@ -2572,6 +2576,12 @@ function Game({ username, region, maia }) {
     setTractorSpeedBoost(true);
     showNotif("Route goudronnée","success","+30 % de vitesse pour tous les tracteurs");
   };
+  const handleBuyTrailer = (idx) => {
+    if (tractorTrailers[idx] || euros < TRACTOR_UPGRADES.trailer.cost) return;
+    setEuros(e => e - TRACTOR_UPGRADES.trailer.cost);
+    setTractorTrailers(prev => { const n = [...prev]; n[idx] = true; return n; });
+    showNotif(`Remorque — tracteur ${idx + 1}`, "success", "+50 % de capacité de chargement");
+  };
   const togglePinZone = (upgradeId) => {
     setPinnedZones(prev => prev.includes(upgradeId) ? prev.filter(x=>x!==upgradeId) : [...prev, upgradeId]);
   };
@@ -3204,6 +3214,7 @@ function Game({ username, region, maia }) {
             handlePour={handlePour}
             tractorCount={tractorCount}
             tractorSpeedBoost={tractorSpeedBoost}
+            tractorTrailers={tractorTrailers}
             pinnedZones={pinnedZones}
             onTogglePin={togglePinZone}
             cityView={cityView}
@@ -3416,10 +3427,12 @@ function Game({ username, region, maia }) {
             <TractorFleetSection
               tractorCount={tractorCount}
               tractorSpeedBoost={tractorSpeedBoost}
+              tractorTrailers={tractorTrailers}
               euros={euros}
               onBuyTractor2={handleBuyTractor2}
               onBuyTractor3={handleBuyTractor3}
               onBuySpeedBoost={handleBuySpeedBoost}
+              onBuyTrailer={handleBuyTrailer}
             />
           )}
 
@@ -4259,7 +4272,7 @@ function computeZoneProgress(zIdx) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTrailers, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -4289,8 +4302,9 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
   const boostRef       = useRef(speedBoost);  useEffect(()=>{boostRef.current=speedBoost;},[speedBoost]);
   const fillRateRef    = useRef(fillRate);    useEffect(()=>{fillRateRef.current=fillRate;},[fillRate]);
   // v24 : refs pour les gisements
-  const zoneStateRefT  = useRef(zoneState);   useEffect(()=>{zoneStateRefT.current=zoneState;},[zoneState]);
-  const localStockRefT = useRef(localStock);  useEffect(()=>{localStockRefT.current=localStock;},[localStock]);
+  const zoneStateRefT  = useRef(zoneState);      useEffect(()=>{zoneStateRefT.current=zoneState;},[zoneState]);
+  const localStockRefT = useRef(localStock);     useEffect(()=>{localStockRefT.current=localStock;},[localStock]);
+  const trailersRef    = useRef(tractorTrailers); useEffect(()=>{trailersRef.current=tractorTrailers;},[tractorTrailers]);
 
   // Choix de la prochaine zone : round-robin pins > round-robin possédés
   // v24 : exclure les zones en panne (offline) — les tracteurs contournent
@@ -4453,7 +4467,8 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, pinnedZones, 
             if (zIdx !== null) {
               const upgId = CITY_ZONES[zIdx].upgradeId;
               const cur = localStockRefT.current[upgId] || 0;
-              const cap = UPGRADES[upgId].bagCap;     // capacité tracteur = 1× bagCap (tonnes)
+              const trailerBonus = (trailersRef.current || [])[i] ? 1.5 : 1;
+              const cap = UPGRADES[upgId].bagCap * trailerBonus;
               const taken = Math.min(cur, cap);
               t.payload = taken;
               t.payloadYield = UPGRADES[upgId].realYield; // m³ CH₄/t — pour mix au dump
@@ -4919,7 +4934,7 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, tractorG
 
 // ─── TRACTOR FLEET SECTION (v23) ─────────────────────────────────────────────
 // 3 upgrades payées en € (disponibles après raccordement GRDF)
-function TractorFleetSection({ tractorCount, tractorSpeedBoost, euros, onBuyTractor2, onBuyTractor3, onBuySpeedBoost }) {
+function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers, euros, onBuyTractor2, onBuyTractor3, onBuySpeedBoost, onBuyTrailer }) {
   const row = (key, label, sublabel, cost, ownedAlready, onBuy, icon) => {
     const canBuy = !ownedAlready && euros >= cost;
     return (
@@ -4946,6 +4961,10 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, euros, onBuyTrac
       </div>
     );
   };
+
+  const tractorLabels = ["1ᵉʳ tracteur", "2ᵉ tracteur", "3ᵉ tracteur"];
+  const trailerCost = TRACTOR_UPGRADES.trailer.cost;
+
   return (
     <div style={{marginTop:"14px",padding:"14px 14px 10px",borderRadius:"18px",
       background:"linear-gradient(135deg,rgba(232,160,32,.06),rgba(11,22,35,.55))",
@@ -4959,9 +4978,45 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, euros, onBuyTrac
           </div>
         </div>
       </div>
+
       {row("count2",     "2ᵉ tracteur",  TRACTOR_UPGRADES.count2.desc,     TRACTOR_UPGRADES.count2.cost,     tractorCount>=2,     onBuyTractor2,    "🚜")}
       {row("count3",     "3ᵉ tracteur",  TRACTOR_UPGRADES.count3.desc,     TRACTOR_UPGRADES.count3.cost,     tractorCount>=3,     onBuyTractor3,    "🚜")}
-      {row("speedBoost", "Route goudronnée", TRACTOR_UPGRADES.speedBoost.desc, TRACTOR_UPGRADES.speedBoost.cost, tractorSpeedBoost,   onBuySpeedBoost,  "⚡")}
+      {row("speedBoost", "Route goudronnée", TRACTOR_UPGRADES.speedBoost.desc, TRACTOR_UPGRADES.speedBoost.cost, tractorSpeedBoost, onBuySpeedBoost,  "⚡")}
+
+      {/* ── Remorques individuelles ── */}
+      <div style={{marginTop:"12px",marginBottom:"6px",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,.45)",textTransform:"uppercase",letterSpacing:".06em"}}>
+        Remorques individuelles
+      </div>
+      {[0,1,2].filter(i => i < tractorCount).map(i => {
+        const hasTrailer = tractorTrailers[i];
+        const canBuy = !hasTrailer && euros >= trailerCost;
+        return (
+          <div key={`trailer${i}`} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"12px",background:"rgba(11,22,35,.45)",border:`1px solid ${hasTrailer?"rgba(74,219,148,.28)":"rgba(74,158,219,.14)"}`,marginBottom:"8px"}}>
+            <div style={{fontSize:"22px",flex:"0 0 30px",textAlign:"center"}}>🔧</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:"12px",fontWeight:700,color:hasTrailer?"#4ADB94":"#E6EDF3"}}>
+                Remorque — {tractorLabels[i]} {hasTrailer && <span style={{fontSize:"10px",marginLeft:"4px"}}>✅</span>}
+              </div>
+              <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)",marginTop:"2px"}}>
+                {hasTrailer ? "+50 % capacité active" : TRACTOR_UPGRADES.trailer.desc}
+              </div>
+            </div>
+            {!hasTrailer && (
+              <button onClick={() => onBuyTrailer(i)} disabled={!canBuy} style={{
+                padding:"7px 12px",borderRadius:"8px",border:"none",
+                background: canBuy ? "linear-gradient(135deg,#1a4a7a,#2268a8)" : "rgba(255,255,255,.05)",
+                color: canBuy ? "white" : "rgba(255,255,255,.28)",
+                fontWeight:700,fontSize:"11px",cursor:canBuy?"pointer":"not-allowed",
+                whiteSpace:"nowrap",
+                boxShadow:canBuy?"0 3px 10px rgba(34,104,168,.3)":"none"
+              }}>
+                {canBuy ? fmtEuro(trailerCost) : `manque ${fmtEuro(Math.max(0,trailerCost-euros))}`}
+              </button>
+            )}
+          </div>
+        );
+      })}
+
       <div style={{fontSize:"10px",color:"rgba(255,255,255,.38)",marginTop:"6px",textAlign:"center",lineHeight:1.4}}>
         📌 Épinglez une zone sur la carte pour y prioriser les tracteurs
       </div>
@@ -6447,6 +6502,7 @@ function DigesteurScene({
               owned={owned}
               tractorCount={tractorCount}
               speedBoost={tractorSpeedBoost}
+              tractorTrailers={tractorTrailers}
               pinnedZones={pinnedZones}
               zoneState={zoneState}
               localStock={localStock}
