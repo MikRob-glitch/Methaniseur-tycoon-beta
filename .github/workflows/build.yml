@@ -1,0 +1,122 @@
+# ============================================================================
+# Méthaniseur Tycoon — Build & Deploy
+# ============================================================================
+# Déclenché à chaque push sur main.
+# 1. Précompile le JSX en JS vanilla (Babel CLI)
+# 2. Assemble index.html (header sans Babel runtime + JS compilé + tail)
+# 3. Déploie sur GitHub Pages
+#
+# → Élimine la transpilation in-browser (~1s de blanc au chargement)
+# ============================================================================
+
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:          # permet de relancer manuellement depuis l'UI GitHub
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true   # annule le build précédent si un nouveau push arrive
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── 2. Node.js + Babel CLI ─────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer Babel
+        run: |
+          npm init -y --silent
+          npm install --save-dev \
+            @babel/core \
+            @babel/cli \
+            @babel/preset-react \
+            --silent
+
+      # ── 3. Trouver le fichier JSX source ──────────────────────────────────
+      - name: Détecter JSX source
+        id: jsx
+        run: |
+          # Prend le .jsx le plus récemment modifié (version la plus haute)
+          JSX=$(ls -t *.jsx 2>/dev/null | head -1)
+          if [ -z "$JSX" ]; then
+            echo "❌ Aucun fichier .jsx trouvé dans le repo"
+            exit 1
+          fi
+          echo "file=$JSX" >> $GITHUB_OUTPUT
+          echo "✅ Source JSX détecté : $JSX"
+
+      # ── 4. Compiler JSX → JS vanilla ──────────────────────────────────────
+      - name: Compiler JSX
+        run: |
+          npx babel "${{ steps.jsx.outputs.file }}" \
+            --presets @babel/preset-react \
+            --out-file compiled.js
+          echo "✅ Compilation OK ($(wc -l < compiled.js) lignes)"
+
+      # ── 5. Assembler index.html ────────────────────────────────────────────
+      - name: Assembler index.html
+        run: |
+          # Modifier le header :
+          #   - Supprimer la ligne du CDN Babel (inutile après compilation)
+          #   - Changer type="text/babel" → type="text/javascript"
+          #   - Ajouter mobile-web-app-capable (standard Chrome/Android)
+          sed \
+            -e '/babel\.min\.js/d' \
+            -e 's|type="text/babel"[^>]*>|type="text/javascript">|' \
+            -e 's|<meta name="apple-mobile-web-app-capable"|<meta name="mobile-web-app-capable" content="yes"/>\n  <meta name="apple-mobile-web-app-capable"|' \
+            shell_header.html > _header_compiled.html
+
+          # Concaténation finale
+          cat _header_compiled.html compiled.js shell_tail.html > index.html
+
+          LINES=$(wc -l < index.html)
+          SIZE=$(du -h index.html | cut -f1)
+          echo "✅ index.html assemblé ($LINES lignes, $SIZE)"
+
+      # ── 6. Préparer l'artefact Pages ──────────────────────────────────────
+      - name: Préparer les fichiers statiques
+        run: |
+          mkdir -p _site
+
+          # Fichiers obligatoires
+          cp index.html sw.js manifest.json _site/
+
+          # Icônes — copie tout ce qui existe
+          for f in icon.svg icon-192.png icon-512.png icon-180.png; do
+            [ -f "$f" ] && cp "$f" _site/ && echo "  ✓ $f"
+          done
+
+          echo "📦 Contenu _site/ :"
+          ls -lh _site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  # ── Déploiement ─────────────────────────────────────────────────────────────
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
