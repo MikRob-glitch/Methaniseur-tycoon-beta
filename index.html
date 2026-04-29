@@ -1062,6 +1062,66 @@ function MiniDigesterIcon({ size }) {
   );
 }
 
+// ─── CH₄ MOLECULE ICON ───────────────────────────────────────────────────────
+// v25.2.4 : icône pré-raccordement (m³ de biométhane disponibles)
+function CH4Icon({ size }) {
+  const dim = size != null ? `${size}px` : "1em";
+  return (
+    <svg
+      width={dim}
+      height={dim}
+      viewBox="0 0 22 22"
+      style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+      aria-label="Biométhane"
+    >
+      {/* 4 liaisons */}
+      <line x1="11" y1="11" x2="4"  y2="4"  stroke="rgba(154,218,96,0.7)" strokeWidth="1.2"/>
+      <line x1="11" y1="11" x2="18" y2="4"  stroke="rgba(154,218,96,0.7)" strokeWidth="1.2"/>
+      <line x1="11" y1="11" x2="4"  y2="18" stroke="rgba(154,218,96,0.7)" strokeWidth="1.2"/>
+      <line x1="11" y1="11" x2="18" y2="18" stroke="rgba(154,218,96,0.7)" strokeWidth="1.2"/>
+      {/* Carbone central */}
+      <circle cx="11" cy="11" r="3.2" fill="#2E7020" stroke="#9ADA60" strokeWidth="0.8"/>
+      {/* 4 hydrogènes */}
+      <circle cx="4"  cy="4"  r="2"   fill="#D8F0B0"/>
+      <circle cx="18" cy="4"  r="2"   fill="#D8F0B0"/>
+      <circle cx="4"  cy="18" r="2"   fill="#D8F0B0"/>
+      <circle cx="18" cy="18" r="2"   fill="#D8F0B0"/>
+    </svg>
+  );
+}
+
+// ─── BANK ICON ───────────────────────────────────────────────────────────────
+// v25.2.4 : icône post-raccordement (euros disponibles)
+function BankIcon({ size }) {
+  const dim = size != null ? `${size}px` : "1em";
+  return (
+    <svg
+      width={dim}
+      height={dim}
+      viewBox="0 0 22 22"
+      style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+      aria-label="Budget"
+    >
+      {/* Fronton triangulaire */}
+      <path d="M 2 7 L 11 2 L 20 7 Z" fill="#4A9EDB" stroke="#6DB5EC" strokeWidth="0.5"/>
+      {/* Plate-forme */}
+      <rect x="2" y="7" width="18" height="1.5" fill="#1C3040" stroke="rgba(74,158,219,0.4)" strokeWidth="0.3"/>
+      {/* 4 colonnes */}
+      <rect x="3.5"  y="9"  width="2" height="9" fill="#4A9EDB" opacity="0.85"/>
+      <rect x="7"    y="9"  width="2" height="9" fill="#4A9EDB" opacity="0.85"/>
+      <rect x="13"   y="9"  width="2" height="9" fill="#4A9EDB" opacity="0.85"/>
+      <rect x="16.5" y="9"  width="2" height="9" fill="#4A9EDB" opacity="0.85"/>
+      {/* Symbole € */}
+      <text x="11" y="16.5" textAnchor="middle"
+            fontFamily="-apple-system, system-ui, sans-serif"
+            fontSize="9" fontWeight="900"
+            fill="#E8A020">€</text>
+      {/* Sol */}
+      <rect x="1" y="18" width="20" height="2" fill="#1C3040" stroke="rgba(74,158,219,0.4)" strokeWidth="0.3"/>
+    </svg>
+  );
+}
+
 // ─── TAMPON SVG ──────────────────────────────────────────────────────────────
 function StampSvg({ size = 170 }) {
   return (
@@ -3035,7 +3095,7 @@ function Game({ username, region, maia }) {
                 <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)",textTransform:"uppercase",letterSpacing:".05em"}}>Biométhane injecté</div>
                 <div style={{fontSize:"20px",fontWeight:800,color:"#4A9EDB",letterSpacing:"-.5px"}}>{fmt(totalScore)}</div>
                 <div style={{display:"flex",alignItems:"center",gap:"6px",justifyContent:"flex-end",marginTop:"3px"}}>
-                  <span style={{fontSize:"10px",color:"#E8A020",fontWeight:700}}>💰 {fmtEuro(euros)}</span>
+                  <span style={{fontSize:"10px",color:"#E8A020",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"4px"}}><BankIcon size={12}/> {fmtEuro(euros)}</span>
                   <span style={{fontSize:"8px",color:"rgba(255,255,255,.25)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
                 </div>
               </>
@@ -3106,7 +3166,7 @@ function Game({ username, region, maia }) {
             {[
               {icon:"🐄",label:"Remplissage",val:fillRate>0?fmtT(fillRate*fillPenalty)+"/s":"—"},
               {icon:<MiniDigesterIcon size={18}/>,label:"m³/heure",   val:isDigesting?fmt(bmPerHour):"—"},
-              {icon:"💧",label:injected?"€ dispos":"m³ dispos",  val:injected?fmtEuro(euros):fmt(wallet)},
+              {icon: injected ? <BankIcon size={18}/> : <CH4Icon size={18}/>, label:injected?"€ dispos":"m³ dispos",  val:injected?fmtEuro(euros):fmt(wallet)},
               // v24 : Fiabilité (affichée dès qu'on possède au moins une zone)
               ...(owned.some(q=>q>0) ? [{
                 icon: reliability >= 80 ? "🟢" : reliability >= 50 ? "🟡" : "🔴",
@@ -3710,7 +3770,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: "9px", color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".07em" }}>{injected?"💰 Budget €":"💧 Budget"}</div>
+            <div style={{ fontSize: "9px", color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".07em", display:"inline-flex", alignItems:"center", gap:"4px" }}>{injected?<><BankIcon size={11}/> Budget €</>:<><CH4Icon size={11}/> Budget</>}</div>
             <div style={{ fontSize: "22px", fontWeight: 800, color: injected?"#E8A020":"#6DB5EC", letterSpacing: "-.5px" }}>{injected?fmtEuro(wallet):fmt(wallet)}</div>
           </div>
           <div style={{ display: "flex", gap: "3px", background: "rgba(255,255,255,.06)", borderRadius: "10px", padding: "3px" }}>
