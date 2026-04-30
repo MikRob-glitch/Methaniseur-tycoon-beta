@@ -400,7 +400,7 @@ const DIGESTEUR_LABELS    = ["x2 capacité","x3 capacité","x4 capacité"];
 //   Chaque palier débloque un bonus multiplicatif sur baseFill de cet intrant.
 //   Pédagogie : simule le gain d'efficacité opérationnelle qu'un site obtient
 //   en exploitant durablement le même type d'intrant (procédés, équipes, logistique).
-const STAR_THRESHOLDS = [1, 5, 10, 20, 40];                 // qty seuils 1★→5★
+const STAR_THRESHOLDS = [5, 10, 20, 50, 100];                 // qty seuils 1★→5★
 const STAR_BONUSES    = [1.05, 1.10, 1.20, 1.35, 1.50];     // multiplicateurs cumulatifs (PAS additifs)
 const getIntrantStars = (qty) => {
   if (qty <= 0) return 0;
@@ -958,7 +958,7 @@ function computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump })
   }));
 
   // v25.0.7 — Maîtrise multi-paliers (5 étoiles par intrant)
-  // Chaque seuil 1/5/10/20/40 génère un badge séparé, débloquable progressivement.
+  // Chaque seuil 5/10/20/50/100 génère un badge séparé, débloquable progressivement.
   // Pédagogie : montre la courbe d'apprentissage opérationnel sur la durée.
   const STAR_LABELS = ["Initiation", "Pratique", "Expertise", "Excellence", "Maîtrise totale"];
   const mastery = [];
