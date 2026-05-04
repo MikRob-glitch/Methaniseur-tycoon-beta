@@ -2,14 +2,12 @@
 // Source de vérité — Méthaniseur Tycoon v25.8
 // Workflow : modifier ce fichier → ./build.sh → push index.html
 // v25.8 : VUE RÉSEAU AVAL — GnvNetworkView dans Vue 2 bottom (250px)
-//         · Pipeline GRDF horizontal animé (bulles de flux) + bâtiments consommateurs raccordés
-//         · 3 stations GNV (active ⛽ / verrou 🔒) branchées sur le pipe via branches colorées
-//         · Route avec marquage jaune — véhicules (🚌🚛🚗🚑🚐) animés par CSS keyframes
-//         · Tracteurs GNV convertis (🚜) apparaissent aléatoirement si tractorGnvArr > 0
-//         · Fréquence de spawn proportionnelle à gnvSplit + gnvStations
-//         · Read-only (contrôles slider + achat station restent dans le shop)
-//         · Locked (🔒) avant raccordement réseau GRDF
-//         · 2 nouvelles props DigesteurScene : gnvSplit, gnvBm (bmPerHour déjà présent)
+//         v25.8.1 corrections :
+//         · Layout corrigé top→bottom : Route → Stations GNV → Pipe GRDF → Bâtiments réseau aval
+//         · Connexion visuelle Vue 1→Vue 2 : pipe entre depuis la gauche (← Inj.)
+//         · Sens véhicules : scaleX(-1) sur non-tracteurs (emojis face gauche par défaut → face droite)
+//         · Tracteur 🚜 : pas de flip (face droite nativement)
+//         · isTractor flag dans le spawn pour distinction tracteur/véhicule
 // v25.7 : UNIFICATION SYSTÈME GNV — un seul système, par tracteur
 //         · Bonus +15 % de remplissage par tracteur converti GNV (max ×3 = +45 %)
 //         · Suppression du bouton legacy global "Passer le tracteur au GNV — 2 000 €"
@@ -5268,6 +5266,10 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
 //         stations GNV avec branches + route animée (véhicules + tracteurs GNV).
 //         Read-only (contrôles dans le shop). Props: gnvStations, gnvSplit, gnvBm,
 //         bmPerHour, tractorGnvArr, tractorCount.
+// v25.8.1 — Layout corrigé :
+//   Route (haut) → Stations GNV → Pipe GRDF (depuis injection Vue 1) → Bâtiments réseau aval
+//   Sens véhicules : scaleX(-1) pour non-tracteurs (emojis face gauche par défaut)
+//   Tracteur 🚜 : pas de flip (déjà face droite)
 function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr, tractorCount }) {
   const [vehicles, setVehicles] = useState([]);
   const timerRef = useRef(null);
@@ -5276,7 +5278,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   const hasActive    = gnvStations > 0 && gnvSplit > 0;
   const gnvPerHour   = Math.round(bmPerHour * gnvSplit / 100);
   const netPerHour   = Math.round(bmPerHour * (100 - gnvSplit) / 100);
-  const STATION_X    = [22, 50, 78]; // % du conteneur route
+  const STATION_X    = [22, 50, 78]; // % du conteneur
 
   // Injection CSS keyframes (une seule fois dans le document)
   useEffect(() => {
@@ -5293,17 +5295,16 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     document.head.appendChild(s);
   }, []);
 
-  // Spawn véhicules vers les stations actives
+  // Spawn véhicules (+ tracteurs GNV) vers les stations actives
   useEffect(() => {
     if (!hasActive) { setVehicles([]); return; }
     const interval = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
     timerRef.current = setInterval(() => {
       const stIdx = Math.floor(Math.random() * gnvStations);
-      const useTractor = gnvConverted > 0 && Math.random() < 0.22;
-      const icon = useTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const isTractor = gnvConverted > 0 && Math.random() < 0.22;
+      const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
       const id = uid++;
-      setVehicles(prev => [...prev.slice(-6), { id, icon, stIdx }]);
-      // Nettoyage après fin d'animation (5s)
+      setVehicles(prev => [...prev.slice(-6), { id, icon, stIdx, isTractor }]);
       setTimeout(() => setVehicles(prev => prev.filter(x => x.id !== id)), 5200);
     }, interval);
     return () => clearInterval(timerRef.current);
@@ -5313,13 +5314,13 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     <div style={{height:"250px", flexShrink:0, display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(7,14,25,.55)"}}>
 
       {/* ── Header KPIs ── */}
-      <div style={{flexShrink:0, height:"26px", display:"flex", alignItems:"center", gap:"6px",
+      <div style={{flexShrink:0, height:"24px", display:"flex", alignItems:"center", gap:"6px",
         padding:"0 10px", borderBottom:"1px solid rgba(255,255,255,.05)"}}>
-        <div style={{width:"2px", height:"14px",
+        <div style={{width:"2px", height:"13px",
           background:"linear-gradient(180deg,rgba(74,158,219,.9),rgba(74,158,219,.1))",
           borderRadius:"2px", boxShadow:"0 0 6px rgba(74,158,219,.5)"}}/>
         <span style={{fontSize:"7px", color:"rgba(74,158,219,.7)", textTransform:"uppercase",
-          letterSpacing:".08em", fontWeight:700}}>Distribution réseau aval GRDF</span>
+          letterSpacing:".07em", fontWeight:700}}>Distribution réseau aval GRDF</span>
         <div style={{marginLeft:"auto", display:"flex", gap:"4px"}}>
           <div style={{background:"rgba(74,158,219,.1)", border:"1px solid rgba(74,158,219,.2)",
             borderRadius:"4px", padding:"1px 5px", fontSize:"7px", color:"#4A9EDB", fontWeight:700}}>
@@ -5334,28 +5335,88 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         </div>
       </div>
 
-      {/* ── Pipeline GRDF + bâtiments consommateurs ── */}
-      <div style={{flexShrink:0, height:"52px", position:"relative"}}>
-        {/* Bâtiments raccordés au-dessus du pipe */}
-        {[8, 22, 40, 58, 72, 88].map((xPct, i) => {
-          const bw = [16,12,20,14,18,10][i];
-          const bh = [18,13,24,15,20,11][i];
-          const ic = i===2 ? "🏭" : i===4 ? "🏬" : i===1 ? "🏢" : "🏠";
+      {/* ── Route + véhicules (en haut — tracteurs et clients GNV) ── */}
+      <div style={{flexShrink:0, height:"40px", position:"relative", overflow:"hidden"}}>
+        {/* Asphalte */}
+        <div style={{position:"absolute", top:0, left:0, right:0, height:"28px",
+          background:"#141e2e",
+          borderTop:"1px solid rgba(255,255,255,.07)",
+          borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+          {/* Marquage central jaune pointillé */}
+          <div style={{position:"absolute", top:"11px", left:0, right:0, height:"3px",
+            backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.5) 0,rgba(245,190,80,.5) 16px,transparent 16px,transparent 30px)"}}/>
+        </div>
+        {/* Trottoir */}
+        <div style={{position:"absolute", bottom:0, left:0, right:0, height:"12px",
+          background:"rgba(22,34,52,.85)"}}/>
+
+        {/* Véhicules animés par CSS keyframes.
+            scaleX(-1) sur non-tracteurs : emojis 🚗🚌🚛 font face gauche par défaut → flipper pour marche avant.
+            🚜 face droite nativement → pas de flip. */}
+        {vehicles.map(v => (
+          <div key={v.id} style={{
+            position:"absolute", top:"4px", fontSize:"17px", lineHeight:"22px",
+            animation:`gnvNetDriveS${v.stIdx} 5s linear 1 forwards`,
+            transform: v.isTractor ? "none" : "scaleX(-1)",
+          }}>
+            {v.icon}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Stations GNV (entre route et pipe GRDF) ── */}
+      <div style={{flexShrink:0, height:"54px", position:"relative"}}>
+        {[0, 1, 2].map(i => {
+          const active = i < gnvStations;
+          const x = STATION_X[i];
           return (
-            <div key={i} style={{position:"absolute", bottom:"11px", left:`${xPct}%`,
+            <div key={i} style={{position:"absolute", top:0, left:`${x}%`,
               transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
-              <div style={{fontSize:"7px", lineHeight:1, marginBottom:"1px"}}>{ic}</div>
-              <div style={{width:`${bw}px`, height:`${bh}px`,
-                background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)",
-                borderRadius:"2px 2px 0 0"}}/>
-              <div style={{width:"1px", height:"6px", background:"rgba(74,158,219,.28)"}}/>
+              {/* Branche montante vers la route */}
+              <div style={{width:"2px", height:"8px",
+                background: active
+                  ? "linear-gradient(180deg,rgba(74,219,148,.7),rgba(74,219,148,.4))"
+                  : "rgba(255,255,255,.07)"}}/>
+              {/* Corps station */}
+              <div style={{
+                width:"40px", height:"36px", borderRadius:"7px",
+                background: active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)",
+                border: `1.5px solid ${active ? "rgba(74,219,148,.42)" : "rgba(255,255,255,.09)"}`,
+                display:"flex", flexDirection:"column", alignItems:"center",
+                justifyContent:"center", gap:"1px",
+                animation: active ? `gnvNetPulse 2.4s ${i * 0.8}s infinite ease-in-out` : "none",
+              }}>
+                <div style={{fontSize:"14px", filter: active ? "none" : "grayscale(1)",
+                  opacity: active ? 1 : 0.28}}>⛽</div>
+                <div style={{fontSize:"6px", fontWeight:700,
+                  color: active ? "#4ADB94" : "rgba(255,255,255,.18)"}}>
+                  {active ? `S${i+1}` : "🔒"}
+                </div>
+              </div>
+              {/* Branche descendante vers le pipe */}
+              <div style={{width:"2px", height:"10px",
+                background: active
+                  ? "linear-gradient(180deg,rgba(74,219,148,.4),rgba(74,158,219,.4))"
+                  : "rgba(255,255,255,.06)"}}/>
             </div>
           );
         })}
-        {/* Pipe horizontal GRDF avec bulles de flux */}
-        <div style={{position:"absolute", bottom:"5px", left:0, right:0, height:"5px",
-          background:"linear-gradient(90deg,rgba(74,158,219,.5),rgba(74,158,219,.95),rgba(74,158,219,.5))",
-          boxShadow:"0 0 10px rgba(74,158,219,.38)", borderRadius:"3px", overflow:"hidden"}}>
+      </div>
+
+      {/* ── Pipe GRDF horizontal — entre stations et réseau aval ── */}
+      {/* Entrée depuis la gauche = connexion avec l'injection de la Vue 1 */}
+      <div style={{flexShrink:0, height:"20px", position:"relative"}}>
+        {/* Étiquette connexion Vue 1 */}
+        <div style={{position:"absolute", left:0, top:0, bottom:0, display:"flex",
+          alignItems:"center", paddingLeft:"3px", zIndex:5}}>
+          <div style={{fontSize:"6px", color:"rgba(74,158,219,.55)", fontWeight:700,
+            whiteSpace:"nowrap", letterSpacing:".03em"}}>← Inj.</div>
+        </div>
+        {/* Pipe horizontal avec bulles de flux */}
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"5px",
+          background:"linear-gradient(90deg,rgba(74,158,219,.95),rgba(74,158,219,.9),rgba(74,158,219,.5))",
+          boxShadow:"0 0 10px rgba(74,158,219,.4)", borderRadius:"0 3px 3px 0", overflow:"hidden"}}>
           {[0,1,2,3,4].map(i => (
             <div key={i} style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
               width:"7px", height:"7px", borderRadius:"50%",
@@ -5365,67 +5426,26 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         </div>
       </div>
 
-      {/* ── Branches depuis pipe → stations GNV ── */}
-      <div style={{flexShrink:0, height:"76px", position:"relative"}}>
-        {[0, 1, 2].map(i => {
-          const active = i < gnvStations;
-          const x = STATION_X[i];
+      {/* ── Bâtiments réseau aval (consommateurs raccordés sous le pipe) ── */}
+      <div style={{flexShrink:0, height:"44px", position:"relative"}}>
+        {[8, 22, 40, 58, 72, 88].map((xPct, i) => {
+          const bw = [16,12,20,14,18,10][i];
+          const bh = [16,11,22,13,18,9][i];
+          const ic = i===2 ? "🏭" : i===4 ? "🏬" : i===1 ? "🏢" : "🏠";
           return (
-            <div key={i} style={{position:"absolute", top:0, left:`${x}%`,
+            <div key={i} style={{position:"absolute", top:0, left:`${xPct}%`,
               transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
-              {/* Branch verticale depuis le pipe */}
-              <div style={{width:"2px", height:"14px",
-                background: active
-                  ? "linear-gradient(180deg,rgba(74,219,148,.85),rgba(74,219,148,.35))"
-                  : "rgba(255,255,255,.08)",
-                boxShadow: active ? "0 0 5px rgba(74,219,148,.4)" : "none"}}/>
-              {/* Corps station */}
-              <div style={{
-                width:"42px", height:"44px", borderRadius:"8px",
-                background: active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)",
-                border: `1.5px solid ${active ? "rgba(74,219,148,.42)" : "rgba(255,255,255,.09)"}`,
-                display:"flex", flexDirection:"column", alignItems:"center",
-                justifyContent:"center", gap:"2px",
-                animation: active ? `gnvNetPulse 2.4s ${i * 0.8}s infinite ease-in-out` : "none",
-              }}>
-                <div style={{fontSize:"15px", filter: active ? "none" : "grayscale(1)",
-                  opacity: active ? 1 : 0.28}}>⛽</div>
-                <div style={{fontSize:"6.5px", fontWeight:700,
-                  color: active ? "#4ADB94" : "rgba(255,255,255,.18)"}}>
-                  {active ? `S${i+1}` : "🔒"}
-                </div>
-              </div>
-              {/* Poteau jusqu'à la route */}
-              <div style={{width:"2px", height:"12px",
-                background: active ? "rgba(74,219,148,.2)" : "rgba(255,255,255,.06)"}}/>
+              {/* Tige raccordement depuis le pipe */}
+              <div style={{width:"1px", height:"6px", background:"rgba(74,158,219,.28)"}}/>
+              {/* Façade bâtiment */}
+              <div style={{width:`${bw}px`, height:`${bh}px`,
+                background:"rgba(74,158,219,.07)", border:"1px solid rgba(74,158,219,.13)",
+                borderRadius:"0 0 2px 2px"}}/>
+              {/* Emoji type de bâtiment */}
+              <div style={{fontSize:"7px", lineHeight:1, marginTop:"1px"}}>{ic}</div>
             </div>
           );
         })}
-      </div>
-
-      {/* ── Route + véhicules animés ── */}
-      <div style={{flexShrink:0, height:"42px", position:"relative", overflow:"hidden"}}>
-        {/* Asphalte */}
-        <div style={{position:"absolute", top:"4px", left:0, right:0, height:"24px",
-          background:"#141e2e",
-          borderTop:"1px solid rgba(255,255,255,.07)",
-          borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-          {/* Marquage central jaune */}
-          <div style={{position:"absolute", top:"9px", left:0, right:0, height:"3px",
-            backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.5) 0,rgba(245,190,80,.5) 16px,transparent 16px,transparent 30px)"}}/>
-        </div>
-        {/* Trottoir */}
-        <div style={{position:"absolute", bottom:0, left:0, right:0, height:"14px",
-          background:"rgba(22,34,52,.8)"}}/>
-        {/* Véhicules (animation CSS keyframe par station cible) */}
-        {vehicles.map(v => (
-          <div key={v.id} style={{
-            position:"absolute", top:"5px", fontSize:"17px", lineHeight:"20px",
-            animation:`gnvNetDriveS${v.stIdx} 5s linear 1 forwards`,
-          }}>
-            {v.icon}
-          </div>
-        ))}
       </div>
 
       {/* ── Spacer ── */}
@@ -5436,7 +5456,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         justifyContent:"center", padding:"0 10px",
         background:"rgba(7,14,25,.7)", borderTop:"1px solid rgba(255,255,255,.05)"}}>
         <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
-          ⛽ GNV total : <strong style={{color:"#4ADB94"}}>{fmt(gnvBm)}</strong> m³
+          ⛽ GNV : <strong style={{color:"#4ADB94"}}>{fmt(gnvBm)}</strong> m³
         </span>
         <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
         <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
