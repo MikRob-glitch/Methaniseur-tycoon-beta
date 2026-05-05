@@ -5302,8 +5302,11 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   const [stRoadVeh,  setStRoadVeh]  = useState([]);
   // Circuit 2 : route de retour (L→R) — véhicules clients devant les bâtiments
   const [retRoadVeh, setRetRoadVeh] = useState([]);
-  const stTimerRef  = useRef(null);
-  const retTimerRef = useRef(null);
+  // Circuit 3 : trajet complet tracteur acheté — descente bande droite → station → remontée bande gauche
+  const [gnvTrips,   setGnvTrips]   = useState([]);
+  const stTimerRef   = useRef(null);
+  const retTimerRef  = useRef(null);
+  const tripTimerRef = useRef(null);
 
   const gnvConverted = tractorGnvArr.slice(0, tractorCount).filter(Boolean).length;
   const hasActive    = gnvStations > 0 && gnvSplit > 0;
@@ -5312,6 +5315,11 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   // Positions stations : S1=22%, S2=50%, S3=78% (de gauche)
   // En sens R→L : le premier atteint est S3 (78%), puis S2 (50%), puis S1 (22%)
   const STATION_X = [22, 50, 78];
+
+  // Overlay trip : top=-350px depuis GnvNetworkView, height=600px → couvre toute Vue2
+  // Station road dans l'overlay : 350 (TOP zone) + 24 (header GnvNetworkView) = 374px
+  const TRIP_OVERLAY_H = 600;
+  const TRIP_STATION_Y = 374; // px depuis le haut de l'overlay
 
   // ── CSS keyframes (injection unique dans le document) ──
   useEffect(() => {
@@ -5330,11 +5338,13 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       "@keyframes gnvSt2RL{0%{left:107%;opacity:0}5%{opacity:1}28%{left:calc(78% - 10px)}47%{left:calc(78% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
       // ── Route de retour L→R ──
       "@keyframes gnvRetLR{0%{left:-8%;opacity:0}5%{opacity:1}95%{opacity:1}100%{left:107%;opacity:0}}",
-      // ── Routes latérales : tracteurs descendent (bande droite) et montent (bande gauche) ──
-      // gnvTrDown/Up utilisés dans GnvNetworkView (STRIP_H~130px) ET dans le TOP de Vue2 (350px)
-      // La durée varie selon le conteneur pour garder une vitesse cohérente (~55px/s)
+      // ── Routes latérales ──
       "@keyframes gnvTrDown{0%{top:-22px;opacity:0}4%{opacity:1}96%{opacity:1}100%{top:calc(100% + 4px);opacity:0}}",
       "@keyframes gnvTrUp{0%{top:calc(100% + 4px);opacity:0}4%{opacity:1}96%{opacity:1}100%{top:-22px;opacity:0}}",
+      // ── Trajet complet tracteur : descente bande droite (top 0→374px) ──
+      "@keyframes gnvTripDown{0%{top:-30px;opacity:0}4%{opacity:1}100%{top:374px;opacity:1}}",
+      // ── Trajet complet tracteur : remontée bande gauche (top 374px→0) ──
+      "@keyframes gnvTripUp{0%{top:374px;opacity:1}96%{opacity:1}100%{top:-30px;opacity:0}}",
     ].join('\n');
     document.head.appendChild(s);
   }, []);
@@ -5370,6 +5380,27 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     return () => clearInterval(retTimerRef.current);
   }, [hasActive, gnvStations, gnvSplit]);
 
+  // ── Spawn : trajet complet tracteur acheté (descente → station → remontée) ──
+  // Déclenché toutes les ~18s dès qu'il y a des tracteurs et des stations actives.
+  // Phases : 'down' (4.2s) → 'cross' (5.3s) → 'up' (4.3s) → supprimé
+  useEffect(() => {
+    clearInterval(tripTimerRef.current);
+    if (tractorCount === 0 || gnvStations === 0) { setGnvTrips([]); return; }
+    const spawn = () => {
+      const tractorIdx = Math.floor(Math.random() * tractorCount);
+      const stIdx      = Math.floor(Math.random() * gnvStations);
+      const isGnv      = (tractorGnvArr || [])[tractorIdx] || false;
+      const id = uid++;
+      setGnvTrips(prev => [...prev.slice(-2), { id, tractorIdx, stIdx, isGnv, phase: 'down' }]);
+      setTimeout(() => setGnvTrips(p => p.map(t => t.id === id ? { ...t, phase: 'cross' } : t)), 4200);
+      setTimeout(() => setGnvTrips(p => p.map(t => t.id === id ? { ...t, phase: 'up'   } : t)), 9500);
+      setTimeout(() => setGnvTrips(p => p.filter(t => t.id !== id)), 13800);
+    };
+    spawn(); // premier passage immédiat
+    tripTimerRef.current = setInterval(spawn, 18000);
+    return () => clearInterval(tripTimerRef.current);
+  }, [tractorCount, gnvStations]);
+
   // ── Hauteurs (total = 250px) ──
   // Header 24 + StRoad 30 + Stations 52 + Pipe 18 + RetRoad 30 + Buildings 40 + spacer + Footer 26
   // Circuit tracteurs : rectangle formé par bandes verticales + lignes horizontales haut/bas station road
@@ -5379,7 +5410,34 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   const CORNER_R = 12; // rayon des virages aux coins du circuit
 
   return (
-    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(7,14,25,.55)"}}>
+    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"visible", background:"rgba(7,14,25,.55)"}}>
+
+      {/* ══ OVERLAY TRAJET COMPLET TRACTEUR — couvre Vue2 entière (350+250=600px) ══
+          position:absolute, top:-350px → commence au sommet de la zone TOP
+          overflow:hidden sur le parent Vue2 contient le débordement */}
+      <div style={{position:"absolute", top:"-350px", left:0, right:0, height:`${TRIP_OVERLAY_H}px`, pointerEvents:"none", zIndex:20}}>
+        {gnvTrips.map(trip => {
+          if (trip.phase === 'down') return (
+            <div key={trip.id} style={{position:"absolute", right:"4px",
+              animation:"gnvTripDown 4.2s linear forwards"}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={true} size={22}/>
+            </div>
+          );
+          if (trip.phase === 'cross') return (
+            <div key={trip.id} style={{position:"absolute", top:`${TRIP_STATION_Y}px`,
+              animation:`gnvSt${trip.stIdx}RL 5.3s linear forwards`}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={true} size={22}/>
+            </div>
+          );
+          if (trip.phase === 'up') return (
+            <div key={trip.id} style={{position:"absolute", left:"4px",
+              animation:"gnvTripUp 4.3s linear forwards"}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={false} size={22}/>
+            </div>
+          );
+          return null;
+        })}
+      </div>
 
       {/* ══ CIRCUIT TRACTEURS : rectangle de route avec virages ══
           Bandes verticales (gauche/droite, height:100%) + lignes horizontales (haut/bas station road)
