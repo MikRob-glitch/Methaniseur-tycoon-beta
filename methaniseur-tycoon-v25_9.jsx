@@ -5370,12 +5370,11 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   }, [hasActive, gnvStations, gnvSplit]);
 
   // ── Hauteurs (total = 250px) ──
-  // Header 24 + StRoad 36 + Stations 52 + Pipe 18 + RetRoad 18 + Buildings 40 + spacer + Footer 26
-  // = 214px fixe → spacer = 36px
+  // Header 24 + StRoad 30 + Stations 52 + Pipe 18 + RetRoad 30 + Buildings 40 + spacer + Footer 26
   // Circuit tracteurs : rectangle formé par bandes verticales + lignes horizontales haut/bas station road
-  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 60px (bas de la station road)
+  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 54px (bas de la station road = 24+30)
   const ROAD_TOP = 24; // px depuis le haut de GnvNetworkView = bas du header
-  const ROAD_BOT = 60; // px depuis le haut = bas de la station road (24 + 36)
+  const ROAD_BOT = 54; // px depuis le haut = bas de la station road (24 + 30)
   const CORNER_R = 12; // rayon des virages aux coins du circuit
 
   return (
@@ -5468,24 +5467,19 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       </div>
 
       {/* ── Station road R→L ──
-          Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche.
-          Transforms emojis :
-            • Véhicule (🚗🚌…) : face gauche par défaut → pas de flip → sens R→L correct ✓
-            • Tracteur 🚜 : face droite par défaut → scaleX(-1) → face gauche ✓ */}
-      <div style={{flexShrink:0, height:"36px", position:"relative", overflow:"hidden"}}>
-        {/* Asphalte — fond unifié avec les bandes du circuit (#141e2e) */}
-        <div style={{position:"absolute", top:0, left:0, right:0, height:"24px",
-          background:"#141e2e"}}>
-          <div style={{position:"absolute", top:"9px", left:0, right:0, height:"3px",
-            backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.52) 0,rgba(245,190,80,.52) 16px,transparent 16px,transparent 30px)"}}/>
-        </div>
-        {/* Trottoir */}
-        <div style={{position:"absolute", bottom:0, left:0, right:0, height:"12px",
-          background:"rgba(20,30,48,.9)"}}/>
+          Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche. */}
+      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
+        background:"#141e2e",
+        borderTop:"2px solid rgba(240,80,180,.45)",
+        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
+        {/* Marquage central rose — identique aux bandes verticales */}
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"2px",
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
         {/* Véhicules R→L */}
         {stRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"3px", fontSize:"16px", lineHeight:"20px",
+            position:"absolute", top:"5px", fontSize:"16px", lineHeight:"20px",
             animation:`gnvSt${v.stIdx}RL 5s linear 1 forwards`,
             transform: v.isTractor ? "scaleX(-1)" : "none",
           }}>
@@ -5552,22 +5546,19 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         </div>
       </div>
 
-      {/* ── Route de retour L→R — véhicules clients devant les bâtiments ──
-          Véhicules qui ont fait le plein → sortent par la gauche → passent devant les bâtiments → ressortent à droite.
-          Sens L→R : emojis face gauche → flip scaleX(-1) → face droite ✓ */}
-      <div style={{flexShrink:0, height:"18px", position:"relative", overflow:"hidden"}}>
-        {/* Route de retour (asphalte teinté orange pour distinguer) */}
-        <div style={{position:"absolute", top:"2px", left:0, right:0, height:"14px",
-          background:"#0e1622",
-          borderTop:"1px solid rgba(255,140,50,.18)",
-          borderBottom:"1px solid rgba(255,140,50,.1)"}}>
-          <div style={{position:"absolute", top:"4px", left:0, right:0, height:"2px",
-            backgroundImage:"repeating-linear-gradient(90deg,rgba(255,140,50,.3) 0,rgba(255,140,50,.3) 12px,transparent 12px,transparent 22px)"}}/>
-        </div>
+      {/* ── Route de retour L→R — véhicules clients devant les bâtiments ── */}
+      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
+        background:"#141e2e",
+        borderTop:"2px solid rgba(240,80,180,.45)",
+        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
+        {/* Marquage central rose */}
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"2px",
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
         {/* Véhicules L→R (retour) — face droite */}
         {retRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"2px", fontSize:"13px", lineHeight:"16px",
+            position:"absolute", top:"5px", fontSize:"13px", lineHeight:"16px",
             animation:"gnvRetLR 6.5s linear 1 forwards",
             transform:"scaleX(-1)",
           }}>
@@ -6968,9 +6959,9 @@ function DigesteurScene({
             preserveAspectRatio="none"
             style={{position:"absolute", left:0, top:0, width:"100%", height:"350px", pointerEvents:"none"}}
           >
-            {/* Couche 1 : ASPHALTE (gris foncé épais) — donne le visuel "route" */}
-            <g stroke="#1a2538" strokeWidth="9" fill="none" strokeLinecap="round" opacity=".95">
-              {/* VUE 1 — lane droite du bac + segment au-dessus du bac */}
+            {/* Couche 1 : ASPHALTE (même fond que les bandes verticales) */}
+            <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square" opacity="1">
+              {/* VUE 1 — lane droite du bac + segment au-dessus */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
@@ -6981,8 +6972,21 @@ function DigesteurScene({
               <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
             </g>
-            {/* Couche 2 : MARQUAGE CENTRAL pointillé jaune (signe universel "route") */}
-            <g stroke="#F5D888" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 6" opacity=".75">
+            {/* Couche 2 : BORDS roses (identiques aux bandes verticales HTML) */}
+            <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square" opacity="1">
+              {/* VUE 1 */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP - 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP + 5}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT - 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT + 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5}`}/>
+              {/* VUE 2 — lanes horizontales */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L 795 ${WORLD.LANE_TOP - 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L 795 ${WORLD.LANE_TOP + 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5} L 795 ${WORLD.LANE_BOT - 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5} L 795 ${WORLD.LANE_BOT + 5}`}/>
+            </g>
+            {/* Couche 3 : MARQUAGE CENTRAL pointillé rose (unifié avec bandes verticales) */}
+            <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10" opacity="1">
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
