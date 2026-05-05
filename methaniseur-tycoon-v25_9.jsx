@@ -5270,6 +5270,22 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
   );
 }
 
+// ─── MINI TRACTOR — tracteur SVG miniaturisé pour les routes latérales ────────
+// Réutilise TractorSvgInner (même visuel que le tracteur du jeu, avec badge GNV).
+// flipped=true → face gauche (descend vers stations), flipped=false → face droite (remonte).
+function MiniTractor({ isGnv, flipped, size }) {
+  const h = size || 22;
+  const w = Math.round(h * 90 / 48);
+  return (
+    <svg viewBox="0 0 90 48" width={w} height={h}
+      style={{display:"block", overflow:"visible", flexShrink:0}}>
+      <g transform={flipped ? "translate(90,0) scale(-1,1)" : ""}>
+        <TractorSvgInner isLoaded={false} icon="" trailerTilt={0} isGnv={isGnv} />
+      </g>
+    </svg>
+  );
+}
+
 // ─── GNV NETWORK VIEW — Vue 2 réseau aval ────────────────────────────────────
 // v25.8 — Visualisation spatiale : pipeline GRDF + bâtiments consommateurs +
 //         stations GNV avec branches + route animée (véhicules + tracteurs GNV).
@@ -5356,40 +5372,78 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   // ── Hauteurs (total = 250px) ──
   // Header 24 + StRoad 36 + Stations 52 + Pipe 18 + RetRoad 18 + Buildings 40 + spacer + Footer 26
   // = 214px fixe → spacer = 36px
-  const STRIP_H = 130; // hauteur bandes latérales (header + stRoad + stations + pipe)
+  // Circuit tracteurs : rectangle formé par bandes verticales + lignes horizontales haut/bas station road
+  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 60px (bas de la station road)
+  const ROAD_TOP = 24; // px depuis le haut de GnvNetworkView = bas du header
+  const ROAD_BOT = 60; // px depuis le haut = bas de la station road (24 + 36)
+  const CORNER_R = 12; // rayon des virages aux coins du circuit
 
   return (
     <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(7,14,25,.55)"}}>
 
-      {/* ══ Routes latérales 30px : liaison gisements ↔ stations GNV ══ */}
-      {/* DROITE : tracteurs descendent (gisements → stations, face gauche = scaleX(-1)) */}
-      <div style={{position:"absolute", right:0, top:0, width:"30px", height:`${STRIP_H}px`, zIndex:8, overflow:"hidden",
-        background:"#0d1521", borderLeft:"2px solid rgba(240,80,180,.45)",
-        boxShadow:"-3px 0 10px rgba(240,80,180,.14)"}}>
-        {/* Tirets centraux */}
+      {/* ══ CIRCUIT TRACTEURS : rectangle de route avec virages ══
+          Bandes verticales (gauche/droite, height:100%) + lignes horizontales (haut/bas station road)
+          → ferment visuellement la boucle. Fond unifié #141e2e = même asphalte que la station road. */}
+
+      {/* ─ Bande DROITE : tracteurs descendent (gisements → stations, face gauche) ─ */}
+      <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
+        background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
+        {/* Tirets de voie centrale */}
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.28) 0,rgba(240,80,180,.28) 8px,transparent 8px,transparent 16px)"}}/>
-        {/* Tracteurs descendants */}
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+        {/* Vrais tracteurs descendants — MiniTractor avec badge GNV si converti */}
         {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-          <div key={i} style={{position:"absolute", left:"50%",
-            transform:"translateX(-50%) scaleX(-1)", fontSize:"15px", lineHeight:1,
-            animation:`gnvTrDown ${2.4 + i * 0.5}s ${-(i * 0.85)}s infinite linear`}}>🚜</div>
+          <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
+            animation:`gnvTrDown ${2.4 + i * 0.5}s ${-(i * 0.85)}s infinite linear`}}>
+            <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={true} size={20}/>
+          </div>
         ))}
       </div>
-      {/* GAUCHE : tracteurs montent (stations → gisements, face droite = pas de flip) */}
-      <div style={{position:"absolute", left:0, top:0, width:"30px", height:`${STRIP_H}px`, zIndex:8, overflow:"hidden",
-        background:"#0d1521", borderRight:"2px solid rgba(240,80,180,.45)",
-        boxShadow:"3px 0 10px rgba(240,80,180,.14)"}}>
+
+      {/* ─ Bande GAUCHE : tracteurs montent (stations → gisements, face droite) ─ */}
+      <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
+        background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.28) 0,rgba(240,80,180,.28) 8px,transparent 8px,transparent 16px)"}}/>
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
         {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-          <div key={i} style={{position:"absolute", left:"50%",
-            transform:"translateX(-50%)", fontSize:"15px", lineHeight:1,
-            animation:`gnvTrUp ${2.4 + i * 0.5}s ${-(i * 0.85) - 1.2}s infinite linear`}}>🚜</div>
+          <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
+            animation:`gnvTrUp ${2.4 + i * 0.5}s ${-(i * 0.85) - 1.2}s infinite linear`}}>
+            <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={false} size={20}/>
+          </div>
         ))}
       </div>
+
+      {/* ─ Lignes horizontales — ferment le rectangle du circuit ─ */}
+      {/* Haut : relie bande gauche → bande droite au niveau du haut de la station road */}
+      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_TOP}px`, height:"2px",
+        background:"rgba(240,80,180,.42)", zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas : relie bande gauche → bande droite au niveau du bas de la station road */}
+      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_BOT}px`, height:"2px",
+        background:"rgba(240,80,180,.28)", zIndex:6, pointerEvents:"none"}}/>
+
+      {/* ─ Coins de virage aux 4 intersections ─ */}
+      {/* Haut-droit */}
+      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderTop:"2px solid rgba(240,80,180,.42)", borderRight:"2px solid rgba(240,80,180,.45)",
+        borderTopRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas-droit */}
+      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_BOT}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderBottom:"2px solid rgba(240,80,180,.28)", borderRight:"2px solid rgba(240,80,180,.45)",
+        borderBottomRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Haut-gauche */}
+      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderTop:"2px solid rgba(240,80,180,.42)", borderLeft:"2px solid rgba(240,80,180,.45)",
+        borderTopLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas-gauche */}
+      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_BOT}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderBottom:"2px solid rgba(240,80,180,.28)", borderLeft:"2px solid rgba(240,80,180,.45)",
+        borderBottomLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
 
       {/* ── Header KPIs ── */}
       <div style={{flexShrink:0, height:"24px", display:"flex", alignItems:"center", gap:"6px",
@@ -5419,11 +5473,9 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
             • Véhicule (🚗🚌…) : face gauche par défaut → pas de flip → sens R→L correct ✓
             • Tracteur 🚜 : face droite par défaut → scaleX(-1) → face gauche ✓ */}
       <div style={{flexShrink:0, height:"36px", position:"relative", overflow:"hidden"}}>
-        {/* Asphalte */}
+        {/* Asphalte — fond unifié avec les bandes du circuit (#141e2e) */}
         <div style={{position:"absolute", top:0, left:0, right:0, height:"24px",
-          background:"#141e2e",
-          borderTop:"1px solid rgba(255,255,255,.08)",
-          borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+          background:"#141e2e"}}>
           <div style={{position:"absolute", top:"9px", left:0, right:0, height:"3px",
             backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.52) 0,rgba(245,190,80,.52) 16px,transparent 16px,transparent 30px)"}}/>
         </div>
@@ -6810,27 +6862,27 @@ function DigesteurScene({
                 z-index:2 = derrière les zones (z:5) et les routes SVG monde */}
             {injected && (<>
               <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
-                background:"#0d1521", borderLeft:"2px solid rgba(240,80,180,.45)",
-                boxShadow:"-3px 0 10px rgba(240,80,180,.14)"}}>
+                background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
                 <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
                   width:"2px", height:"100%",
-                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.28) 0,rgba(240,80,180,.28) 8px,transparent 8px,transparent 16px)"}}/>
+                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
                 {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-                  <div key={i} style={{position:"absolute", left:"50%",
-                    transform:"translateX(-50%) scaleX(-1)", fontSize:"15px", lineHeight:1,
-                    animation:`gnvTrDown ${6.4 + i * 1.1}s ${-(i * 2.3)}s infinite linear`}}>🚜</div>
+                  <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
+                    animation:`gnvTrDown ${6.4 + i * 1.1}s ${-(i * 2.3)}s infinite linear`}}>
+                    <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={true} size={20}/>
+                  </div>
                 ))}
               </div>
               <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
-                background:"#0d1521", borderRight:"2px solid rgba(240,80,180,.45)",
-                boxShadow:"3px 0 10px rgba(240,80,180,.14)"}}>
+                background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
                 <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
                   width:"2px", height:"100%",
-                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.28) 0,rgba(240,80,180,.28) 8px,transparent 8px,transparent 16px)"}}/>
+                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
                 {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-                  <div key={i} style={{position:"absolute", left:"50%",
-                    transform:"translateX(-50%)", fontSize:"15px", lineHeight:1,
-                    animation:`gnvTrUp ${6.4 + i * 1.1}s ${-(i * 2.3) - 3.2}s infinite linear`}}>🚜</div>
+                  <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
+                    animation:`gnvTrUp ${6.4 + i * 1.1}s ${-(i * 2.3) - 3.2}s infinite linear`}}>
+                    <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={false} size={20}/>
+                  </div>
                 ))}
               </div>
             </>)}
