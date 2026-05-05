@@ -5346,10 +5346,11 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     const ms = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
     stTimerRef.current = setInterval(() => {
       const stIdx = Math.floor(Math.random() * gnvStations);
-      const isTractor = gnvConverted > 0 && Math.random() < 0.22;
+      const isTractor = Math.random() < 0.45; // tracteurs des gisements passent régulièrement
+      const tractorIsGnv = isTractor && gnvConverted > 0 && Math.random() < 0.6;
       const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
       const id = uid++;
-      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor }]);
+      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor, tractorIsGnv }]);
       setTimeout(() => setStRoadVeh(prev => prev.filter(x => x.id !== id)), 5300);
     }, ms);
     return () => clearInterval(stTimerRef.current);
@@ -5384,34 +5385,20 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
           Bandes verticales (gauche/droite, height:100%) + lignes horizontales (haut/bas station road)
           → ferment visuellement la boucle. Fond unifié #141e2e = même asphalte que la station road. */}
 
-      {/* ─ Bande DROITE : tracteurs descendent (gisements → stations, face gauche) ─ */}
-      <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
+      {/* ─ Bande DROITE : asphalte pur — les tracteurs sont sur les routes horizontales ─ */}
+      <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2,
         background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
-        {/* Tirets de voie centrale */}
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
           backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-        {/* Vrais tracteurs descendants — MiniTractor avec badge GNV si converti */}
-        {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-          <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
-            animation:`gnvTrDown ${2.4 + i * 0.5}s ${-(i * 0.85)}s infinite linear`}}>
-            <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={true} size={20}/>
-          </div>
-        ))}
       </div>
 
-      {/* ─ Bande GAUCHE : tracteurs montent (stations → gisements, face droite) ─ */}
-      <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
+      {/* ─ Bande GAUCHE : asphalte pur ─ */}
+      <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2,
         background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
           backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-        {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-          <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
-            animation:`gnvTrUp ${2.4 + i * 0.5}s ${-(i * 0.85) - 1.2}s infinite linear`}}>
-            <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={false} size={20}/>
-          </div>
-        ))}
       </div>
 
       {/* ─ Lignes horizontales — ferment le rectangle du circuit ─ */}
@@ -5476,14 +5463,16 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"2px",
           backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-        {/* Véhicules R→L */}
+        {/* Véhicules R→L — tracteurs = vrai SVG MiniTractor, autres = emoji */}
         {stRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"5px", fontSize:"16px", lineHeight:"20px",
+            position:"absolute", top:"4px",
             animation:`gnvSt${v.stIdx}RL 5s linear 1 forwards`,
-            transform: v.isTractor ? "scaleX(-1)" : "none",
           }}>
-            {v.icon}
+            {v.isTractor
+              ? <MiniTractor isGnv={v.tractorIsGnv} flipped={true} size={22}/>
+              : <span style={{fontSize:"16px", lineHeight:"20px"}}>{v.icon}</span>
+            }
           </div>
         ))}
       </div>
@@ -6848,35 +6837,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
-            {/* ══ Routes latérales continues — prolongement vers GnvNetworkView ══
-                Visible uniquement après raccordement (même condition que GnvNetworkView).
-                z-index:2 = derrière les zones (z:5) et les routes SVG monde */}
-            {injected && (<>
-              <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
-                background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
-                <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
-                  width:"2px", height:"100%",
-                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-                {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-                  <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
-                    animation:`gnvTrDown ${6.4 + i * 1.1}s ${-(i * 2.3)}s infinite linear`}}>
-                    <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={true} size={20}/>
-                  </div>
-                ))}
-              </div>
-              <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2, overflow:"hidden",
-                background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
-                <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
-                  width:"2px", height:"100%",
-                  backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-                {Array.from({length: Math.min(tractorCount, 3)}).map((_, i) => (
-                  <div key={i} style={{position:"absolute", left:"50%", transform:"translateX(-50%)",
-                    animation:`gnvTrUp ${6.4 + i * 1.1}s ${-(i * 2.3) - 3.2}s infinite linear`}}>
-                    <MiniTractor isGnv={(tractorGnvArr||[])[i]||false} flipped={false} size={20}/>
-                  </div>
-                ))}
-              </div>
-            </>)}
+            {/* Les bandes latérales sont désormais dans le SVG monde (chemins x=400 et x=800) */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
@@ -6967,12 +6928,16 @@ function DigesteurScene({
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
               {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
+              {/* VUE 2 — bandes latérales pleines (bord gauche x=400, bord droit x=800) */}
+              {/* strokeWidth:30 = même largeur que les bandes HTML de GnvNetworkView */}
+              <path d="M 400 0 L 400 280" strokeWidth="30"/>
+              <path d="M 800 0 L 800 280" strokeWidth="30"/>
             </g>
-            {/* Couche 2 : BORDS roses (identiques aux bandes verticales HTML) */}
+            {/* Couche 2 : BORDS roses — uniquement sur les lanes horizontales */}
             <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square" opacity="1">
               {/* VUE 1 */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP - 5}`}/>
@@ -6980,21 +6945,27 @@ function DigesteurScene({
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT - 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT + 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5}`}/>
               {/* VUE 2 — lanes horizontales */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L 795 ${WORLD.LANE_TOP - 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L 795 ${WORLD.LANE_TOP + 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5} L 795 ${WORLD.LANE_BOT - 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5} L 795 ${WORLD.LANE_BOT + 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L 800 ${WORLD.LANE_TOP - 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L 800 ${WORLD.LANE_TOP + 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5} L 800 ${WORLD.LANE_BOT - 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5} L 800 ${WORLD.LANE_BOT + 5}`}/>
+              {/* Bandes latérales — bord intérieur seulement (bord extérieur = bord de l'écran) */}
+              <path d="M 415 0 L 415 280"/>
+              <path d="M 785 0 L 785 280"/>
             </g>
-            {/* Couche 3 : MARQUAGE CENTRAL pointillé rose (unifié avec bandes verticales) */}
+            {/* Couche 3 : MARQUAGE CENTRAL pointillé rose */}
             <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10" opacity="1">
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
+              {/* Marquage central des bandes latérales */}
+              <path d="M 400 0 L 400 280"/>
+              <path d="M 800 0 L 800 280"/>
             </g>
 
             {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
