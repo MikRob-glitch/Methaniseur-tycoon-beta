@@ -7019,11 +7019,11 @@ function DigesteurScene({
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
-            {/* SVG local vue 2 : UNIQUEMENT les zones — zIndex:3 > SVG monde (zIndex:2) */}
+            {/* SVG local vue 2 : UNIQUEMENT les zones — zIndex:2 < SVG monde (zIndex:3) */}
             <svg
               viewBox="0 0 400 280"
               preserveAspectRatio="none"
-              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:3}}
+              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:2}}
             >
               <g style={{pointerEvents:"auto"}}>
                 {CITY_ZONES.map(z => {
@@ -7101,7 +7101,7 @@ function DigesteurScene({
           <svg
             viewBox="0 0 800 480"
             preserveAspectRatio="none"
-            style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none", zIndex:2}}
+            style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none", zIndex:3}}
           >
             {/* Couche 1 : ASPHALTE #141e2e — fond route unifié */}
             <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square" opacity="1">
