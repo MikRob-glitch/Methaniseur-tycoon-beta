@@ -2,12 +2,15 @@
 // Source de vérité — Méthaniseur Tycoon v25.8
 // Workflow : modifier ce fichier → ./build.sh → push index.html
 // v25.8 : VUE RÉSEAU AVAL — GnvNetworkView dans Vue 2 bottom (250px)
-//         v25.8.1 corrections :
-//         · Layout corrigé top→bottom : Route → Stations GNV → Pipe GRDF → Bâtiments réseau aval
-//         · Connexion visuelle Vue 1→Vue 2 : pipe entre depuis la gauche (← Inj.)
-//         · Sens véhicules : scaleX(-1) sur non-tracteurs (emojis face gauche par défaut → face droite)
-//         · Tracteur 🚜 : pas de flip (face droite nativement)
-//         · isTractor flag dans le spawn pour distinction tracteur/véhicule
+//         v25.8.1 : layout corrigé top→bottom, sens véhicules, connexion Vue 1
+//         v25.8.2 : DUAL CIRCUIT
+//           · CIRCUIT TRACTEURS (rose) : bandes latérales gauche/droite animées
+//             descente à droite (gisements→stations) + remontée à gauche (stations→gisements)
+//           · Station road (R→L) : véhicules clients + tracteurs GNV entrent par la droite,
+//             s'arrêtent à leur station cible (S1/S2/S3), ressortent à gauche
+//           · Route de retour (L→R) : véhicules clients après plein passent devant bâtiments
+//           · Transforms : tracteur 🚜 scaleX(-1) sur station road, véhicule scaleX(-1) sur retour
+//           · CSS_ID versionné 'gnv-net-css-v3' pour éviter collision avec ancien tag
 // v25.7 : UNIFICATION SYSTÈME GNV — un seul système, par tracteur
 //         · Bonus +15 % de remplissage par tracteur converti GNV (max ×3 = +45 %)
 //         · Suppression du bouton legacy global "Passer le tracteur au GNV — 2 000 €"
@@ -5266,56 +5269,116 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
 //         stations GNV avec branches + route animée (véhicules + tracteurs GNV).
 //         Read-only (contrôles dans le shop). Props: gnvStations, gnvSplit, gnvBm,
 //         bmPerHour, tractorGnvArr, tractorCount.
-// v25.8.1 — Layout corrigé :
-//   Route (haut) → Stations GNV → Pipe GRDF (depuis injection Vue 1) → Bâtiments réseau aval
-//   Sens véhicules : scaleX(-1) pour non-tracteurs (emojis face gauche par défaut)
-//   Tracteur 🚜 : pas de flip (déjà face droite)
+// v25.8.2 — Deux circuits de circulation :
+//   CIRCUIT TRACTEURS (rose) : descend à droite → station road R→L → remonte à gauche
+//   CIRCUIT VÉHICULES (orange) : entre à droite → R→L stations → descend → L→R bâtiments → remonte
+//   Station road : sens R→L (véhicules depuis droite)
+//   Émoji transforms : véhicule face gauche = pas de flip ; tracteur 🚜 face droite = scaleX(-1)
+//   Bandes latérales roses : connectent la route des tracteurs (zone intrants) aux stations GNV
 function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr, tractorCount }) {
-  const [vehicles, setVehicles] = useState([]);
-  const timerRef = useRef(null);
+  // Circuit 1 : route stations (R→L) — clients + tracteurs GNV
+  const [stRoadVeh,  setStRoadVeh]  = useState([]);
+  // Circuit 2 : route de retour (L→R) — véhicules clients devant les bâtiments
+  const [retRoadVeh, setRetRoadVeh] = useState([]);
+  const stTimerRef  = useRef(null);
+  const retTimerRef = useRef(null);
 
   const gnvConverted = tractorGnvArr.slice(0, tractorCount).filter(Boolean).length;
   const hasActive    = gnvStations > 0 && gnvSplit > 0;
   const gnvPerHour   = Math.round(bmPerHour * gnvSplit / 100);
   const netPerHour   = Math.round(bmPerHour * (100 - gnvSplit) / 100);
-  const STATION_X    = [22, 50, 78]; // % du conteneur
+  // Positions stations : S1=22%, S2=50%, S3=78% (de gauche)
+  // En sens R→L : le premier atteint est S3 (78%), puis S2 (50%), puis S1 (22%)
+  const STATION_X = [22, 50, 78];
 
-  // Injection CSS keyframes (une seule fois dans le document)
+  // ── CSS keyframes (injection unique dans le document) ──
   useEffect(() => {
-    if (document.getElementById('gnv-net-css')) return;
+    const CSS_ID = 'gnv-net-css-v3';
+    if (document.getElementById(CSS_ID)) return;
     const s = document.createElement('style');
-    s.id = 'gnv-net-css';
+    s.id = CSS_ID;
     s.textContent = [
-      "@keyframes gnvNetFlow{0%{left:-8px;opacity:0}8%{opacity:.85}92%{opacity:.85}100%{left:calc(100% + 8px);opacity:0}}",
-      "@keyframes gnvNetPulse{0%,100%{box-shadow:0 0 6px rgba(74,219,148,.18)}50%{box-shadow:0 0 20px rgba(74,219,148,.58)}}",
-      "@keyframes gnvNetDriveS0{0%{left:-5%;opacity:0}5%{opacity:1}27%{left:calc(22% - 10px)}56%{left:calc(22% - 10px)}97%{left:107%;opacity:1}100%{left:107%;opacity:0}}",
-      "@keyframes gnvNetDriveS1{0%{left:-5%;opacity:0}5%{opacity:1}41%{left:calc(50% - 10px)}68%{left:calc(50% - 10px)}97%{left:107%;opacity:1}100%{left:107%;opacity:0}}",
-      "@keyframes gnvNetDriveS2{0%{left:-5%;opacity:0}5%{opacity:1}55%{left:calc(78% - 10px)}78%{left:calc(78% - 10px)}97%{left:107%;opacity:1}100%{left:107%;opacity:0}}",
+      // Bulles flux pipe GRDF
+      "@keyframes gnvFlow{0%{left:-8px;opacity:0}8%{opacity:.85}92%{opacity:.85}100%{left:calc(100% + 8px);opacity:0}}",
+      // Pulsation station active
+      "@keyframes gnvPulse{0%,100%{box-shadow:0 0 6px rgba(74,219,148,.18)}50%{box-shadow:0 0 22px rgba(74,219,148,.62)}}",
+      // ── Station road R→L : véhicules entrent par la droite (107%) → station → sortent à gauche (-8%) ──
+      // stIdx=0 : cible S1 (22% de gauche = la plus loin pour qui vient de droite)
+      "@keyframes gnvSt0RL{0%{left:107%;opacity:0}5%{opacity:1}60%{left:calc(22% - 10px)}77%{left:calc(22% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      // stIdx=1 : cible S2 (50%)
+      "@keyframes gnvSt1RL{0%{left:107%;opacity:0}5%{opacity:1}43%{left:calc(50% - 10px)}61%{left:calc(50% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      // stIdx=2 : cible S3 (78% = première station rencontrée depuis droite)
+      "@keyframes gnvSt2RL{0%{left:107%;opacity:0}5%{opacity:1}28%{left:calc(78% - 10px)}47%{left:calc(78% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      // ── Route de retour L→R : devant les bâtiments ──
+      "@keyframes gnvRetLR{0%{left:-8%;opacity:0}5%{opacity:1}95%{opacity:1}100%{left:107%;opacity:0}}",
+      // ── Bandes rose (bords) : tracteurs descendent à droite, remontent à gauche ──
+      "@keyframes gnvDotDown{0%{top:-4px;opacity:0}8%{opacity:.9}92%{opacity:.9}100%{top:100%;opacity:0}}",
+      "@keyframes gnvDotUp{0%{top:100%;opacity:0}8%{opacity:.9}92%{opacity:.9}100%{top:-4px;opacity:0}}",
     ].join('\n');
     document.head.appendChild(s);
   }, []);
 
-  // Spawn véhicules (+ tracteurs GNV) vers les stations actives
+  // ── Spawn : route stations (R→L) ──
   useEffect(() => {
-    if (!hasActive) { setVehicles([]); return; }
-    const interval = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
-    timerRef.current = setInterval(() => {
+    clearInterval(stTimerRef.current);
+    if (!hasActive) { setStRoadVeh([]); return; }
+    const ms = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
+    stTimerRef.current = setInterval(() => {
       const stIdx = Math.floor(Math.random() * gnvStations);
       const isTractor = gnvConverted > 0 && Math.random() < 0.22;
       const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
       const id = uid++;
-      setVehicles(prev => [...prev.slice(-6), { id, icon, stIdx, isTractor }]);
-      setTimeout(() => setVehicles(prev => prev.filter(x => x.id !== id)), 5200);
-    }, interval);
-    return () => clearInterval(timerRef.current);
+      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor }]);
+      setTimeout(() => setStRoadVeh(prev => prev.filter(x => x.id !== id)), 5300);
+    }, ms);
+    return () => clearInterval(stTimerRef.current);
   }, [hasActive, gnvStations, gnvSplit, gnvConverted]);
 
+  // ── Spawn : route de retour (L→R) ──
+  useEffect(() => {
+    clearInterval(retTimerRef.current);
+    if (!hasActive) { setRetRoadVeh([]); return; }
+    const ms = Math.max(2500, 9000 - gnvSplit * 40 - gnvStations * 800);
+    retTimerRef.current = setInterval(() => {
+      const icon = GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const id = uid++;
+      setRetRoadVeh(prev => [...prev.slice(-4), { id, icon }]);
+      setTimeout(() => setRetRoadVeh(prev => prev.filter(x => x.id !== id)), 6500);
+    }, ms);
+    return () => clearInterval(retTimerRef.current);
+  }, [hasActive, gnvStations, gnvSplit]);
+
+  // ── Hauteurs (total = 250px) ──
+  // Header 24 + StRoad 36 + Stations 52 + Pipe 18 + RetRoad 18 + Buildings 40 + spacer + Footer 26
+  // = 214px fixe → spacer = 36px
+  const STRIP_H = 130; // hauteur bandes latérales (header + stRoad + stations + pipe)
+
   return (
-    <div style={{height:"250px", flexShrink:0, display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(7,14,25,.55)"}}>
+    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"hidden", background:"rgba(7,14,25,.55)"}}>
+
+      {/* ══ Bandes latérales roses : liaison route tracteurs ↔ stations GNV ══ */}
+      {/* Bande DROITE : tracteurs descendent (gisements → stations) */}
+      <div style={{position:"absolute", right:0, top:0, width:"7px", height:`${STRIP_H}px`, zIndex:8,
+        background:"rgba(240,80,180,.09)", borderLeft:"1.5px solid rgba(240,80,180,.4)"}}>
+        {[0,1].map(i => (
+          <div key={i} style={{position:"absolute", right:"1px", width:"5px", height:"5px",
+            borderRadius:"50%", background:"rgba(240,80,180,.95)", boxShadow:"0 0 4px rgba(240,80,180,.7)",
+            animation:`gnvDotDown ${3.2 + i * 1.1}s ${-i * 1.6}s infinite linear`}}/>
+        ))}
+      </div>
+      {/* Bande GAUCHE : tracteurs remontent (stations → gisements) */}
+      <div style={{position:"absolute", left:0, top:0, width:"7px", height:`${STRIP_H}px`, zIndex:8,
+        background:"rgba(240,80,180,.09)", borderRight:"1.5px solid rgba(240,80,180,.4)"}}>
+        {[0,1].map(i => (
+          <div key={i} style={{position:"absolute", left:"1px", width:"5px", height:"5px",
+            borderRadius:"50%", background:"rgba(240,80,180,.95)", boxShadow:"0 0 4px rgba(240,80,180,.7)",
+            animation:`gnvDotUp ${3.2 + i * 1.1}s ${-i * 1.6}s infinite linear`}}/>
+        ))}
+      </div>
 
       {/* ── Header KPIs ── */}
       <div style={{flexShrink:0, height:"24px", display:"flex", alignItems:"center", gap:"6px",
-        padding:"0 10px", borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+        padding:"0 12px", borderBottom:"1px solid rgba(255,255,255,.05)", position:"relative", zIndex:5}}>
         <div style={{width:"2px", height:"13px",
           background:"linear-gradient(180deg,rgba(74,158,219,.9),rgba(74,158,219,.1))",
           borderRadius:"2px", boxShadow:"0 0 6px rgba(74,158,219,.5)"}}/>
@@ -5335,47 +5398,47 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         </div>
       </div>
 
-      {/* ── Route + véhicules (en haut — tracteurs et clients GNV) ── */}
-      <div style={{flexShrink:0, height:"40px", position:"relative", overflow:"hidden"}}>
+      {/* ── Station road R→L ──
+          Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche.
+          Transforms emojis :
+            • Véhicule (🚗🚌…) : face gauche par défaut → pas de flip → sens R→L correct ✓
+            • Tracteur 🚜 : face droite par défaut → scaleX(-1) → face gauche ✓ */}
+      <div style={{flexShrink:0, height:"36px", position:"relative", overflow:"hidden"}}>
         {/* Asphalte */}
-        <div style={{position:"absolute", top:0, left:0, right:0, height:"28px",
+        <div style={{position:"absolute", top:0, left:0, right:0, height:"24px",
           background:"#141e2e",
-          borderTop:"1px solid rgba(255,255,255,.07)",
+          borderTop:"1px solid rgba(255,255,255,.08)",
           borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-          {/* Marquage central jaune pointillé */}
-          <div style={{position:"absolute", top:"11px", left:0, right:0, height:"3px",
-            backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.5) 0,rgba(245,190,80,.5) 16px,transparent 16px,transparent 30px)"}}/>
+          <div style={{position:"absolute", top:"9px", left:0, right:0, height:"3px",
+            backgroundImage:"repeating-linear-gradient(90deg,rgba(245,190,80,.52) 0,rgba(245,190,80,.52) 16px,transparent 16px,transparent 30px)"}}/>
         </div>
         {/* Trottoir */}
         <div style={{position:"absolute", bottom:0, left:0, right:0, height:"12px",
-          background:"rgba(22,34,52,.85)"}}/>
-
-        {/* Véhicules animés par CSS keyframes.
-            scaleX(-1) sur non-tracteurs : emojis 🚗🚌🚛 font face gauche par défaut → flipper pour marche avant.
-            🚜 face droite nativement → pas de flip. */}
-        {vehicles.map(v => (
+          background:"rgba(20,30,48,.9)"}}/>
+        {/* Véhicules R→L */}
+        {stRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"4px", fontSize:"17px", lineHeight:"22px",
-            animation:`gnvNetDriveS${v.stIdx} 5s linear 1 forwards`,
-            transform: v.isTractor ? "none" : "scaleX(-1)",
+            position:"absolute", top:"3px", fontSize:"16px", lineHeight:"20px",
+            animation:`gnvSt${v.stIdx}RL 5s linear 1 forwards`,
+            transform: v.isTractor ? "scaleX(-1)" : "none",
           }}>
             {v.icon}
           </div>
         ))}
       </div>
 
-      {/* ── Stations GNV (entre route et pipe GRDF) ── */}
-      <div style={{flexShrink:0, height:"54px", position:"relative"}}>
+      {/* ── Stations GNV ── */}
+      <div style={{flexShrink:0, height:"52px", position:"relative"}}>
         {[0, 1, 2].map(i => {
           const active = i < gnvStations;
           const x = STATION_X[i];
           return (
             <div key={i} style={{position:"absolute", top:0, left:`${x}%`,
               transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
-              {/* Branche montante vers la route */}
+              {/* Branche montante (vers route) */}
               <div style={{width:"2px", height:"8px",
                 background: active
-                  ? "linear-gradient(180deg,rgba(74,219,148,.7),rgba(74,219,148,.4))"
+                  ? "linear-gradient(180deg,rgba(74,219,148,.75),rgba(74,219,148,.35))"
                   : "rgba(255,255,255,.07)"}}/>
               {/* Corps station */}
               <div style={{
@@ -5384,7 +5447,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
                 border: `1.5px solid ${active ? "rgba(74,219,148,.42)" : "rgba(255,255,255,.09)"}`,
                 display:"flex", flexDirection:"column", alignItems:"center",
                 justifyContent:"center", gap:"1px",
-                animation: active ? `gnvNetPulse 2.4s ${i * 0.8}s infinite ease-in-out` : "none",
+                animation: active ? `gnvPulse 2.4s ${i * 0.8}s infinite ease-in-out` : "none",
               }}>
                 <div style={{fontSize:"14px", filter: active ? "none" : "grayscale(1)",
                   opacity: active ? 1 : 0.28}}>⛽</div>
@@ -5393,67 +5456,84 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
                   {active ? `S${i+1}` : "🔒"}
                 </div>
               </div>
-              {/* Branche descendante vers le pipe */}
-              <div style={{width:"2px", height:"10px",
+              {/* Branche descendante (vers pipe GRDF) */}
+              <div style={{width:"2px", height:"8px",
                 background: active
-                  ? "linear-gradient(180deg,rgba(74,219,148,.4),rgba(74,158,219,.4))"
+                  ? "linear-gradient(180deg,rgba(74,219,148,.38),rgba(74,158,219,.38))"
                   : "rgba(255,255,255,.06)"}}/>
             </div>
           );
         })}
       </div>
 
-      {/* ── Pipe GRDF horizontal — entre stations et réseau aval ── */}
-      {/* Entrée depuis la gauche = connexion avec l'injection de la Vue 1 */}
-      <div style={{flexShrink:0, height:"20px", position:"relative"}}>
-        {/* Étiquette connexion Vue 1 */}
+      {/* ── Pipe GRDF — connexion depuis injection Vue 1 (← gauche) ── */}
+      <div style={{flexShrink:0, height:"18px", position:"relative"}}>
         <div style={{position:"absolute", left:0, top:0, bottom:0, display:"flex",
-          alignItems:"center", paddingLeft:"3px", zIndex:5}}>
-          <div style={{fontSize:"6px", color:"rgba(74,158,219,.55)", fontWeight:700,
-            whiteSpace:"nowrap", letterSpacing:".03em"}}>← Inj.</div>
+          alignItems:"center", paddingLeft:"10px", zIndex:5}}>
+          <div style={{fontSize:"6px", color:"rgba(74,158,219,.55)", fontWeight:700, letterSpacing:".03em"}}>← Inj.</div>
         </div>
-        {/* Pipe horizontal avec bulles de flux */}
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"5px",
-          background:"linear-gradient(90deg,rgba(74,158,219,.95),rgba(74,158,219,.9),rgba(74,158,219,.5))",
+          background:"linear-gradient(90deg,rgba(74,158,219,.95),rgba(74,158,219,.85),rgba(74,158,219,.45))",
           boxShadow:"0 0 10px rgba(74,158,219,.4)", borderRadius:"0 3px 3px 0", overflow:"hidden"}}>
           {[0,1,2,3,4].map(i => (
             <div key={i} style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
               width:"7px", height:"7px", borderRadius:"50%",
               background:"rgba(200,230,255,.9)", boxShadow:"0 0 5px rgba(200,230,255,.8)",
-              animation:`gnvNetFlow ${2 + i * 0.28}s ${-(i * 0.55)}s infinite linear`}}/>
+              animation:`gnvFlow ${2 + i * 0.28}s ${-(i * 0.55)}s infinite linear`}}/>
           ))}
         </div>
       </div>
 
-      {/* ── Bâtiments réseau aval (consommateurs raccordés sous le pipe) ── */}
-      <div style={{flexShrink:0, height:"44px", position:"relative"}}>
+      {/* ── Route de retour L→R — véhicules clients devant les bâtiments ──
+          Véhicules qui ont fait le plein → sortent par la gauche → passent devant les bâtiments → ressortent à droite.
+          Sens L→R : emojis face gauche → flip scaleX(-1) → face droite ✓ */}
+      <div style={{flexShrink:0, height:"18px", position:"relative", overflow:"hidden"}}>
+        {/* Route de retour (asphalte teinté orange pour distinguer) */}
+        <div style={{position:"absolute", top:"2px", left:0, right:0, height:"14px",
+          background:"#0e1622",
+          borderTop:"1px solid rgba(255,140,50,.18)",
+          borderBottom:"1px solid rgba(255,140,50,.1)"}}>
+          <div style={{position:"absolute", top:"4px", left:0, right:0, height:"2px",
+            backgroundImage:"repeating-linear-gradient(90deg,rgba(255,140,50,.3) 0,rgba(255,140,50,.3) 12px,transparent 12px,transparent 22px)"}}/>
+        </div>
+        {/* Véhicules L→R (retour) — face droite */}
+        {retRoadVeh.map(v => (
+          <div key={v.id} style={{
+            position:"absolute", top:"2px", fontSize:"13px", lineHeight:"16px",
+            animation:"gnvRetLR 6.5s linear 1 forwards",
+            transform:"scaleX(-1)",
+          }}>
+            {v.icon}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Bâtiments réseau aval (consommateurs raccordés) ── */}
+      <div style={{flexShrink:0, height:"40px", position:"relative"}}>
         {[8, 22, 40, 58, 72, 88].map((xPct, i) => {
           const bw = [16,12,20,14,18,10][i];
-          const bh = [16,11,22,13,18,9][i];
+          const bh = [14,10,20,12,16,9][i];
           const ic = i===2 ? "🏭" : i===4 ? "🏬" : i===1 ? "🏢" : "🏠";
           return (
             <div key={i} style={{position:"absolute", top:0, left:`${xPct}%`,
               transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
-              {/* Tige raccordement depuis le pipe */}
-              <div style={{width:"1px", height:"6px", background:"rgba(74,158,219,.28)"}}/>
-              {/* Façade bâtiment */}
+              <div style={{width:"1px", height:"5px", background:"rgba(74,158,219,.22)"}}/>
               <div style={{width:`${bw}px`, height:`${bh}px`,
-                background:"rgba(74,158,219,.07)", border:"1px solid rgba(74,158,219,.13)",
+                background:"rgba(74,158,219,.07)", border:"1px solid rgba(74,158,219,.12)",
                 borderRadius:"0 0 2px 2px"}}/>
-              {/* Emoji type de bâtiment */}
               <div style={{fontSize:"7px", lineHeight:1, marginTop:"1px"}}>{ic}</div>
             </div>
           );
         })}
       </div>
 
-      {/* ── Spacer ── */}
+      {/* Spacer */}
       <div style={{flex:1}}/>
 
       {/* ── Stats footer ── */}
-      <div style={{flexShrink:0, height:"28px", display:"flex", gap:"8px", alignItems:"center",
-        justifyContent:"center", padding:"0 10px",
+      <div style={{flexShrink:0, height:"26px", display:"flex", gap:"8px", alignItems:"center",
+        justifyContent:"center", padding:"0 12px",
         background:"rgba(7,14,25,.7)", borderTop:"1px solid rgba(255,255,255,.05)"}}>
         <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
           ⛽ GNV : <strong style={{color:"#4ADB94"}}>{fmt(gnvBm)}</strong> m³
@@ -5465,7 +5545,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         {gnvConverted > 0 && (
           <>
             <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
-            <span style={{fontSize:"8px", color:"rgba(74,219,148,.7)"}}>🚜 ×{gnvConverted} GNV</span>
+            <span style={{fontSize:"8px", color:"rgba(240,80,180,.85)"}}>🚜 ×{gnvConverted} GNV</span>
           </>
         )}
       </div>
