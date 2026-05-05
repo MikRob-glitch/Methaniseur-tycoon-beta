@@ -7019,11 +7019,11 @@ function DigesteurScene({
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
-            {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
+            {/* SVG local vue 2 : UNIQUEMENT les zones — zIndex:3 > SVG monde (zIndex:2) */}
             <svg
               viewBox="0 0 400 280"
               preserveAspectRatio="none"
-              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none"}}
+              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:3}}
             >
               <g style={{pointerEvents:"auto"}}>
                 {CITY_ZONES.map(z => {
@@ -7101,54 +7101,58 @@ function DigesteurScene({
           <svg
             viewBox="0 0 800 480"
             preserveAspectRatio="none"
-            style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none"}}
+            style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none", zIndex:2}}
           >
-            {/* Couche 1 : ASPHALTE (même fond que les bandes verticales) */}
+            {/* Couche 1 : ASPHALTE #141e2e — fond route unifié */}
             <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square" opacity="1">
-              {/* VUE 1 — lane droite du bac + segment au-dessus */}
+              {/* VUE 1 — circuit tracteur */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-              {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
+              {/* VUE 2 — lanes horizontales + colonnes internes */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-              {/* VUE 2 — bandes latérales pleines (bord gauche x=400, bord droit x=800) */}
-              {/* strokeWidth:30 = même largeur que les bandes HTML de GnvNetworkView */}
-              <path d="M 400 0 L 400 280" strokeWidth="30"/>
-              <path d="M 800 0 L 800 280" strokeWidth="30"/>
+              {/* BANDES LATÉRALES — de y=0 jusqu'à GNV_LANE (circuit complet, sans coupure) */}
+              <path d={`M 400 0 L 400 ${WORLD.GNV_LANE + 10}`} strokeWidth="30"/>
+              <path d={`M 800 0 L 800 ${WORLD.GNV_LANE + 10}`} strokeWidth="30"/>
+              {/* COINS de jonction LANE_BOT → GNV_LANE sur les deux bords (ferme le circuit) */}
+              <path d={`M ${WORLD.R_EDGE} ${WORLD.LANE_BOT} L ${WORLD.R_EDGE} ${WORLD.GNV_LANE}`} strokeWidth="30"/>
+              <path d={`M ${WORLD.L_EDGE} ${WORLD.LANE_BOT} L ${WORLD.L_EDGE} ${WORLD.GNV_LANE}`} strokeWidth="30"/>
             </g>
-            {/* Couche 2 : BORDS roses — uniquement sur les lanes horizontales */}
-            <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square" opacity="1">
+
+            {/* Couche 2 : BORDS roses — identiques aux bords des lanes horizontales */}
+            <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
               {/* VUE 1 */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP - 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP + 5}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT - 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT + 5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP-5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP-5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP+5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP+5}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT-5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT-5}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT+5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT+5}`}/>
               {/* VUE 2 — lanes horizontales */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP - 5} L 800 ${WORLD.LANE_TOP - 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP + 5} L 800 ${WORLD.LANE_TOP + 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT - 5} L 800 ${WORLD.LANE_BOT - 5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT + 5} L 800 ${WORLD.LANE_BOT + 5}`}/>
-              {/* Bandes latérales — bord intérieur seulement (bord extérieur = bord de l'écran) */}
-              <path d="M 415 0 L 415 280"/>
-              <path d="M 785 0 L 785 280"/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP-5} L 800 ${WORLD.LANE_TOP-5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP+5} L 800 ${WORLD.LANE_TOP+5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT-5} L 800 ${WORLD.LANE_BOT-5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT+5} L 800 ${WORLD.LANE_BOT+5}`}/>
+              {/* Bandes latérales — bord intérieur continu de y=0 à GNV_LANE */}
+              <path d={`M 415 0 L 415 ${WORLD.GNV_LANE}`}/>
+              <path d={`M 785 0 L 785 ${WORLD.GNV_LANE}`}/>
             </g>
+
             {/* Couche 3 : MARQUAGE CENTRAL pointillé rose */}
-            <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10" opacity="1">
+            <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-              {/* Marquage central des bandes latérales */}
-              <path d="M 400 0 L 400 280"/>
-              <path d="M 800 0 L 800 280"/>
+              <path d={`M ${WORLD.V1_V2+175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+175} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.V1_V2+345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+345} ${WORLD.LANE_BOT}`}/>
+              {/* Marquage central bandes latérales — continu jusqu'à GNV_LANE */}
+              <path d={`M 400 0 L 400 ${WORLD.GNV_LANE}`}/>
+              <path d={`M 800 0 L 800 ${WORLD.GNV_LANE}`}/>
             </g>
 
             {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
