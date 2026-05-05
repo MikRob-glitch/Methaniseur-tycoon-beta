@@ -4278,20 +4278,19 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
 //     - DUMP_X_RIGHT (415) : sprite (rotaté 90° en montée) gauche à x=388, bac droit à x≈394 → marge 6 SVG
 //     - DUMP_X (346)       : centre horizontal du bac (point de décharge)
 const WORLD = {
-  W: 800, H: 480,              // v25.10 : H étendu 280→480 (yScale=1.25 inchangé, CSS 600px)
+  W: 800, H: 480,              // viewBox (CSS : 600px → yScale = 1.25 inchangé)
   DUMP_X:       346,
   DUMP_X_RIGHT: 415,
   LANE_TOP:     15,
-  LANE_BOT:     253,
   DUMP_Y:       30,
   V1_V2:        400,
-  // ── Zone GNV (y=280-480 dans le SVG étendu, x=400-800 = Vue2 uniquement) ──
-  GNV_HEADER:   284,           // y séparateur / header réseau aval
-  GNV_LANE:     305,           // y centre route GNV (tracteurs + véhicules, R→L)
-  GNV_RET:      365,           // y centre route retour (véhicules, L→R)
-  GNV_S:        [488, 600, 712], // x stations S1, S2, S3 (22%, 50%, 78% de Vue2)
-  R_EDGE:       790,           // x bord droit Vue2 (bande latérale)
-  L_EDGE:       415,           // x bord gauche Vue2 = DUMP_X_RIGHT
+  // ── Route unifiée retour (tracteurs + GNV) — plus de LANE_BOT séparé ──
+  // SVG y=255 → CSS y≈319px (dans la zone TOP 0-350px, ~30px sous les zones)
+  GNV_LANE:     255,           // route de retour tracteurs ET route GNV véhicules
+  GNV_S:        [488, 600, 712], // x stations S1/S2/S3 dans Vue2
+  GNV_RET:      345,           // route de retour véhicules GNV (sous les stations)
+  R_EDGE:       790,           // bord droit Vue2
+  L_EDGE:       415,           // bord gauche Vue2 = DUMP_X_RIGHT
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
 // zone → charge → remonte → lane haut → retour lane gauche → DUMP point
@@ -4302,15 +4301,15 @@ const WORLD = {
 //   - DUMP_Y (30)        : niveau haut de scène, bien au-dessus du bac
 //   Path : DUMP → glisse droite (DUMP_X_RIGHT) → monte légèrement à LANE_TOP → zones →
 //          retour par lane bot → remonte à DUMP_X_RIGHT → DUMP_Y → glisse gauche au DUMP
-// v25.10 : withGnv=true → le path inclut la boucle GNV (descente bande droite → lane GNV → remontée bande gauche)
-// Toutes les constantes restent dans WORLD pour que computeZoneProgress soit cohérent.
 function buildMissionPath(zIdx, withGnv) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, LANE_BOT, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
-  const gnvLoop = withGnv
-    ? `L ${R_EDGE} ${LANE_BOT} L ${R_EDGE} ${GNV_LANE} L ${DUMP_X_RIGHT} ${GNV_LANE}`
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
+  // Détour GNV : traverse la route unifiée de droite (R_EDGE) vers gauche (L_EDGE)
+  // → passe devant les stations, puis remonte la bande gauche
+  const gnvDetour = withGnv
+    ? `L ${R_EDGE} ${GNV_LANE} L ${DUMP_X_RIGHT} ${GNV_LANE}`
     : '';
   return `
     M ${DUMP_X} ${DUMP_Y}
@@ -4320,9 +4319,9 @@ function buildMissionPath(zIdx, withGnv) {
     L ${routeX} ${z.y}
     L ${zoneX} ${z.y}
     L ${routeX} ${z.y}
-    L ${routeX} ${LANE_BOT}
-    L ${DUMP_X_RIGHT} ${LANE_BOT}
-    ${gnvLoop}
+    L ${routeX} ${GNV_LANE}
+    ${gnvDetour}
+    L ${DUMP_X_RIGHT} ${GNV_LANE}
     L ${DUMP_X_RIGHT} ${DUMP_Y}
     L ${DUMP_X} ${DUMP_Y}
   `.trim().replace(/\s+/g,' ');
@@ -4332,7 +4331,7 @@ function computeZoneProgress(zIdx, withGnv) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, LANE_BOT, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
   const basePts = [
     [DUMP_X,       DUMP_Y],
     [DUMP_X_RIGHT, DUMP_Y],
@@ -4341,19 +4340,18 @@ function computeZoneProgress(zIdx, withGnv) {
     [routeX,       z.y],
     [zoneX,        z.y],      // ← CHARGE (fin segment 5)
     [routeX,       z.y],
-    [routeX,       LANE_BOT],
-    [DUMP_X_RIGHT, LANE_BOT],
+    [routeX,       GNV_LANE],
   ];
-  const gnvPts = withGnv ? [
-    [R_EDGE,       LANE_BOT],
+  const detourPts = withGnv ? [
     [R_EDGE,       GNV_LANE],
     [DUMP_X_RIGHT, GNV_LANE],
   ] : [];
   const endPts = [
+    [DUMP_X_RIGHT, GNV_LANE],
     [DUMP_X_RIGHT, DUMP_Y],
     [DUMP_X,       DUMP_Y],
   ];
-  const pts = [...basePts, ...gnvPts, ...endPts];
+  const pts = [...basePts, ...detourPts, ...endPts];
   let totalL = 0, loadL = 0;
   for (let i = 1; i < pts.length; i++) {
     const dx = pts[i][0] - pts[i-1][0];
@@ -7103,54 +7101,38 @@ function DigesteurScene({
             preserveAspectRatio="none"
             style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none", zIndex:3}}
           >
-            {/* Couche 1 : ASPHALTE #141e2e — fond route unifié */}
-            <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square" opacity="1">
-              {/* VUE 1 — circuit tracteur */}
+            {/* Couche 1 : ASPHALTE — UN seul circuit unifié */}
+            <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square">
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.GNV_LANE}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-              {/* VUE 2 — lanes horizontales + colonnes internes */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-              {/* BANDES LATÉRALES — de y=0 jusqu'à GNV_LANE (circuit complet, sans coupure) */}
-              <path d={`M 400 0 L 400 ${WORLD.GNV_LANE + 10}`} strokeWidth="30"/>
-              <path d={`M 800 0 L 800 ${WORLD.GNV_LANE + 10}`} strokeWidth="30"/>
-              {/* COINS de jonction LANE_BOT → GNV_LANE sur les deux bords (ferme le circuit) */}
-              <path d={`M ${WORLD.R_EDGE} ${WORLD.LANE_BOT} L ${WORLD.R_EDGE} ${WORLD.GNV_LANE}`} strokeWidth="30"/>
-              <path d={`M ${WORLD.L_EDGE} ${WORLD.LANE_BOT} L ${WORLD.L_EDGE} ${WORLD.GNV_LANE}`} strokeWidth="30"/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.GNV_LANE} L 800 ${WORLD.GNV_LANE}`}/>
+              <path d={`M ${WORLD.V1_V2+175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+175} ${WORLD.GNV_LANE}`}/>
+              <path d={`M ${WORLD.V1_V2+345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+345} ${WORLD.GNV_LANE}`}/>
+              <path d={`M 400 0 L 400 ${WORLD.GNV_LANE+10}`} strokeWidth="30"/>
+              <path d={`M 800 0 L 800 ${WORLD.GNV_LANE+10}`} strokeWidth="30"/>
             </g>
-
-            {/* Couche 2 : BORDS roses — identiques aux bords des lanes horizontales */}
+            {/* Couche 2 : BORDS roses */}
             <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
-              {/* VUE 1 */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP-5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP-5}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP+5} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP+5}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT-5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT-5}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT+5} L ${WORLD.V1_V2} ${WORLD.LANE_BOT+5}`}/>
-              {/* VUE 2 — lanes horizontales */}
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP-5} L 800 ${WORLD.LANE_TOP-5}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP+5} L 800 ${WORLD.LANE_TOP+5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT-5} L 800 ${WORLD.LANE_BOT-5}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT+5} L 800 ${WORLD.LANE_BOT+5}`}/>
-              {/* Bandes latérales — bord intérieur continu de y=0 à GNV_LANE */}
-              <path d={`M 415 0 L 415 ${WORLD.GNV_LANE}`}/>
-              <path d={`M 785 0 L 785 ${WORLD.GNV_LANE}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.GNV_LANE-5} L 800 ${WORLD.GNV_LANE-5}`}/>
+              <path d={`M ${WORLD.V1_V2} ${WORLD.GNV_LANE+5} L 800 ${WORLD.GNV_LANE+5}`}/>
+              <path d={`M 415 0 L 415 ${WORLD.GNV_LANE+5}`}/>
+              <path d={`M 785 0 L 785 ${WORLD.GNV_LANE+5}`}/>
             </g>
-
             {/* Couche 3 : MARQUAGE CENTRAL pointillé rose */}
             <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
+              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.GNV_LANE}`}/>
               <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
               <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 800 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 800 ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2+175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+175} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2+345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+345} ${WORLD.LANE_BOT}`}/>
-              {/* Marquage central bandes latérales — continu jusqu'à GNV_LANE */}
+              <path d={`M ${WORLD.V1_V2} ${WORLD.GNV_LANE} L 800 ${WORLD.GNV_LANE}`}/>
+              <path d={`M ${WORLD.V1_V2+175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+175} ${WORLD.GNV_LANE}`}/>
+              <path d={`M ${WORLD.V1_V2+345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2+345} ${WORLD.GNV_LANE}`}/>
               <path d={`M 400 0 L 400 ${WORLD.GNV_LANE}`}/>
               <path d={`M 800 0 L 800 ${WORLD.GNV_LANE}`}/>
             </g>
@@ -7193,78 +7175,62 @@ function DigesteurScene({
               gnvStations={gnvStations}
             />
 
-            {/* ── Zone GNV dans le SVG étendu (y=280-480, x=400-800 uniquement) ── */}
+            {/* ── Zone GNV : stations + pipe + bâtiments (sous GNV_LANE unifié) ── */}
             {injected && (() => {
-              const { GNV_LANE, GNV_RET, GNV_S, GNV_HEADER, V1_V2, R_EDGE, L_EDGE } = WORLD;
-              const sxArr = GNV_S.slice(0, gnvStations);
+              const { GNV_LANE, GNV_RET, GNV_S } = WORLD;
               return (
                 <>
-                  {/* Fond zone aval */}
-                  <rect x="400" y="280" width="400" height="200" fill="rgba(7,14,25,.82)"/>
-                  {/* Séparateur */}
-                  <line x1="400" y1="281" x2="800" y2="281" stroke="rgba(74,158,219,.18)" strokeWidth="1"/>
-                  {/* Label */}
-                  <text x="412" y="293" fontSize="7" fill="rgba(74,158,219,.6)" fontWeight="700" letterSpacing=".06em">DISTRIBUTION RÉSEAU AVAL GRDF</text>
+                  {/* Label réseau aval — au-dessus de la route GNV_LANE */}
+                  <text x="412" y={GNV_LANE-14} fontSize="6" fill="rgba(74,158,219,.55)"
+                    fontWeight="700" letterSpacing=".06em">DISTRIBUTION RÉSEAU AVAL GRDF</text>
 
-                  {/* ── LANE GNV : asphalte + bords + marquage ── */}
-                  <rect x="400" y={GNV_LANE-10} width="400" height="20" fill="#141e2e"/>
-                  <line x1="400" y1={GNV_LANE-10} x2="800" y2={GNV_LANE-10} stroke="rgba(240,80,180,.45)" strokeWidth="1.5"/>
-                  <line x1="400" y1={GNV_LANE+10} x2="800" y2={GNV_LANE+10} stroke="rgba(240,80,180,.28)" strokeWidth="1.5"/>
-                  <line x1="400" y1={GNV_LANE} x2="800" y2={GNV_LANE}
-                    stroke="rgba(240,80,180,.32)" strokeWidth="1.2"
-                    strokeDasharray="6 10"/>
-
-                  {/* ── STATIONS GNV ── */}
+                  {/* ── STATIONS GNV — accrochées sous la route GNV_LANE ── */}
                   {GNV_S.map((sx, i) => {
                     const active = i < gnvStations;
                     return (
-                      <g key={i} transform={`translate(${sx},${GNV_LANE+10})`}>
-                        {/* Branche verticale */}
-                        <line x1="0" y1="0" x2="0" y2="12"
+                      <g key={i} transform={`translate(${sx},${GNV_LANE+8})`}>
+                        <line x1="0" y1="0" x2="0" y2="8"
                           stroke={active ? "rgba(74,219,148,.7)" : "rgba(255,255,255,.08)"}
                           strokeWidth="1.5"/>
-                        {/* Corps station */}
-                        <rect x="-18" y="12" width="36" height="26" rx="5"
+                        <rect x="-18" y="8" width="36" height="26" rx="5"
                           fill={active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)"}
                           stroke={active ? "rgba(74,219,148,.45)" : "rgba(255,255,255,.1)"}
                           strokeWidth="1"/>
-                        <text x="0" y="28" textAnchor="middle" fontSize="12">⛽</text>
-                        <text x="0" y="38" textAnchor="middle" fontSize="5" fontWeight="700"
+                        <text x="0" y="24" textAnchor="middle" fontSize="12">⛽</text>
+                        <text x="0" y="33" textAnchor="middle" fontSize="5" fontWeight="700"
                           fill={active ? "#4ADB94" : "rgba(255,255,255,.2)"}>
                           {active ? `S${i+1}` : '🔒'}
                         </text>
-                        {/* Branche vers pipe GRDF */}
-                        {active && <line x1="0" y1="38" x2="0" y2="50"
+                        {active && <line x1="0" y1="34" x2="0" y2="44"
                           stroke="rgba(74,219,148,.4)" strokeWidth="1"/>}
                       </g>
                     );
                   })}
 
                   {/* ── PIPE GRDF ── */}
-                  <rect x="400" y={GNV_LANE+60} width="400" height="5" rx="2.5"
+                  <rect x="415" y={GNV_LANE+54} width="370" height="4" rx="2"
                     fill="rgba(74,158,219,.15)" stroke="rgba(74,158,219,.4)" strokeWidth="1"/>
-                  <text x="412" y={GNV_LANE+69} fontSize="5" fill="rgba(74,158,219,.55)" fontWeight="700">← Injection réseau</text>
+                  <text x="420" y={GNV_LANE+62} fontSize="5"
+                    fill="rgba(74,158,219,.55)" fontWeight="700">← Injection réseau GRDF</text>
 
-                  {/* ── LANE RETOUR ── */}
-                  <rect x="400" y={GNV_RET-10} width="400" height="20" fill="#141e2e"/>
-                  <line x1="400" y1={GNV_RET-10} x2="800" y2={GNV_RET-10} stroke="rgba(240,80,180,.45)" strokeWidth="1.5"/>
-                  <line x1="400" y1={GNV_RET+10} x2="800" y2={GNV_RET+10} stroke="rgba(240,80,180,.28)" strokeWidth="1.5"/>
-                  <line x1="400" y1={GNV_RET} x2="800" y2={GNV_RET}
-                    stroke="rgba(240,80,180,.32)" strokeWidth="1.2" strokeDasharray="6 10"/>
+                  {/* ── ROUTE RETOUR + BÂTIMENTS (GNV_RET) ── */}
+                  <rect x="415" y={GNV_RET-8} width="370" height="16" fill="#141e2e"/>
+                  <line x1="415" y1={GNV_RET-8} x2="785" y2={GNV_RET-8}
+                    stroke="rgba(240,80,180,.35)" strokeWidth="1.2"/>
+                  <line x1="415" y1={GNV_RET+8} x2="785" y2={GNV_RET+8}
+                    stroke="rgba(240,80,180,.2)" strokeWidth="1.2"/>
+                  <line x1="415" y1={GNV_RET} x2="785" y2={GNV_RET}
+                    stroke="rgba(240,80,180,.25)" strokeWidth="1" strokeDasharray="5 9"/>
 
-                  {/* ── BÂTIMENTS RÉSIDENTIELS (zone de consommation) ── */}
-                  {[430,470,510,555,600,645,690,730,768].map((bx, bi) => {
-                    const h = 12 + (bi % 3) * 6;
+                  {/* ── BÂTIMENTS RÉSIDENTIELS ── */}
+                  {[430,468,506,548,592,634,676,716,754].map((bx, bi) => {
+                    const h = 10 + (bi % 3) * 5;
                     return (
-                      <g key={bi} transform={`translate(${bx},${GNV_RET+14})`}>
-                        <rect x="-8" y={0} width="16" height={h} rx="1.5"
-                          fill="rgba(11,22,35,.8)" stroke="rgba(74,158,219,.2)" strokeWidth=".8"/>
-                        <rect x="-5" y={2} width="4" height="3" rx=".5"
-                          fill="rgba(74,158,219,.25)"/>
-                        <rect x="1" y={2} width="4" height="3" rx=".5"
-                          fill="rgba(74,158,219,.25)"/>
-                        <rect x="-4" y={h-4} width="8" height="3" rx=".5"
-                          fill="rgba(74,158,219,.1)"/>
+                      <g key={bi} transform={`translate(${bx},${GNV_RET+10})`}>
+                        <rect x="-7" y={0} width="14" height={h} rx="1.5"
+                          fill="rgba(11,22,35,.8)" stroke="rgba(74,158,219,.18)" strokeWidth=".7"/>
+                        <rect x="-4" y={1} width="3" height="3" rx=".5" fill="rgba(74,158,219,.22)"/>
+                        <rect x="1" y={1} width="3" height="3" rx=".5" fill="rgba(74,158,219,.22)"/>
                       </g>
                     );
                   })}
