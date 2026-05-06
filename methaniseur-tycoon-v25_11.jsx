@@ -3798,9 +3798,10 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <clipPath id="vTankBody"><rect x={cx-26} y="15" width="52" height="58" rx="3"/></clipPath>
         </defs>
 
-        {/* ── Biogaz entry : stub vertical top → cuve (pipe cross-panel gère la connexion) ── */}
-        <rect x={cx-4} y="0" width="8" height="17" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
-        {act(0)&&<rect x={cx-3} y="0" width="6" height="15" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="4 3" strokeDashoffset={flow}/>}
+        {/* ── Biogaz entry : pipe horizontal depuis droite + stub vertical vers cuve ── */}
+        <rect x={cx} y="3" width="66" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+        {act(0)&&<rect x={cx} y="4" width="66" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
+        <rect x={cx-4} y="3" width="8" height="14" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
 
         {/* ── Cuve tampon ── */}
         <ellipse cx={cx} cy="15" rx="26" ry="6" fill={act(0)?"#0098CC":"rgba(42,140,192,.25)"} stroke={act(0)?"#3AACCC":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
@@ -6758,16 +6759,12 @@ function DigesteurScene({
             </div>
             {/* ─── CHAÎNE : hauteur fixe 350px = même que section haute Vue 1 ─── */}
             <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
-              {/* Pont biogaz : droite panel → bord SVG (tube, actif si digestion) */}
-              <div style={{position:"absolute", top:"3px", right:0, width:"calc((100% - 160px) / 2 + 2px)", height:"10px", background:"#1E3848", borderTop:`1px solid rgba(102,238,136,${isDigesting?.5:.18})`, borderBottom:`1px solid rgba(102,238,136,${isDigesting?.5:.18})`, borderRadius:"0 3px 3px 0"}}/>
-              {/* Pont GRDF : bord SVG → droite panel (tube, actif si injecté) */}
-              <div style={{position:"absolute", top:"333px", right:0, width:"calc((100% - 160px) / 2 + 2px)", height:"10px", background:"#1E3848", borderTop:`1px solid rgba(74,158,219,${injected?.5:.15})`, borderBottom:`1px solid rgba(74,158,219,${injected?.5:.15})`, borderRadius:"0 3px 3px 0"}}/>
-              {/* Ancres cross-panel Vue 0 */}
-              <Anchor name="v0.biogaz.entry" side="right">
-                <div style={{position:"absolute", top:"3px", right:0, width:"1px", height:"10px"}}/>
+              {/* Ancres cross-panel Vue 0 — position réelle des éléments SVG (cx=90 → calc(50%+10px)) */}
+              <Anchor name="v0.biogaz.entry" side="center">
+                <div style={{position:"absolute", left:"calc(50% + 10px)", top:"7px", width:"1px", height:"1px"}}/>
               </Anchor>
-              <Anchor name="v0.grdf.exit" side="right">
-                <div style={{position:"absolute", top:"333px", right:0, width:"1px", height:"10px"}}/>
+              <Anchor name="v0.grdf.exit" side="center">
+                <div style={{position:"absolute", left:"calc(50% + 10px)", top:"337px", width:"1px", height:"1px"}}/>
               </Anchor>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
             </div>
