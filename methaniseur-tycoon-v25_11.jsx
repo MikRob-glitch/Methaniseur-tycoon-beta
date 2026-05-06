@@ -3798,11 +3798,9 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <clipPath id="vTankBody"><rect x={cx-26} y="15" width="52" height="58" rx="3"/></clipPath>
         </defs>
 
-        {/* ── Biogaz entry pipe from top-right (digesteur Vue 1) ── */}
-        <rect x={cx} y="3" width="66" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
-        {act(0)&&<rect x={cx} y="4" width="66" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
-        <rect x={cx-4} y="3" width="8" height="14" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
-        <text x="154" y="9" textAnchor="end" fontSize="5.5" fontWeight="700" fill={act(0)?"#3AACCC":"rgba(255,255,255,.32)"}>← Biogaz · Digesteur</text>
+        {/* ── Biogaz entry : stub vertical top → cuve (pipe cross-panel gère la connexion) ── */}
+        <rect x={cx-4} y="0" width="8" height="17" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+        {act(0)&&<rect x={cx-3} y="0" width="6" height="15" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="4 3" strokeDashoffset={flow}/>}
 
         {/* ── Cuve tampon ── */}
         <ellipse cx={cx} cy="15" rx="26" ry="6" fill={act(0)?"#0098CC":"rgba(42,140,192,.25)"} stroke={act(0)?"#3AACCC":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
@@ -6739,6 +6737,7 @@ function DigesteurScene({
             willChange:"transform",
           }}
         >
+          <AnchorProvider>
           {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
           {/* v25.11 — Vue 0 à gauche de Vue 1 : poste d'injection, chaîne haut→bas
               Collecteur digesteur → cuve tampon → épurateur → compresseur → poste d'injection
@@ -6758,23 +6757,20 @@ function DigesteurScene({
               </div>
             </div>
             {/* ─── CHAÎNE : hauteur fixe 350px = même que section haute Vue 1 ─── */}
-            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center"}}>
+            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
+              {/* Pont biogaz : droite panel → bord SVG (tube, actif si digestion) */}
+              <div style={{position:"absolute", top:"3px", right:0, width:"calc((100% - 160px) / 2 + 2px)", height:"10px", background:"#1E3848", borderTop:`1px solid rgba(102,238,136,${isDigesting?.5:.18})`, borderBottom:`1px solid rgba(102,238,136,${isDigesting?.5:.18})`, borderRadius:"0 3px 3px 0"}}/>
+              {/* Pont GRDF : bord SVG → droite panel (tube, actif si injecté) */}
+              <div style={{position:"absolute", top:"333px", right:0, width:"calc((100% - 160px) / 2 + 2px)", height:"10px", background:"#1E3848", borderTop:`1px solid rgba(74,158,219,${injected?.5:.15})`, borderBottom:`1px solid rgba(74,158,219,${injected?.5:.15})`, borderRadius:"0 3px 3px 0"}}/>
+              {/* Ancres cross-panel Vue 0 */}
+              <Anchor name="v0.biogaz.entry" side="right">
+                <div style={{position:"absolute", top:"3px", right:0, width:"1px", height:"10px"}}/>
+              </Anchor>
+              <Anchor name="v0.grdf.exit" side="right">
+                <div style={{position:"absolute", top:"333px", right:0, width:"1px", height:"10px"}}/>
+              </Anchor>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
             </div>
-            {/* ─── BANDEAU INJECTION (si raccordé) ─── */}
-            {injected && (
-              <div style={{flexShrink:0, padding:"0 10px 4px"}}>
-                <div style={{display:"flex", alignItems:"center", gap:"8px", padding:"4px 8px", borderRadius:"8px", background:"rgba(11,22,35,.55)", border:"1px solid rgba(74,158,219,.12)"}}>
-                  <div style={{fontSize:"14px"}}>🔌</div>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div style={{height:"4px", borderRadius:"2px", background:"rgba(74,158,219,.12)", overflow:"hidden"}}>
-                      <div style={{height:"100%", borderRadius:"2px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#6DB5EC)", transition:"width .5s"}}/>
-                    </div>
-                  </div>
-                  <div style={{fontSize:"12px", fontWeight:800, color:"#4A9EDB", whiteSpace:"nowrap"}}>{fmt(bm)} m³</div>
-                </div>
-              </div>
-            )}
             {/* ─── RÉSEAU GRDF AVAL : tout en bas de la vue ─── */}
             <div style={{flex:1, padding:"8px 10px 12px", background:"rgba(7,14,25,.55)", borderTop:"1px solid rgba(74,158,219,.1)", display:"flex", flexDirection:"column", justifyContent:"center"}}>
               {!injected ? (
@@ -6811,10 +6807,6 @@ function DigesteurScene({
           {/* v25.11 — Vue 1 principale (bac + digesteurs). Largeur 33.33%.
               Chaîne d'injection migrée dans Vue 0. Bottom = Station GNV + GRDF. */}
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
-            {/* v25.1.20 — AnchorProvider englobe toute la VUE 1 : permet aux pipes
-                de se positionner dynamiquement entre bac, digesteurs, cuve, etc.
-                Plus besoin d'estimer les pixels manuellement. */}
-            <AnchorProvider>
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -7121,6 +7113,10 @@ function DigesteurScene({
             {/* ─── BOTTOM : Station GNV + réseau GRDF (250px) ─── */}
             {/* v25.11 — Chaîne d'injection migrée dans Vue 0. Ici : station GNV + pipe GRDF. */}
             <div style={{height:"250px", flexShrink:0, position:"relative", background:"rgba(7,14,25,.55)"}}>
+              {/* Ancre cross-panel : entrée réseau GRDF/GNV depuis Vue 0 injection */}
+              <Anchor name="v1.grdf.entry" side="left">
+                <div style={{position:"absolute", left:0, top:"37px", width:"1px", height:"10px"}}/>
+              </Anchor>
               {!injected ? (
                 <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center"}}>
                   <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
@@ -7170,8 +7166,16 @@ function DigesteurScene({
               color="#E8A020" flowColor="#F5BE50"
               active={pouring} animate="auger" animSpeed=".35s"
               strokeWidth={9}/>
-            </AnchorProvider>
           </div>
+          {/* ── Pipes cross-panel : collecteur biogaz → Vue 0 cuve tampon ── */}
+          <Pipe from="v1.biogaz.left" to="v0.biogaz.entry" mode="straight"
+            color="rgba(102,238,136,.7)" flowColor="#66ee88"
+            active={isDigesting} animate="flow-reverse" animSpeed="1s" strokeWidth={10} zIndex={5}/>
+          {/* ── Pipe cross-panel : Vue 0 injection → Vue 1 réseau GRDF ── */}
+          <Pipe from="v0.grdf.exit" to="v1.grdf.entry" mode="straight"
+            color="#4A9EDB" flowColor="#27a85a"
+            active={injected} animate="flow" animSpeed="1.4s" strokeWidth={10} zIndex={5}/>
+          </AnchorProvider>
 
           {/* ════════ VUE 2 : GISEMENTS + RÉSEAU AVAL ════════ */}
           {/* v25.11 — Vue 2 : gisements (top 350px) + circuit routier + bâtiments GRDF (bottom 250px).
@@ -7505,6 +7509,10 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
     // pour que le flex parent calcule la largeur SANS l'extension. Le SVG en absolu
     // déborde visuellement à gauche sans impacter le layout.
     <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
+      {/* Ancre cross-panel : bout gauche du collecteur biogaz → Vue 0 cuve tampon */}
+      <Anchor name="v1.biogaz.left" side="left">
+        <div style={{position:"absolute", left:`${-LEFT_EXT}px`, top:`${cY-4}px`, width:"1px", height:"8px"}}/>
+      </Anchor>
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
         style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
 
