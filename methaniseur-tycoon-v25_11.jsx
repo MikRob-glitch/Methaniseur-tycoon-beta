@@ -3786,7 +3786,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
   const cx = 80;
   return (
     <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <svg viewBox="0 0 160 384" style={{width:"auto",height:"100%",maxHeight:"280px",display:"block"}}>
+      <svg viewBox="0 0 160 384" style={{width:"auto",height:"100%",maxWidth:"100%",display:"block"}}>
         <defs>
           <linearGradient id="gvTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0098CC" stopOpacity={act(0)?1:.25}/><stop offset="100%" stopColor="#164e63" stopOpacity={act(0)?1:.15}/></linearGradient>
           <linearGradient id="gvLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(74,188,223,.5)"/><stop offset="100%" stopColor="rgba(74,188,223,.85)"/></linearGradient>
@@ -6742,27 +6742,27 @@ function DigesteurScene({
           {/* v25.11 — Vue 0 à gauche de Vue 1 : poste d'injection, chaîne haut→bas
               Collecteur digesteur → cuve tampon → épurateur → compresseur → poste d'injection
               → réseau GRDF aval (→ droite vers Vue 1 bas → Vue 2 bas) */}
-          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
-            {/* ─── TOP : Biogaz + Chaîne d'injection (350px) ─── */}
-            <div style={{height:"350px", position:"relative", flexShrink:0, display:"flex", flexDirection:"column", padding:"12px 10px 8px", background:"rgba(11,22,35,.6)"}}>
-              {/* Connexion biogaz entrant depuis Vue 1 (digesteur) */}
-              <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"8px", padding:"4px 8px", borderRadius:"8px", background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)"}}>
+          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
+            {/* ─── HEADER : collecteur digesteur + titre (haut de vue) ─── */}
+            <div style={{flexShrink:0, padding:"10px 10px 4px"}}>
+              <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"6px", padding:"4px 8px", borderRadius:"8px", background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)"}}>
                 <div style={{fontSize:"9px", color:"rgba(74,158,219,.65)", fontWeight:700}}>← Biogaz collecteur digesteur</div>
               </div>
-              {/* Header titre + statut */}
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px", padding:"0 4px"}}>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 4px"}}>
                 <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
                 {injected
                   ? <span style={{fontSize:"10px", fontWeight:700, color:"#4A9EDB", padding:"2px 8px", borderRadius:"20px", background:"rgba(74,158,219,.17)"}}>✅ Raccordé</span>
                   : <span style={{fontSize:"10px", fontWeight:700, color:canConnect?"#F5BE50":"rgba(255,255,255,.32)", padding:"2px 8px", borderRadius:"20px", background:canConnect?"rgba(232,160,32,.18)":"rgba(74,158,219,.06)"}}>{canConnect?"🔓 Prêt !":"🔒 Verrouillé"}</span>
                 }
               </div>
-              {/* Schéma chaîne injection */}
-              <div style={{flex:1, minHeight:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
-                <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
-              </div>
-              {/* Bandeau injection si raccordé */}
-              {injected && (
+            </div>
+            {/* ─── CHAÎNE : s'étale sur tout l'espace central ─── */}
+            <div style={{flex:1, minHeight:0, display:"flex", alignItems:"stretch", justifyContent:"center"}}>
+              <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
+            </div>
+            {/* ─── BANDEAU INJECTION (si raccordé) ─── */}
+            {injected && (
+              <div style={{flexShrink:0, padding:"0 10px 4px"}}>
                 <div style={{display:"flex", alignItems:"center", gap:"8px", padding:"4px 8px", borderRadius:"8px", background:"rgba(11,22,35,.55)", border:"1px solid rgba(74,158,219,.12)"}}>
                   <div style={{fontSize:"14px"}}>🔌</div>
                   <div style={{flex:1, minWidth:0}}>
@@ -6772,18 +6772,18 @@ function DigesteurScene({
                   </div>
                   <div style={{fontSize:"12px", fontWeight:800, color:"#4A9EDB", whiteSpace:"nowrap"}}>{fmt(bm)} m³</div>
                 </div>
-              )}
-            </div>
-            {/* ─── BOTTOM : Réseau GRDF sortant → Vue 1 → Vue 2 (250px) ─── */}
-            <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", justifyContent:"center", padding:"12px 16px", background:"rgba(7,14,25,.45)"}}>
+              </div>
+            )}
+            {/* ─── RÉSEAU GRDF AVAL : tout en bas de la vue ─── */}
+            <div style={{flexShrink:0, padding:"8px 10px 12px", background:"rgba(7,14,25,.55)", borderTop:"1px solid rgba(74,158,219,.1)"}}>
               {!injected ? (
-                <div style={{textAlign:"center", opacity:.42}}>
-                  <div style={{fontSize:"20px", marginBottom:"4px"}}>🔒</div>
+                <div style={{textAlign:"center", opacity:.42, padding:"6px 0"}}>
+                  <div style={{fontSize:"18px", marginBottom:"4px"}}>🔒</div>
                   <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)"}}>Raccordement GRDF</div>
                   <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Injectez du biogaz pour activer</div>
                 </div>
               ) : (
-                <div style={{display:"flex", flexDirection:"column", gap:"8px"}}>
+                <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
                   <div style={{fontSize:"10px", color:"rgba(74,158,219,.7)", fontWeight:700, textTransform:"uppercase", letterSpacing:".06em"}}>Réseau GRDF aval →</div>
                   <div style={{display:"flex", gap:"6px"}}>
                     <div style={{flex:1, background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,158,219,.25)", borderRadius:"6px", padding:"6px 8px"}}>
@@ -6797,7 +6797,7 @@ function DigesteurScene({
                       </div>
                     )}
                   </div>
-                  <div style={{height:"6px", borderRadius:"3px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
+                  <div style={{height:"5px", borderRadius:"3px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
                     <div style={{height:"100%", borderRadius:"3px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation:"gasFlow 1.4s linear infinite"}}/>
                   </div>
                   <div style={{fontSize:"8px", color:"rgba(255,255,255,.28)", textAlign:"center"}}>→ Station GNV (Vue 1) → Réseau résidentiel (Vue 2)</div>
