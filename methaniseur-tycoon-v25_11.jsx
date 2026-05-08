@@ -7136,7 +7136,6 @@ function DigesteurScene({
                 </div>
               )}
             </div>
-          </div>
           <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
             color="#E8A020" flowColor="#F5BE50"
             active={pouring} animate="auger" animSpeed=".35s"
