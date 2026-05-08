@@ -1536,7 +1536,7 @@ function Game({ username, region, maia }) {
   // v25.7 — tractorGnv dérivé : true dès qu'au moins un tracteur est converti (compat cloud + badges)
   const tractorGnv = tractorGnvArr.some(Boolean);
   const [pinnedZones,       setPinnedZones]       = useState(() => Array.isArray(saved?.pinnedZones) ? saved.pinnedZones : []);
-  const [cityView,          setCityView]          = useState(1); // 0 = injection, 1 = digesteur (défaut), 2 = gisements — non persisté
+  const [cityView,          setCityView]          = useState(0); // 0 = injection+digesteurs (fusionné), 1 = gisements — non persisté
 
   // ── v24 : SYSTÈME GISEMENTS LOCAUX ──
   // Chaque array est indexé par upgradeId (0..6). Migration safe pour saves antérieures.
@@ -6665,7 +6665,7 @@ function DigesteurScene({
     const base = -cityView * vw;
     let offset = dx;
     // Résistance aux bords
-    if ((cityView === 0 && offset > 0) || (cityView === 2 && offset < 0)) offset *= 0.3;
+    if ((cityView === 0 && offset > 0) || (cityView === 1 && offset < 0)) offset *= 0.3;
     sceneRef.current.style.transform = `translateX(${base + offset}px)`;
   };
   const onPointerUp = (e) => {
@@ -6676,7 +6676,7 @@ function DigesteurScene({
       const vw = viewportRef.current.offsetWidth;
       const threshold = vw * 0.2;
       let target = cityView;
-      if (dx < -threshold && cityView < 2) target = cityView + 1;
+      if (dx < -threshold && cityView < 1) target = cityView + 1;
       else if (dx > threshold && cityView > 0) target = cityView - 1;
       if (target !== cityView) setCityView(target);
       else applyTransform(cityView, true);
@@ -6728,22 +6728,21 @@ function DigesteurScene({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        {/* Scène monde (300% largeur — 3 vues) */}
+        {/* Scène monde (200% largeur — 2 panneaux : fusionné injection+digesteurs | gisements) */}
         <div
           ref={sceneRef}
           style={{
             position:"relative",
-            width:"300%",
+            width:"200%",
             display:"flex",
             willChange:"transform",
           }}
         >
+          {/* ════════ PANNEAU FUSIONNÉ : chaîne injection (gauche) + digesteurs (droite) ════════ */}
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", overflow:"hidden", display:"flex", flexDirection:"row"}}>
           <AnchorProvider>
-          {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
-          {/* v25.11 — Vue 0 à gauche de Vue 1 : poste d'injection, chaîne haut→bas
-              Collecteur digesteur → cuve tampon → épurateur → compresseur → poste d'injection
-              → réseau GRDF aval (→ droite vers Vue 1 bas → Vue 2 bas) */}
-          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
+          {/* ── SECTION GAUCHE : Chaîne d'injection (200px fixe) ── */}
+          <div style={{width:"200px", flexShrink:0, display:"flex", flexDirection:"column", position:"relative", background:"rgba(11,22,35,.6)", borderRight:"1px solid rgba(74,158,219,.12)"}}>
             {/* ─── HEADER : collecteur digesteur + titre (haut de vue) ─── */}
             <div style={{flexShrink:0, padding:"10px 10px 4px"}}>
               <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"6px", padding:"4px 8px", borderRadius:"8px", background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)"}}>
@@ -6759,12 +6758,14 @@ function DigesteurScene({
             </div>
             {/* ─── CHAÎNE : hauteur fixe 350px = même que section haute Vue 1 ─── */}
             <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
-              {/* Ancres cross-panel Vue 0 — position réelle des éléments SVG (cx=90 → calc(50%+10px)) */}
+              {/* Ancres pipes internes — section 200px, SVG 160px centré (marge 20px) */}
+              {/* Biogaz : cx=90 → 20+90=110px = calc(50%+10px) ; top=9 = sommet cap cuve */}
               <Anchor name="v0.biogaz.entry" side="center">
-                <div style={{position:"absolute", left:"calc(50% + 10px)", top:"7px", width:"1px", height:"1px"}}/>
+                <div style={{position:"absolute", left:"calc(50% + 10px)", top:"9px", width:"1px", height:"1px"}}/>
               </Anchor>
+              {/* GRDF exit : x=156 → 20+156=176px = calc(50%+76px) ; top=337 = milieu pipe horiz */}
               <Anchor name="v0.grdf.exit" side="center">
-                <div style={{position:"absolute", left:"calc(50% + 10px)", top:"337px", width:"1px", height:"1px"}}/>
+                <div style={{position:"absolute", left:"calc(50% + 76px)", top:"337px", width:"1px", height:"1px"}}/>
               </Anchor>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
             </div>
@@ -6800,10 +6801,8 @@ function DigesteurScene({
             </div>
           </div>
 
-          {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
-          {/* v25.11 — Vue 1 principale (bac + digesteurs). Largeur 33.33%.
-              Chaîne d'injection migrée dans Vue 0. Bottom = Station GNV + GRDF. */}
-          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+          {/* ── SECTION DROITE : Digesteurs + BAC + GRDF (flex:1) ── */}
+          <div style={{flex:1, display:"flex", flexDirection:"column", position:"relative", minWidth:0}}>
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -7153,33 +7152,24 @@ function DigesteurScene({
                 </div>
               )}
             </div>
-            {/* v25.1.21 — Le collecteur biogaz est rendu par DigesteurManifold (composant
-                inline avec branches descendantes vers chaque digesteur, extension à gauche
-                hors champ). La vis sans fin sous les digesteurs est rendue par
-                DigesteurFeeder. Reste le pipe DYNAMIQUE qui relie le coin bas-gauche
-                du bac à l'embout droit du DigesteurFeeder — c'est le seul qui demandait
-                du calibrage manuel auparavant. Il utilise maintenant le système d'ancres. */}
-            <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
-              color="#E8A020" flowColor="#F5BE50"
-              active={pouring} animate="auger" animSpeed=".35s"
-              strokeWidth={9}/>
           </div>
-          {/* ── Pipes cross-panel : collecteur biogaz → Vue 0 cuve tampon ── */}
+          {/* ── Tous les Pipes au niveau AnchorProvider (position:absolute = Panneau fusionné) ── */}
+          <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
+            color="#E8A020" flowColor="#F5BE50"
+            active={pouring} animate="auger" animSpeed=".35s"
+            strokeWidth={9}/>
           <Pipe from="v1.biogaz.left" to="v0.biogaz.entry" mode="straight"
             color="rgba(102,238,136,.7)" flowColor="#66ee88"
             active={isDigesting} animate="flow-reverse" animSpeed="1s" strokeWidth={10} zIndex={5}/>
-          {/* ── Pipe cross-panel : Vue 0 injection → Vue 1 réseau GRDF ── */}
           <Pipe from="v0.grdf.exit" to="v1.grdf.entry" mode="straight"
-            color="#4A9EDB" flowColor="#27a85a"
+            color="#4A9EDB" flowColor="#4A9EDB"
             active={injected} animate="flow" animSpeed="1.4s" strokeWidth={10} zIndex={5}/>
           </AnchorProvider>
+          </div>
 
-          {/* ════════ VUE 2 : GISEMENTS + RÉSEAU AVAL ════════ */}
-          {/* v25.11 — Vue 2 : gisements (top 350px) + circuit routier + bâtiments GRDF (bottom 250px).
-              Circuit tracteurs : descente côté droit → route haut du bas → station GNV Vue 1 →
-              C-loop → route bas du bas → remontée côté gauche → gisements.
-              Véhicules lambda : même circuit haut/bas, ne remontent pas. */}
-          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+          {/* ════════ VUE 1 : GISEMENTS + RÉSEAU AVAL ════════ */}
+          {/* v25.11 — (ex-Vue 2) Gisements (top 350px) + circuit routier + bâtiments GRDF (bottom 250px). */}
+          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* Les bandes latérales sont désormais dans le SVG monde (chemins x=400 et x=800) */}
@@ -7440,7 +7430,7 @@ function DigesteurScene({
         </div>
 
         {/* ─── FLÈCHE HINT DE SWIPE ─── */}
-        {cityView < 2 && (
+        {cityView < 1 && (
           <div style={{
             position:"absolute", right:6, top:"50%", transform:"translateY(-50%)",
             fontSize:"22px", color:"#E8A020",
@@ -7465,7 +7455,7 @@ function DigesteurScene({
           display:"flex", justifyContent:"center", gap:6,
           zIndex:20, pointerEvents:"none",
         }}>
-          {[0,1,2].map(i => (
+          {[0,1].map(i => (
             <div key={i}
               onClick={(e) => { e.stopPropagation(); setCityView(i); }}
               style={{
@@ -7494,7 +7484,7 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
   // v25.1.11 : EXTENSION vers la GAUCHE pour que le tube collecteur sorte de l'écran.
   // v25.1.14 : SVG en position:absolute pour que l'extension ne force PAS la largeur
   //   de la colonne digesteurs (qui sur Android coupait le bac à droite).
-  const LEFT_EXT = 140;
+  const LEFT_EXT = 4; // extrémité gauche du collecteur (Pipe prend le relais vers la cuve tampon)
   const svgW   = totalW + LEFT_EXT;
   const svgH   = 38;
   const cY     = 14;
@@ -7506,7 +7496,7 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
     // pour que le flex parent calcule la largeur SANS l'extension. Le SVG en absolu
     // déborde visuellement à gauche sans impacter le layout.
     <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
-      {/* Ancre cross-panel : bout gauche du collecteur biogaz → Vue 0 cuve tampon */}
+      {/* Ancre biogaz : bout gauche du collecteur → Pipe interne vers cuve tampon */}
       <Anchor name="v1.biogaz.left" side="left">
         <div style={{position:"absolute", left:`${-LEFT_EXT}px`, top:`${cY-4}px`, width:"1px", height:"8px"}}/>
       </Anchor>
@@ -7537,14 +7527,7 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
         <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
           fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
 
-        {/* Label "Biogaz vers la cuve ↓" — positionné côté DROIT de l'extension
-            (près du digesteur #1) pour rester dans la zone visible de l'écran.
-            v25.1.13 : x=LEFT_EXT-50 au lieu de LEFT_EXT/2 (sinon coupé hors champ). */}
-        <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
-          fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
-          fontWeight="700" letterSpacing=".3">
-          ◀ Biogaz vers la cuve
-        </text>
+        {/* Label retiré — la connexion cuve tampon est rendue par le Pipe interne */}
 
         {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
         {digesteurs > 1 && (
