@@ -33,10 +33,38 @@
   </script>
   <script type="text/babel" data-presets="react">
 
-// Source de vérité — Méthaniseur Tycoon v25.1
+// Source de vérité — Méthaniseur Tycoon v25.11
 // Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.9 : ROUTES LATÉRALES TRACTEURS — circuit complet visible
+//         · Bandes latérales gauche/droite élargies à 30px (asphalte + tirets centraux)
+//         · Tracteurs 🚜 animés : descendent côté droit (gisements→stations), montent côté gauche
+//         · Continuité visuelle : bandes dans TOP Vue2 (350px) + GnvNetworkView (STRIP_H)
+//         · Fréquence proportionnelle à tractorCount (max 3 tracteurs en simultané)
+//         · Vitesse cohérente : ~55px/s (durée adaptée à la hauteur du conteneur)
+//         · CSS_ID versionné 'gnv-net-css-v4'
+//         v25.8.1 : layout corrigé top→bottom, sens véhicules, connexion Vue 1
+//         v25.8.2 : DUAL CIRCUIT
+//           · CIRCUIT TRACTEURS (rose) : bandes latérales gauche/droite animées
+//             descente à droite (gisements→stations) + remontée à gauche (stations→gisements)
+//           · Station road (R→L) : véhicules clients + tracteurs GNV entrent par la droite,
+//             s'arrêtent à leur station cible (S1/S2/S3), ressortent à gauche
+//           · Route de retour (L→R) : véhicules clients après plein passent devant bâtiments
+//           · Transforms : tracteur 🚜 scaleX(-1) sur station road, véhicule scaleX(-1) sur retour
+//           · CSS_ID versionné 'gnv-net-css-v3' pour éviter collision avec ancien tag
+// v25.7 : UNIFICATION SYSTÈME GNV — un seul système, par tracteur
+//         · Bonus +15 % de remplissage par tracteur converti GNV (max ×3 = +45 %)
+//         · Suppression du bouton legacy global "Passer le tracteur au GNV — 2 000 €"
+//         · L'info +15 % migre dans la carte de chaque tracteur (FLOTTE DE TRACTEURS)
+//         · `tractorGnv` devient dérivé (tractorGnvArr.some) — backward compat cloud OK
+//         · Migration auto saves legacy : tractorGnv=true → tractorGnvArr[0]=true
+// v25.6 : FIABILITÉ ACTIVE — la fiabilité industrielle module désormais le yield CH₄
+//         · ≥95% : bonus Qualimétha progressif (rampe 1.00→1.10 entre 95 et 100)
+//         · 40-95% : pénalité linéaire (yield × r/100)
+//         · ≤40% : plancher 0.40 (anti-spirale, l'idle reste récupérable)
+//         · Appliqué en temps réel (digestion), offline (calcOffline + applyCatchUp)
+//           et dans l'estimation bmPerHour. UI : stat fiabilité affiche le multiplicateur.
 // v25.1 : RÉÉQUILIBRAGE ÉCO + UI PÉDAGO + LAYOUT INVERSÉ
-//         · Pacing pré-raccordement : seuils ×1,6-2 (épurateur 1k / compresseur 4k / raccordement 8k)
+//         · Pacing pré-raccordement : seuils ×1,6-2 (épurateur 1k / compresseur 4k / raccordement 8k) [remplacé v25.5 → 10k/40k/80k]
 //         · Big bang post-raccordement : prime de 5 000 € + CIVE/Biogaz+ ÷2
 //         · Paliers structurants : tracteurs/digesteurs/GNV recalibrés (ROI cohérent)
 //         · UI pédago shop : m³/s live + preview après achat sur chaque carte intrant
@@ -96,7 +124,7 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
       username, region,
       // ── Score & raccordement ─────────────────────────────────────────────
       score_network: 0, score_gnv: 0, is_connected: false,
-      buffer: 1,
+      buffer: 10,
       // ── v24.2 : full state explicite à l'INSERT ──────────────────────────
       // Ne pas dépendre des DEFAULTs SQL (risque de DEFAULTs erronés type
       // reliability=1 ou local_stock='{}'::jsonb au lieu d'arrays).
@@ -417,12 +445,14 @@ function useSupabaseRealtime(onPlayerChange, active) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ⚙️  PARAMÈTRES CLÉS — seuils chaîne d'injection GRDF (m³ dans la cuve tampon)
 // ─────────────────────────────────────────────────────────────────────────────
+// v25.5 — ×10 coûts intrants + seuils chaîne injection (équilibrage pré-raccordement)
+//         · Scaling coût : 1.15 → 1.35 (dilemme achat vs seuil dès le 4ème achat)
 // v25.1 — Axe 1 : pacing pré-raccordement (seuils ×1,6-2)
 //          Axe 2 : prime de raccordement (big bang)
 //          Axe 3 : paliers structurants digesteurs/GNV
-const EPURATEUR_THRESHOLD   = 1000;
-const COMPRESSEUR_THRESHOLD = 4000;
-const INJECTION_THRESHOLD   = 8000;
+const EPURATEUR_THRESHOLD   = 10000;
+const COMPRESSEUR_THRESHOLD = 40000;
+const INJECTION_THRESHOLD   = 80000;
 const RACCORDEMENT_BONUS    = 5000;                    // v25.1 — avance contractuelle GRDF (€)
 const GNV_STATION_COSTS   = [50000, 300000, 2000000];  // v25.1 — progression moins extrême en endgame
 const DIGESTEUR_COSTS     = [200000, 1500000];         // v25.1 — palier digesteur 2 plus marquant
@@ -434,7 +464,7 @@ const DIGESTEUR_LABELS    = ["x2 capacité","x3 capacité","x4 capacité"];
 //   Chaque palier débloque un bonus multiplicatif sur baseFill de cet intrant.
 //   Pédagogie : simule le gain d'efficacité opérationnelle qu'un site obtient
 //   en exploitant durablement le même type d'intrant (procédés, équipes, logistique).
-const STAR_THRESHOLDS = [1, 5, 10, 20, 40];                 // qty seuils 1★→5★
+const STAR_THRESHOLDS = [5, 10, 20, 50, 100];                 // qty seuils 1★→5★
 const STAR_BONUSES    = [1.05, 1.10, 1.20, 1.35, 1.50];     // multiplicateurs cumulatifs (PAS additifs)
 const getIntrantStars = (qty) => {
   if (qty <= 0) return 0;
@@ -464,7 +494,7 @@ const UPGRADES = [
   {
     id:0, name:"Lisier bovin",        icon:"🐄",
     desc:"Effluents d'élevage bovin",
-    baseCost:0.5,   baseFill:0.10,   bagCap:9,         unlocksAt:null,
+    baseCost:5,     baseFill:0.10,   bagCap:9,         unlocksAt:null,
     realYield:20,
     realYieldLabel:"~20 m³ CH₄ / tonne",
     pedagoTip:"L'intrant le plus répandu en France. Faible rendement unitaire, mais disponible en très grand volume dans les exploitations agricoles. C'est la porte d'entrée de la méthanisation agricole.",
@@ -472,7 +502,7 @@ const UPGRADES = [
   {
     id:1, name:"Déchets verts",       icon:"🌿",
     desc:"Tontes & résidus végétaux",
-    baseCost:3,     baseFill:0.15,   bagCap:13.5,      unlocksAt:null,
+    baseCost:30,    baseFill:0.15,   bagCap:13.5,      unlocksAt:null,
     realYield:75,
     realYieldLabel:"~75 m³ CH₄ / tonne",
     pedagoTip:"Tontes de pelouse, tailles de haies, résidus végétaux de collectivités. Rendement 3,75× supérieur au lisier. Gisement local et stable, souvent sous-valorisé.",
@@ -480,7 +510,7 @@ const UPGRADES = [
   {
     id:2, name:"Biodéchets restau",   icon:"🍽️",
     desc:"Restes alimentaires triés à la source",
-    baseCost:15,    baseFill:0.30,   bagCap:27,        unlocksAt:"epurateur",
+    baseCost:150,   baseFill:0.30,   bagCap:27,        unlocksAt:"epurateur",
     realYield:100,
     realYieldLabel:"~100 m³ CH₄ / tonne",
     pedagoTip:"Haute teneur en sucres et lipides = excellent rendement. La loi du 1er janvier 2024 impose le tri à la source des biodéchets pour tous les professionnels. Un gisement en plein essor !",
@@ -488,7 +518,7 @@ const UPGRADES = [
   {
     id:3, name:"Boues de STEP",       icon:"🏭",
     desc:"Boues d'épuration urbaines optimisées en méthanisation",
-    baseCost:80,    baseFill:0.50,   bagCap:45,        unlocksAt:"epurateur",
+    baseCost:800,   baseFill:0.50,   bagCap:45,        unlocksAt:"epurateur",
     realYield:120,
     realYieldLabel:"~120 m³ CH₄ / tonne",
     pedagoTip:"Coproduit de l'assainissement urbain, optimisé en parc dédié (digestion thermophile, hygiénisation). 6× le rendement du lisier. Volumes considérables en zones urbaines.",
@@ -496,7 +526,7 @@ const UPGRADES = [
   {
     id:4, name:"Déchets industriels", icon:"⚙️",
     desc:"Coproduits agro-industriels à haute énergie",
-    baseCost:400,   baseFill:0.70,   bagCap:63,        unlocksAt:"compresseur",
+    baseCost:4000,  baseFill:0.70,   bagCap:63,        unlocksAt:"compresseur",
     realYield:300,
     realYieldLabel:"~300 m³ CH₄ / tonne",
     pedagoTip:"Mélasses, graisses, eaux de process d'abattoirs ou de laiteries. Rendement 15× supérieur au lisier. Les graisses pures peuvent dépasser 800 m³/tonne — le \"kérosène\" de la méthanisation.",
@@ -504,7 +534,7 @@ const UPGRADES = [
   {
     id:5, name:"Cultures CIVE",       icon:"🌾",
     desc:"Cultures intermédiaires à vocation énergétique",
-    baseCost:2500,  baseFill:0.90,   bagCap:81,        unlocksAt:"injected",   // v25.1 : 5000→2500
+    baseCost:25000, baseFill:0.90,   bagCap:81,        unlocksAt:"injected",   // v25.1 : 5000→2500
     realYield:400,
     realYieldLabel:"~400 m³ CH₄ / tonne",
     pedagoTip:"Sorgho, ray-grass, moutarde : semées entre deux cultures alimentaires, elles captent le CO₂ atmosphérique. 20× le rendement du lisier en biométhane 100 % renouvelable.",
@@ -512,7 +542,7 @@ const UPGRADES = [
   {
     id:6, name:"Parc biogaz+",        icon:"💨",
     desc:"Co-digestion multi-sources optimisée",
-    baseCost:20000, baseFill:1.00,   bagCap:90,        unlocksAt:"injected",   // v25.1 : 40000→20000
+    baseCost:200000,baseFill:1.00,   bagCap:90,        unlocksAt:"injected",   // v25.1 : 40000→20000
     realYield:500,
     realYieldLabel:"~500 m³ CH₄ / tonne",
     pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 10 % de gaz vert en 2030.",
@@ -590,10 +620,11 @@ const PARCELLES = [
 // v25.0 — coûts ×10 pour s'aligner sur la nouvelle échelle économique
 // v25.1 — Coûts revus pour ROI cohérent (3ᵉ tracteur ne paraît plus overpriced)
 const TRACTOR_UPGRADES = {
-  count2:     { cost: 50000,  req: "injected", desc: "Ajoute un 2ᵉ tracteur — double la cadence de chargement" },
-  count3:     { cost: 250000, req: "injected", desc: "Ajoute un 3ᵉ tracteur — triple la cadence de chargement" },
-  speedBoost: { cost: 120000, req: "injected", desc: "+30% de vitesse sur tous les tracteurs (route goudronnée)" },
-  trailer:    { cost: 25000,  req: "injected", desc: "Remorque individuelle — +50 % de capacité de chargement pour ce tracteur" },
+  count2:     { cost: 50000,  req: "injected",   desc: "Ajoute un 2ᵉ tracteur — double la cadence de chargement" },
+  count3:     { cost: 250000, req: "injected",   desc: "Ajoute un 3ᵉ tracteur — triple la cadence de chargement" },
+  speedBoost: { cost: 120000, req: "injected",   desc: "+30% de vitesse sur tous les tracteurs (route goudronnée)" },
+  trailer:    { cost: 25000,  req: "injected",   desc: "Remorque individuelle — +50 % de capacité de chargement pour ce tracteur" },
+  gnvUnit:    { cost: 15000,  req: "gnvStation", desc: "+15 % de remplissage des intrants · zéro émission directe" },
 };
 
 const MOCK_LB = [
@@ -656,10 +687,29 @@ const RELIABILITY_DROP_PER_SEC_SAT   = 0.5;  // -0,5 pt/s pendant saturation
 const RELIABILITY_DROP_ON_PANNE      = 15;   // -15 pts lors d'une panne
 const RELIABILITY_RECOVER_PER_SEC    = 0.1;  // +0,1 pt/s quand tout va bien
 const RELIABILITY_RESET_ON_RELAUNCH  = 50;   // après relance, fiabilité min. 50%
+// v25.6 — Effet gameplay de la fiabilité sur le yield CH₄
+//   · La fiabilité industrielle module la qualité d'extraction du méthane.
+//   · Mêmes intrants, même tonnage digéré → m³ effectifs variables selon la fiabilité.
+//   · Justification métier : température/brassage/pH instables → moins de CH₄ extrait.
+const RELIABILITY_PROD_FLOOR    = 0.40; // plancher : ≤40% fiab → mult prod = 0.40 (anti-spirale)
+const QUALIMETHA_THRESHOLD      = 95;   // seuil bonus fiabilité industrielle
+const QUALIMETHA_BONUS_MAX      = 1.10; // bonus max (à 100% fiab)
+// Mapping fiabilité → multiplicateur sur la production CH₄ effective.
+// Trois zones : plateau premium (≥95), linéaire (40-95), plancher (≤40).
+// Cliff de +0.05 à exactement 95% : matérialise l'entrée en zone Qualimétha (récompense visible).
+const reliabilityMultFor = (r) => {
+  if (typeof r !== 'number' || isNaN(r)) return 1;        // fail-safe : pas de pénalité si state invalide
+  if (r >= QUALIMETHA_THRESHOLD) {
+    // Rampe premium : 95→1.00, 100→1.10
+    const t = (Math.min(100, r) - QUALIMETHA_THRESHOLD) / (100 - QUALIMETHA_THRESHOLD);
+    return 1.0 + (QUALIMETHA_BONUS_MAX - 1.0) * t;
+  }
+  return Math.max(RELIABILITY_PROD_FLOOR, r / 100);
+};
 // Coût de relance d'une zone en panne : 1× baseCost actuel (qty +1 virtuel)
 const getRelaunchCost = (upgradeIdx, qty) => {
   const u = UPGRADES[upgradeIdx];
-  return u.baseCost * Math.pow(1.15, Math.max(0, qty - 1));
+  return u.baseCost * Math.pow(1.35, Math.max(0, qty - 1));
 };
 
 const fmtT = n => {
@@ -669,7 +719,7 @@ const fmtT = n => {
   return n.toLocaleString("fr-FR",{maximumFractionDigits:2})+" t";
 };
 const getCost = (u, q) => {
-  const raw = u.baseCost * Math.pow(1.15, q);
+  const raw = u.baseCost * Math.pow(1.35, q);
   return raw < 10 ? parseFloat(raw.toFixed(2)) : Math.floor(raw);
 };
 const getMultiCost = (u, q, n) => {
@@ -991,7 +1041,7 @@ function computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump })
   }));
 
   // v25.0.7 — Maîtrise multi-paliers (5 étoiles par intrant)
-  // Chaque seuil 1/5/10/20/40 génère un badge séparé, débloquable progressivement.
+  // Chaque seuil 5/10/20/50/100 génère un badge séparé, débloquable progressivement.
   // Pédagogie : montre la courbe d'apprentissage opérationnel sur la durée.
   const STAR_LABELS = ["Initiation", "Pratique", "Expertise", "Excellence", "Maîtrise totale"];
   const mastery = [];
@@ -1287,7 +1337,10 @@ function Game({ username, region, maia }) {
 
     // Production = part de charge (yield charge) + part de stock (yield mix)
     const fromCharge = Math.min(savedCharge, availableToDigest);
-    const produced = fromCharge * savedChargeYield + stockConsumed * stockMixYield;
+    // v25.6 — la fiabilité sauvegardée module le yield d'extraction CH₄ pendant l'offline
+    //         (cohérent avec le tick temps réel : mêmes intrants, qualité d'extraction variable)
+    const offlineRelMult = reliabilityMultFor(typeof sv.reliability === 'number' ? sv.reliability : 100);
+    const produced = (fromCharge * savedChargeYield + stockConsumed * stockMixYield) * offlineRelMult;
     if (produced < 0.01 && stockGained < 1 && totalLocalStockGained < 1) return null;
 
     // ── Gains par filière ─────────────────────────────────────────────────────
@@ -1407,15 +1460,15 @@ function Game({ username, region, maia }) {
     return base + (offlineGains?.bmGained || 0);
   });
   const [buffer,  setBuffer]  = useState(() => {
-    const base = saved?.buffer ?? 1;
+    const base = saved?.buffer ?? 10;
     const withOffline = (!offlineGains || displayedGains.injected)
       ? base
       : Math.min(INJECTION_THRESHOLD, base + (displayedGains.produced || 0));
     // Anti-deadlock : si aucun intrant acheté et pas encore raccordé, garantit au moins 1 m³
     const savedOwned   = saved?.owned   ?? [0,0,0,0,0,0,0];
     const savedInjected= saved?.injected ?? false;
-    const isDeadlocked = !savedInjected && savedOwned.every(q => q === 0) && withOffline < 1;
-    return isDeadlocked ? 1 : withOffline;
+    const isDeadlocked = !savedInjected && savedOwned.every(q => q === 0) && withOffline < 10;
+    return isDeadlocked ? 10 : withOffline;
   });
   const [tutStep, setTutStep] = useState(saved?.tutStep ?? 0);
   const [owned,   setOwned]   = useState(saved?.owned   ?? [0,0,0,0,0,0,0]);
@@ -1491,7 +1544,8 @@ function Game({ username, region, maia }) {
   const [gnvStations, setGnvStations] = useState(saved?.gnvStations ?? 0);
   const [gnvSplit,    setGnvSplit]    = useState(saved?.gnvSplit    ?? 20);
   const [gnvBm,       setGnvBm]       = useState(() => (saved?.gnvBm ?? 0) + (offlineGains?.gnvBmGained || 0));
-  const [tractorGnv,  setTractorGnv]  = useState(saved?.tractorGnv  ?? false);
+  // v25.7 — tractorGnv dérivé de tractorGnvArr (voir plus bas, après déclaration de l'array)
+  // Migration save legacy effectuée au niveau de tractorGnvArr
   const [digesteurs,  setDigesteurs]  = useState(saved?.digesteurs  ?? 1);
   const [euros,       setEuros]       = useState(() => (saved?.euros ?? 0) + (offlineGains?.eurosGained || 0));
   const [autoDump,    setAutoDump]    = useState(saved?.autoDump    ?? false);
@@ -1506,8 +1560,17 @@ function Game({ username, region, maia }) {
   const [tractorCount,      setTractorCount]      = useState(saved?.tractorCount      ?? 1);
   const [tractorSpeedBoost, setTractorSpeedBoost] = useState(saved?.tractorSpeedBoost ?? false);
   const [tractorTrailers,   setTractorTrailers]   = useState(() => Array.isArray(saved?.tractorTrailers) ? saved.tractorTrailers : [false, false, false]);
+  const [tractorGnvArr,     setTractorGnvArr]     = useState(() => {
+    // v25.7 — migration : si saved.tractorGnvArr existe, l'utiliser
+    if (Array.isArray(saved?.tractorGnvArr)) return saved.tractorGnvArr;
+    // Sinon, migrer l'ancien flag global tractorGnv vers le 1ᵉʳ tracteur
+    if (saved?.tractorGnv === true) return [true, false, false];
+    return [false, false, false];
+  });
+  // v25.7 — tractorGnv dérivé : true dès qu'au moins un tracteur est converti (compat cloud + badges)
+  const tractorGnv = tractorGnvArr.some(Boolean);
   const [pinnedZones,       setPinnedZones]       = useState(() => Array.isArray(saved?.pinnedZones) ? saved.pinnedZones : []);
-  const [cityView,          setCityView]          = useState(0); // 0 = digesteur, 1 = ville — non persisté (UI state)
+  const [cityView,          setCityView]          = useState(1); // 0 = injection, 1 = digesteur (défaut), 2 = gisements — non persisté
 
   // ── v24 : SYSTÈME GISEMENTS LOCAUX ──
   // Chaque array est indexé par upgradeId (0..6). Migration safe pour saves antérieures.
@@ -1600,7 +1663,7 @@ function Game({ username, region, maia }) {
         if (d.is_connected != null) setInjected(!!d.is_connected);
         if (d.gnv_stations != null) setGnvStations(d.gnv_stations);
         if (d.gnv_split   != null) setGnvSplit(d.gnv_split);
-        if (d.tractor_gnv != null) setTractorGnv(!!d.tractor_gnv);
+        // v25.7 — tractor_gnv legacy : migré vers tractor_gnv_arr (cf. bloc plus bas)
         if (d.digesteurs  != null) setDigesteurs(d.digesteurs);
         if (d.auto_dump   != null) setAutoDump(!!d.auto_dump);
         // v25.0.8 — seuil de déclenchement du déverseur
@@ -1609,6 +1672,12 @@ function Game({ username, region, maia }) {
         if (d.tractor_count       != null) setTractorCount(d.tractor_count);
         if (d.tractor_speed_boost != null) setTractorSpeedBoost(!!d.tractor_speed_boost);
         if (Array.isArray(d.tractor_trailers)) setTractorTrailers(d.tractor_trailers);
+        // v25.7 — tractor_gnv_arr : utilisé directement si présent, sinon migration depuis tractor_gnv legacy
+        if (Array.isArray(d.tractor_gnv_arr)) {
+          setTractorGnvArr(d.tractor_gnv_arr);
+        } else if (d.tractor_gnv === true) {
+          setTractorGnvArr([true, false, false]);
+        }
         if (d.pinned_zones        != null) {
           const pz = Array.isArray(d.pinned_zones) ? d.pinned_zones : (typeof d.pinned_zones === 'string' ? (()=>{try{return JSON.parse(d.pinned_zones);}catch{return [];}})() : []);
           setPinnedZones(pz);
@@ -1735,7 +1804,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,tractorGnvArr,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -1793,6 +1862,7 @@ function Game({ username, region, maia }) {
       tractor_count:       stateRef.current.tractorCount,
       tractor_speed_boost: stateRef.current.tractorSpeedBoost,
       tractor_trailers:    stateRef.current.tractorTrailers,
+      tractor_gnv_arr:     stateRef.current.tractorGnvArr,
       pinned_zones:        stateRef.current.pinnedZones,
       // v24 — gisements locaux
       local_stock:         stateRef.current.localStock,
@@ -1875,6 +1945,10 @@ function Game({ username, region, maia }) {
   useEffect(() => { stockRef.current       = stock;       }, [stock]);
   useEffect(() => { stockYieldRef.current  = stockYield;  }, [stockYield]);
   useEffect(() => { chargeYieldRef.current = chargeYield; }, [chargeYield]);
+  // v25.6 — ref miroir fiabilité (lu dans tick digestion + applyCatchUp pour
+  //         calculer le multiplicateur sans dépendance React qui recréerait l'interval)
+  const reliabilityRef = useRef(100);
+  useEffect(() => { reliabilityRef.current = reliability; }, [reliability]);
   // v25.0.8 — ref miroir seuil auto-dump (lu dans tick 2s sans recréer l'interval)
   const autoDumpThresholdRef = useRef(autoDumpThreshold);
   useEffect(() => { autoDumpThresholdRef.current = autoDumpThreshold; }, [autoDumpThreshold]);
@@ -1983,7 +2057,9 @@ function Game({ username, region, maia }) {
           const burn   = bre * dtCharge * pct;
           const actual = Math.min(f, burn);
           // v25.0 — production = masse digérée × yield moyen pondéré du digesteur
-          const produced = actual * (chargeYieldRef.current || 0);
+          // v25.6 — modulé par la fiabilité industrielle (qualité d'extraction CH₄)
+          const relMult  = reliabilityMultFor(reliabilityRef.current ?? 100);
+          const produced = actual * (chargeYieldRef.current || 0) * relMult;
           if (produced > 0) {
             if (st.injected) {
               const euroGain = produced * BM_TO_EUR;
@@ -2025,7 +2101,10 @@ function Game({ username, region, maia }) {
   }, [saveGame, applyCatchUp]);
 
   // ── Dérivés ────────────────────────────────────────────────────────────────
-  const gnvBonus      = tractorGnv ? 1.15 : 1;
+  // v25.7 — bonus +15 % de remplissage par tracteur converti GNV (max ×3 = +45 %)
+  // On ne compte que les tracteurs réellement possédés (slice par tractorCount)
+  const gnvConvertedCount = tractorGnvArr.slice(0, tractorCount).filter(Boolean).length;
+  const gnvBonus      = 1 + 0.15 * gnvConvertedCount;
   gnvBonusRefV24.current = gnvBonus;       // sync immédiat — pas de TDZ
   injectedRefV24.current = injected;       // sync immédiat — pas de TDZ
   const fillRate      = owned.reduce((a,q,i) => a+fillFor(i, q), 0) * gnvBonus;
@@ -2072,7 +2151,9 @@ function Game({ username, region, maia }) {
   // bmPerSecond reflète le taux RÉEL au niveau de charge actuel
   // v25.0 : production = burn × chargeYield (m³ CH₄ par tonne digérée, mix pondéré)
   //         Si digesteur vide, pas de production. Si yield=0 (init), idem.
-  const bmPerSecond = isDigesting ? chargePct * burnRateEff * (chargeYield || 0) : 0;
+  // v25.6 : production effective × multiplicateur fiabilité (qualité extraction CH₄)
+  const reliabilityMult = reliabilityMultFor(reliability);
+  const bmPerSecond = isDigesting ? chargePct * burnRateEff * (chargeYield || 0) * reliabilityMult : 0;
   const bmPerHour   = bmPerSecond*3600;
 
   const fmtETA = (current, target, perHour) => {
@@ -2270,7 +2351,9 @@ function Game({ username, region, maia }) {
         const actual = Math.min(f, burn);
         // v25.0 — production = masse × yield moyen pondéré du digesteur
         // Le yield reste invariant pendant la digestion (consommation proportionnelle)
-        const produced = actual * (chargeYieldRef.current || 0);
+        // v25.6 — modulé par la fiabilité industrielle (qualité d'extraction CH₄)
+        const relMult  = reliabilityMultFor(reliabilityRef.current ?? 100);
+        const produced = actual * (chargeYieldRef.current || 0) * relMult;
         // v25.0.9 — décrément composition proportionnel à la consommation
         if (actual > 0 && f > 0) {
           const ratio = actual / f;
@@ -2542,12 +2625,8 @@ function Game({ username, region, maia }) {
     showNotif(`Station GNV ${gnvStations+1} activée`,"success","Vos premiers véhicules arrivent");
   };
 
-  const handleBuyTractorGnv = () => {
-    if (tractorGnv||euros<2000) return;
-    setEuros(e=>e-2000);
-    setTractorGnv(true);
-    showNotif("Tracteur GNV activé","success","+15% de remplissage sur tous les intrants");
-  };
+  // v25.7 — handleBuyTractorGnv (legacy global) supprimé.
+  // Le système GNV est désormais 100 % par tracteur via handleBuyTractorGnvUnit.
 
   const AUTODUMP_COST = 150000;
   const handleBuyAutoDump = () => {
@@ -2582,6 +2661,13 @@ function Game({ username, region, maia }) {
     setTractorTrailers(prev => { const n = [...prev]; n[idx] = true; return n; });
     showNotif(`Remorque — tracteur ${idx + 1}`, "success", "+50 % de capacité de chargement");
   };
+  const handleBuyTractorGnvUnit = (idx) => {
+    if (tractorGnvArr[idx] || euros < TRACTOR_UPGRADES.gnvUnit.cost || gnvStations === 0) return;
+    setEuros(e => e - TRACTOR_UPGRADES.gnvUnit.cost);
+    setTractorGnvArr(prev => { const n = [...prev]; n[idx] = true; return n; });
+    showNotif(`Tracteur ${idx + 1} → GNV`, "success", "+15 % de remplissage · boucle vertueuse 🔄");
+  };
+
   const togglePinZone = (upgradeId) => {
     setPinnedZones(prev => prev.includes(upgradeId) ? prev.filter(x=>x!==upgradeId) : [...prev, upgradeId]);
   };
@@ -3178,11 +3264,12 @@ function Game({ username, region, maia }) {
               {icon:<MiniDigesterIcon size={18}/>,label:"m³/heure",   val:isDigesting?fmt(bmPerHour):"—"},
               {icon: injected ? <BankIcon size={18}/> : <CH4Icon size={18}/>, label:injected?"€ dispos":"m³ dispos",  val:injected?fmtEuro(euros):fmt(wallet)},
               // v24 : Fiabilité (affichée dès qu'on possède au moins une zone)
+              // v25.6 : affiche le multiplicateur prod + signale la zone Qualimétha (≥95%)
               ...(owned.some(q=>q>0) ? [{
-                icon: reliability >= 80 ? "🟢" : reliability >= 50 ? "🟡" : "🔴",
-                label: "Fiabilité",
-                val: `${Math.round(reliability)}%`,
-                customColor: reliability >= 80 ? "#6DB5EC" : reliability >= 50 ? "#E8A020" : "#E05858"
+                icon: reliability >= 95 ? "💎" : reliability >= 80 ? "🟢" : reliability >= 50 ? "🟡" : "🔴",
+                label: reliability >= 95 ? "Qualimétha" : "Fiabilité",
+                val: `${Math.round(reliability)}% · ×${reliabilityMult.toFixed(2)}`,
+                customColor: reliability >= 95 ? "#FFD55A" : reliability >= 80 ? "#6DB5EC" : reliability >= 50 ? "#E8A020" : "#E05858"
               }] : []),
             ].map(s=>(
               <div key={s.label} style={{flex:1,background:"rgba(74,158,219,.06)",border:"1px solid rgba(74,158,219,.12)",borderRadius:"10px",padding:"8px 6px",textAlign:"center"}}>
@@ -3215,6 +3302,7 @@ function Game({ username, region, maia }) {
             tractorCount={tractorCount}
             tractorSpeedBoost={tractorSpeedBoost}
             tractorTrailers={tractorTrailers}
+            tractorGnvArr={tractorGnvArr}
             pinnedZones={pinnedZones}
             onTogglePin={togglePinZone}
             cityView={cityView}
@@ -3245,6 +3333,8 @@ function Game({ username, region, maia }) {
             bm={bm}
             burnRate={burnRate}
             gnvStations={gnvStations}
+            gnvSplit={gnvSplit}
+            gnvBm={gnvBm}
             canConnect={canConnect}
             relaunchAnim={relaunchAnim}
           />
@@ -3415,10 +3505,8 @@ function Game({ username, region, maia }) {
               setGnvSplit={setGnvSplit}
               gnvBm={gnvBm}
               euros={euros}
-              tractorGnv={tractorGnv}
               bmPerHour={bmPerHour}
               onBuyStation={handleBuyGnvStation}
-              onBuyTractor={handleBuyTractorGnv}
             />
           )}
 
@@ -3428,11 +3516,14 @@ function Game({ username, region, maia }) {
               tractorCount={tractorCount}
               tractorSpeedBoost={tractorSpeedBoost}
               tractorTrailers={tractorTrailers}
+              tractorGnvArr={tractorGnvArr}
+              gnvStations={gnvStations}
               euros={euros}
               onBuyTractor2={handleBuyTractor2}
               onBuyTractor3={handleBuyTractor3}
               onBuySpeedBoost={handleBuySpeedBoost}
               onBuyTrailer={handleBuyTrailer}
+              onBuyTractorGnvUnit={handleBuyTractorGnvUnit}
             />
           )}
 
@@ -3532,8 +3623,8 @@ function Game({ username, region, maia }) {
                 <span style={{fontSize:"10px",color:"rgba(255,255,255,.45)",marginLeft:"4px"}}>Étape {tutStep+1}/3</span>
               </div>
               <div style={{padding:"10px 16px 14px"}}>
-                {tutStep===0&&<><div style={{fontSize:"13px",fontWeight:700,color:"#F5BE50"}}>🎁 Tu reçois <strong>1 m³</strong> de biométhane pour démarrer !</div><div style={{fontSize:"12px",color:"rgba(253,224,71,.6)",marginTop:"6px",lineHeight:1.7}}>👆 Va dans <strong style={{color:"#F5BE50"}}>⬆️ Achats</strong> et achète ta première source d'intrants.</div><button onClick={()=>{setTab("upgrades");setTutStep(1);}} style={{marginTop:"10px",padding:"9px 18px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#C07800,#E8A020)",color:"white",fontWeight:800,fontSize:"13px",cursor:"pointer",boxShadow:"0 4px 16px rgba(232,160,32,.45)"}}>⬆️ Aller dans Achats →</button></>}
-                {tutStep===1&&<><div style={{fontSize:"13px",fontWeight:700,color:"#F5BE50"}}>🐄 Achète du <strong>Lisier bovin</strong> pour démarrer !</div><div style={{fontSize:"12px",color:"rgba(253,224,71,.6)",marginTop:"6px",lineHeight:1.7}}>Il coûte <strong style={{color:"#F5BE50"}}>0.5 m³</strong> — tu en as 1 m³. C'est le moment !</div></>}
+                {tutStep===0&&<><div style={{fontSize:"13px",fontWeight:700,color:"#F5BE50"}}>🎁 Tu reçois <strong>10 m³</strong> de biométhane pour démarrer !</div><div style={{fontSize:"12px",color:"rgba(253,224,71,.6)",marginTop:"6px",lineHeight:1.7}}>👆 Va dans <strong style={{color:"#F5BE50"}}>⬆️ Achats</strong> et achète ta première source d'intrants.</div><button onClick={()=>{setTab("upgrades");setTutStep(1);}} style={{marginTop:"10px",padding:"9px 18px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#C07800,#E8A020)",color:"white",fontWeight:800,fontSize:"13px",cursor:"pointer",boxShadow:"0 4px 16px rgba(232,160,32,.45)"}}>⬆️ Aller dans Achats →</button></>}
+                {tutStep===1&&<><div style={{fontSize:"13px",fontWeight:700,color:"#F5BE50"}}>🐄 Achète du <strong>Lisier bovin</strong> pour démarrer !</div><div style={{fontSize:"12px",color:"rgba(253,224,71,.6)",marginTop:"6px",lineHeight:1.7}}>Il coûte <strong style={{color:"#F5BE50"}}>5 m³</strong> — tu en as 10 m³. C'est le moment !</div></>}
                 {tutStep===2&&<><div style={{fontSize:"13px",fontWeight:700,color:"#6DB5EC"}}>✅ Les déchets arrivent dans le bac d'intrants !</div><div style={{fontSize:"12px",color:"rgba(255,255,255,.62)",marginTop:"6px",lineHeight:1.7}}>Attends que le bac se remplisse, puis clique <strong style={{color:"#6DB5EC"}}>⬇️ Déverser</strong> pour alimenter le digesteur.</div></>}
               </div>
             </div>
@@ -3714,6 +3805,122 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
         {anim(1)&&<rect x="179" y="22" width="44" height="96" rx="8" fill="#a78bfa" opacity=".15"/>}
         {anim(2)&&<rect x="302" y="48" width="62" height="64" rx="8" fill="#E8A020" opacity=".15"/>}
         {anim(3)&&<rect x="426" y="36" width="68" height="79" rx="7" fill="#6DB5EC" opacity=".15"/>}
+      </svg>
+    </div>
+  );
+}
+
+function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockAnim, bufferPct, buffer }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const id=setInterval(()=>setTick(t=>(t+1)%1000),40); return ()=>clearInterval(id); }, []);
+  const act = i => { if(i===0) return buffer>0; if(i===1) return epurateurOk; if(i===2) return compresseurOk; if(i===3) return injected; return false; };
+  const anim = i => { if(i===1) return unlockAnim==="epurateur"; if(i===2) return unlockAnim==="compresseur"; if(i===3) return unlockAnim==="injection"; return false; };
+  const flow = -(tick*0.9)%20;
+  const bladeAngle = tick*(act(2)?4:0);
+  const cx = 90; // pipeline center (décalé à droite pour labels gauche)
+  const LX = 62; // droite de la zone label gauche (textAnchor="end")
+  return (
+    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block"}}>
+        <defs>
+          <linearGradient id="gvTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0098CC" stopOpacity={act(0)?1:.25}/><stop offset="100%" stopColor="#164e63" stopOpacity={act(0)?1:.15}/></linearGradient>
+          <linearGradient id="gvLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(74,188,223,.5)"/><stop offset="100%" stopColor="rgba(74,188,223,.85)"/></linearGradient>
+          <linearGradient id="gvFilter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6d28d9" stopOpacity={act(1)?1:.25}/><stop offset="100%" stopColor="#3b0764" stopOpacity={act(1)?1:.15}/></linearGradient>
+          <linearGradient id="gvComp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#BB6600" stopOpacity={act(2)?1:.25}/><stop offset="100%" stopColor="#431407" stopOpacity={act(2)?1:.15}/></linearGradient>
+          <linearGradient id="gvInj" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2A7DBB" stopOpacity={act(3)?1:.25}/><stop offset="100%" stopColor="#0A1828" stopOpacity={act(3)?1:.15}/></linearGradient>
+          <filter id="glow3" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <clipPath id="vTankBody"><rect x={cx-26} y="15" width="52" height="58" rx="3"/></clipPath>
+        </defs>
+
+        {/* ── Biogaz entry : pipe horizontal depuis droite + stub vertical vers cuve ── */}
+        <rect x={cx} y="3" width="66" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+        {act(0)&&<rect x={cx} y="4" width="66" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
+        <rect x={cx-4} y="3" width="8" height="14" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+
+        {/* ── Cuve tampon ── */}
+        <ellipse cx={cx} cy="15" rx="26" ry="6" fill={act(0)?"#0098CC":"rgba(42,140,192,.25)"} stroke={act(0)?"#3AACCC":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
+        <ellipse cx={cx-6} cy="13" rx="9" ry="3" fill="rgba(255,255,255,.1)"/>
+        <rect x={cx-26} y="15" width="52" height="58" rx="4" fill="url(#gvTank)" stroke={act(0)?"#3AACCC":"rgba(74,188,223,.25)"} strokeWidth="1.5"/>
+        <rect x={cx-25} y={15+58*(1-bufferPct)} width="50" height={58*bufferPct} fill="url(#gvLiquid)" clipPath="url(#vTankBody)"/>
+        {bufferPct>0.02&&<ellipse cx={cx} cy={15+58*(1-bufferPct)} rx="24" ry="3" fill="rgba(74,188,223,.4)"/>}
+        <ellipse cx={cx} cy="73" rx="26" ry="6" fill={act(0)?"#0c4a6e":"rgba(12,74,110,.2)"} stroke={act(0)?"#3AACCC":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
+        <text x={cx} y="43" textAnchor="middle" fontSize="8" fontWeight="800" fill={act(0)?"#e0f2fe":"rgba(224,242,254,.2)"}>{Math.round(bufferPct*100)}%</text>
+        <text x={cx} y="54" textAnchor="middle" fontSize="6.5" fill={act(0)?"rgba(186,230,253,.7)":"rgba(186,230,253,.2)"}>{Math.floor(buffer)} m³</text>
+        {act(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="none" stroke="#00E5FF" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
+        {!act(0)&&<text x={cx} y="50" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
+        {anim(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="#00E5FF" opacity=".15"/>}
+        <text x={LX} y="37" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(255,255,255,.3)"}>Cuve tampon</text>
+        <text x={LX} y="47" textAnchor="end" fontSize="6" fill={act(0)?"rgba(103,232,249,.6)":"rgba(255,255,255,.18)"}>0,5 bar · 100 m³</text>
+
+        {/* ── Pipe Cuve → Épurateur ── */}
+        <rect x={cx-4} y="79" width="8" height="18" rx="3" fill={act(1)?"#5544CC":"rgba(74,158,219,.08)"} stroke={act(1)?"#5544CC":"rgba(74,158,219,.15)"} strokeWidth="1"/>
+        {act(1)&&<rect x={cx-3} y="79" width="6" height="18" rx="3" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+
+        {/* ── Épurateur ── */}
+        <ellipse cx={cx} cy="97" rx="22" ry="6" fill={act(1)?"#5b21b6":"rgba(91,33,182,.25)"} stroke={act(1)?"#5544CC":"rgba(85,68,204,.2)"} strokeWidth="1.5"/>
+        <ellipse cx={cx} cy="97" rx="22" ry="6" fill="rgba(255,255,255,.08)"/>
+        <rect x={cx-22} y="97" width="44" height="66" rx="6" fill="url(#gvFilter)" stroke={act(1)?"#5544CC":"rgba(85,68,204,.25)"} strokeWidth="1.5"/>
+        {[108,117,126,135,144,153].map((y,i)=>(
+          <rect key={i} x={cx-20} y={y} width="40" height="6" rx="2" fill={act(1)?`rgba(167,139,250,${.07+i*.025})`:"rgba(167,139,250,.03)"} stroke={act(1)?"rgba(196,181,253,.3)":"rgba(196,181,253,.07)"} strokeWidth=".5"/>
+        ))}
+        {act(1)&&<text x={cx} y="143" textAnchor="middle" fontSize="6.5" fontWeight="700" fill="rgba(221,214,254,.75)">H₂S · CO₂</text>}
+        <ellipse cx={cx} cy="163" rx="22" ry="6" fill={act(1)?"#3b0764":"rgba(59,7,100,.2)"} stroke={act(1)?"#5544CC":"rgba(85,68,204,.2)"} strokeWidth="1.5"/>
+        <rect x={cx-30} y="106" width="7" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
+        <rect x={cx+23} y="151" width="7" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
+        {act(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="none" stroke="#a78bfa" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
+        {!act(1)&&<text x={cx} y="138" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
+        {anim(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="#a78bfa" opacity=".15"/>}
+        <text x={LX} y="120" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(255,255,255,.3)"}>Épurateur</text>
+        <text x={LX} y="130" textAnchor="end" fontSize="6" fill={act(1)?"rgba(196,181,253,.6)":"rgba(255,255,255,.18)"}>CH₄ {">"} 97%</text>
+
+        {/* ── Pipe Épurateur → Compresseur ── */}
+        <rect x={cx-4} y="169" width="8" height="15" rx="3" fill={act(2)?"#CC7700":"rgba(74,158,219,.08)"} stroke={act(2)?"#CC7700":"rgba(74,158,219,.15)"} strokeWidth="1"/>
+        {act(2)&&<rect x={cx-3} y="169" width="6" height="15" rx="3" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+
+        {/* ── Compresseur ── */}
+        <rect x={cx-16} y="180" width="32" height="12" rx="5" fill={act(2)?"#92400e":"rgba(146,64,14,.25)"} stroke={act(2)?"#CC7700":"rgba(217,119,6,.2)"} strokeWidth="1"/>
+        <text x={cx} y="189" textAnchor="middle" fontSize="5.5" fill={act(2)?"rgba(253,230,138,.85)":"rgba(253,230,138,.2)"}>IN</text>
+        <rect x={cx-26} y="188" width="52" height="58" rx="7" fill="url(#gvComp)" stroke={act(2)?"#CC7700":"rgba(217,119,6,.25)"} strokeWidth="1.5"/>
+        <circle cx={cx} cy="219" r="20" fill={act(2)?"rgba(146,64,14,.4)":"rgba(146,64,14,.1)"} stroke={act(2)?"#f59e0b":"rgba(245,158,11,.2)"} strokeWidth="1.5"/>
+        {[0,45,90,135,180,225,270,315].map((a,i)=>{const ang=(a+bladeAngle)*Math.PI/180,r1=3,r2=15;return(<line key={i} x1={cx+Math.cos(ang)*r1} y1={219+Math.sin(ang)*r1} x2={cx+Math.cos(ang)*r2} y2={219+Math.sin(ang)*r2} stroke={act(2)?"#E8A020":"rgba(232,160,32,.18)"} strokeWidth="2" strokeLinecap="round"/>);})}
+        <circle cx={cx} cy="219" r="4" fill={act(2)?"#E8A020":"rgba(232,160,32,.22)"} stroke={act(2)?"#fffbeb":"rgba(255,251,235,.15)"} strokeWidth="1"/>
+        <rect x={cx-24} y="237" width="48" height="4" rx="2" fill={act(2)?"rgba(251,191,36,.25)":"rgba(232,160,32,.08)"}/>
+        <text x={cx} y="241" textAnchor="middle" fontSize="5.5" fill={act(2)?"rgba(253,230,138,.9)":"rgba(253,230,138,.2)"}>67 bar</text>
+        {act(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="none" stroke="#E8A020" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
+        {!act(2)&&<text x={cx} y="223" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
+        {anim(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="#E8A020" opacity=".15"/>}
+        <text x={LX} y="209" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(2)?"#E8A020":"rgba(255,255,255,.3)"}>Compresseur</text>
+        <text x={LX} y="219" textAnchor="end" fontSize="6" fill={act(2)?"rgba(253,230,138,.6)":"rgba(255,255,255,.18)"}>4 – 67 bar</text>
+
+        {/* ── Pipe Compresseur → Poste injection ── */}
+        <rect x={cx-4} y="246" width="8" height="16" rx="3" fill={act(3)?"#3A8ECB":"rgba(74,158,219,.08)"} stroke={act(3)?"#3A8ECB":"rgba(74,158,219,.15)"} strokeWidth="1"/>
+        {act(3)&&<rect x={cx-3} y="246" width="6" height="16" rx="3" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+
+        {/* ── Poste d'injection ── */}
+        <rect x={cx-32} y="262" width="64" height="60" rx="7" fill="url(#gvInj)" stroke={act(3)?"#3A8ECB":"rgba(0,153,68,.25)"} strokeWidth="1.5"/>
+        <rect x={cx-32} y="262" width="64" height="14" rx="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
+        <rect x={cx-32} y="269" width="64" height="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
+        <text x={cx} y="272" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(255,255,255,.3)"}>GRDF</text>
+        <circle cx={cx-12} cy="298" r="11" fill="rgba(11,22,35,.65)" stroke={act(3)?"#6DB5EC":"rgba(74,158,219,.2)"} strokeWidth="1.5"/>
+        {act(3)&&<><line x1={cx-12} y1="298" x2={cx-12+Math.cos(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} y2={298+Math.sin(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} stroke="#f87171" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx-12} cy="298" r="2" fill="#f87171"/></>}
+        <text x={cx-12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(255,255,255,.3)"}>P</text>
+        <circle cx={cx+12} cy="298" r="11" fill="rgba(11,22,35,.65)" stroke={act(3)?"#6DB5EC":"rgba(74,158,219,.2)"} strokeWidth="1.5"/>
+        {act(3)&&<><line x1={cx+12} y1="298" x2={cx+12+Math.cos(-Math.PI/2+Math.PI*0.82)*8} y2={298+Math.sin(-Math.PI/2+Math.PI*0.82)*8} stroke="#34d399" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx+12} cy="298" r="2" fill="#34d399"/></>}
+        <text x={cx+12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(255,255,255,.3)"}>Q</text>
+        <rect x={cx-28} y="315" width="56" height="9" rx="3" fill="rgba(11,22,35,.75)" stroke={act(3)?"rgba(74,158,219,.4)":"rgba(74,158,219,.1)"} strokeWidth="1"/>
+        <text x={cx} y="322" textAnchor="middle" fontSize="6" fontFamily="monospace" fontWeight="600" fill={act(3)?"#6DB5EC":"rgba(74,158,219,.2)"}>{act(3)?"CH₄ 98.2 %":"— — — —"}</text>
+        {act(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="none" stroke="#6DB5EC" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
+        {!act(3)&&<text x={cx} y="295" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
+        {anim(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="#6DB5EC" opacity=".15"/>}
+        <text x={LX} y="280" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(3)?"#6DB5EC":"rgba(255,255,255,.3)"}>Poste d'injection</text>
+        <text x={LX} y="290" textAnchor="end" fontSize="6" fill={act(3)?"rgba(255,255,255,.62)":"rgba(255,255,255,.18)"}>Odorisation · Comptage</text>
+
+        {/* ── GRDF exit : descend puis part à droite → réseau aval ── */}
+        <rect x={cx-4} y="322" width="8" height="16" rx="3" fill={injected?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"} stroke={injected?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"} strokeWidth="1"/>
+        <rect x={cx} y="333" width="66" height="8" rx="3" fill={injected?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"} stroke={injected?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"} strokeWidth="1"/>
+        {injected&&<rect x={cx} y="334" width="66" height="6" rx="3" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1" strokeDasharray="6 5" strokeDashoffset={flow}/>}
+        <polygon points="154,333 154,341 159,337" fill={injected?"#4A9EDB":"rgba(74,158,219,.22)"}/>
+        <text x={cx+2} y="330" textAnchor="start" fontSize="5.5" fontWeight="800" fill={injected?"#6DB5EC":"rgba(255,255,255,.3)"}>Réseau GRDF aval →</text>
       </svg>
     </div>
   );
@@ -4139,7 +4346,15 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
 
 // ─── TRACTOR SVG (inner, sans wrapper <svg>) ─────────────────────────────────
 // Rendu en SVG natif (pas de <foreignObject>) pour perf optimale dans SVG monde
-function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
+// v25.3 : isGnv prop — diesel rouge, GNV bleu-vert + badge "GNV"
+function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
+  const bodyMain  = isGnv ? '#003366' : '#6B1010';
+  const bodyAcc   = isGnv ? '#2268A8' : '#CC2222';
+  const cabMain   = isGnv ? '#002244' : '#4A0A0A';
+  const winFill   = isGnv ? 'rgba(134,239,172,.22)' : 'rgba(255,140,140,.18)';
+  const winStroke = isGnv ? 'rgba(134,239,172,.18)' : 'rgba(255,100,100,.18)';
+  const spokeClr  = isGnv ? '#2268A8' : '#993333';
+  const exhaust   = !isGnv;
   return (
     <g>
       {/* Remorque — pivote autour du pivot d'attelage pour l'effet basculement */}
@@ -4156,18 +4371,28 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
       {/* Roue arrière tracteur */}
       <circle cx="26" cy="38" r="10" fill="#111827" stroke="#1f2937" strokeWidth="1.5"/>
       <circle cx="26" cy="38" r="5.5" fill="#0a0f0a"/>
-      {[0,60,120,180,240,300].map(a=>{const r=Math.PI/180*a;return (<line key={a} x1={26+Math.cos(r)*5.5} y1={38+Math.sin(r)*5.5} x2={26+Math.cos(r)*10} y2={38+Math.sin(r)*10} stroke="#374151" strokeWidth="1.2"/>);})}
+      {[0,60,120,180,240,300].map(a=>{const r=Math.PI/180*a;return (<line key={a} x1={26+Math.cos(r)*5.5} y1={38+Math.sin(r)*5.5} x2={26+Math.cos(r)*10} y2={38+Math.sin(r)*10} stroke={spokeClr} strokeWidth="1.2"/>);})}
       {/* Corps tracteur */}
-      <rect x="18" y="20" width="34" height="19" rx="3.5" fill="#004D22" stroke="#3A8ECB" strokeWidth="1"/>
-      <rect x="19" y="21" width="32" height="6" rx="2.5" fill="rgba(74,158,219,.1)"/>
-      <rect x="46" y="24" width="8" height="13" rx="2" fill="#2A7DBB" stroke="#3A8ECB" strokeWidth=".8"/>
-      {[26,29,32,34].map(gy=>(<line key={gy} x1="47" y1={gy} x2="53" y2={gy} stroke="#4A9EDB" strokeWidth=".6" opacity=".5"/>))}
+      <rect x="18" y="20" width="34" height="19" rx="3.5" fill={bodyMain} stroke={bodyAcc} strokeWidth="1"/>
+      <rect x="19" y="21" width="32" height="6" rx="2.5" fill="rgba(255,255,255,.06)"/>
+      <rect x="46" y="24" width="8" height="13" rx="2" fill={isGnv?"#1A5FA8":"#993333"} stroke={bodyAcc} strokeWidth=".8"/>
+      {[26,29,32,34].map(gy=>(<line key={gy} x1="47" y1={gy} x2="53" y2={gy} stroke={bodyAcc} strokeWidth=".6" opacity=".5"/>))}
+      {/* Badge GNV sur le capot */}
+      {isGnv && (
+        <g className="gnv-badge">
+          <rect x="20" y="24" width="16" height="7" rx="2" fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+          <text x="28" y="29.5" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="white">GNV</text>
+        </g>
+      )}
       {/* Cabine */}
-      <rect x="18" y="7" width="21" height="16" rx="2.5" fill="#003D1A"/>
-      <rect x="20" y="9" width="16" height="10" rx="1.5" fill="rgba(134,239,172,.22)" stroke="rgba(134,239,172,.18)" strokeWidth=".5"/>
-      <polygon points="21,10 28,10 21,17" fill="rgba(255,255,255,.10)"/>
-      <rect x="36" y="1" width="3.5" height="10" rx="1.8" fill="#374151"/>
-      <ellipse cx="37.8" cy="1" rx="2.2" ry="1.2" fill="#1f2937"/>
+      <rect x="18" y="7" width="21" height="16" rx="2.5" fill={cabMain}/>
+      <rect x="20" y="9" width="16" height="10" rx="1.5" fill={winFill} stroke={winStroke} strokeWidth=".5"/>
+      <polygon points="21,10 28,10 21,17" fill="rgba(255,255,255,.07)"/>
+      {/* Pot d'échappement (diesel uniquement) */}
+      {exhaust && (<>
+        <rect x="36" y="1" width="3.5" height="10" rx="1.8" fill="#374151"/>
+        <ellipse cx="37.8" cy="1" rx="2.2" ry="1.2" fill="#1f2937"/>
+      </>)}
       {/* Roue avant */}
       <circle cx="47" cy="38" r="5.5" fill="#111827" stroke="#1f2937" strokeWidth="1.2"/><circle cx="47" cy="38" r="2.2" fill="#0a0f0a"/>
     </g>
@@ -4203,13 +4428,20 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt }) {
 //     - DUMP_X_RIGHT (415) : sprite (rotaté 90° en montée) gauche à x=388, bac droit à x≈394 → marge 6 SVG
 //     - DUMP_X (346)       : centre horizontal du bac (point de décharge)
 const WORLD = {
-  W: 800, H: 280,
-  DUMP_X:       346,               // centre horizontal du bac (point de décharge AU-DESSUS du bac)
-  DUMP_X_RIGHT: 415,               // v25.1.3 : 396→415 (recul de 19 SVG pour que le sprite rotaté ne chevauche pas le bac)
-  LANE_TOP:     15,                // y lane retour (tracteur chargé)
-  LANE_BOT:     253,               // y lane aller (tracteur vide)
-  DUMP_Y:       30,                // v25.1.5 : 65→30. Placé dans le tier supérieur de la scène (~36px CSS du top), bien séparé visuellement du bac qui occupe la partie basse.
-  V1_V2:        400,               // frontière vue 1 / vue 2
+  W: 1200, H: 480,             // viewBox 3 vues × 400 — v25.11
+  V0_V1:        400,           // frontière Vue 0 / Vue 1
+  DUMP_X:       746,           // centre bac (346+400)
+  DUMP_X_RIGHT: 815,           // transit droite Vue 1 = L_EDGE Vue 2
+  LANE_TOP:     15,
+  DUMP_Y:       30,
+  V1_V2:        800,           // frontière Vue 1 / Vue 2 (400+400)
+  GNV_LANE:     255,           // transition TOP→BOTTOM (y, inchangé)
+  GNV_S:        [560, 620, 680], // x stations GNV dans Vue 1 bas (C-loop)
+  R_EDGE:       1190,          // bord droit Vue 2
+  L_EDGE:       815,           // bord gauche Vue 2 = DUMP_X_RIGHT
+  BOT_TOP_Y:    300,           // y "haut du bas" — route tracteurs/lambda vers GNV
+  BOT_BOT_Y:    455,           // y "bas du bas" — route retour après GNV
+  GRDF_PIPE_Y:  375,           // y pipe GRDF dans section basse
 };
 // Path complet : DUMP point → descend lane gauche → lane bas → route colonne →
 // zone → charge → remonte → lane haut → retour lane gauche → DUMP point
@@ -4220,11 +4452,18 @@ const WORLD = {
 //   - DUMP_Y (30)        : niveau haut de scène, bien au-dessus du bac
 //   Path : DUMP → glisse droite (DUMP_X_RIGHT) → monte légèrement à LANE_TOP → zones →
 //          retour par lane bot → remonte à DUMP_X_RIGHT → DUMP_Y → glisse gauche au DUMP
-function buildMissionPath(zIdx) {
+function buildMissionPath(zIdx, withGnv) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
+  // Détour GNV : traverse la route unifiée de droite (R_EDGE) vers gauche (L_EDGE)
+  // → passe devant les stations, puis remonte la bande gauche
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const gnvStop = GNV_S[0];
+  const gnvDetour = withGnv
+    ? `L ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y} L ${gnvStop} ${BOT_TOP_Y} L ${gnvStop} ${BOT_BOT_Y} L ${DUMP_X_RIGHT} ${BOT_BOT_Y} L ${DUMP_X_RIGHT} ${GNV_LANE}`
+    : '';
   return `
     M ${DUMP_X} ${DUMP_Y}
     L ${DUMP_X_RIGHT} ${DUMP_Y}
@@ -4233,46 +4472,56 @@ function buildMissionPath(zIdx) {
     L ${routeX} ${z.y}
     L ${zoneX} ${z.y}
     L ${routeX} ${z.y}
-    L ${routeX} ${LANE_BOT}
-    L ${DUMP_X_RIGHT} ${LANE_BOT}
+    L ${routeX} ${GNV_LANE}
+    ${gnvDetour}
+    L ${DUMP_X_RIGHT} ${GNV_LANE}
     L ${DUMP_X_RIGHT} ${DUMP_Y}
     L ${DUMP_X} ${DUMP_Y}
   `.trim().replace(/\s+/g,' ');
 }
 
-// Calcule la fraction du path (0..1) à laquelle le tracteur atteint la zone
-// v25.1 : 11 waypoints, 10 segments. CHARGE à la fin du segment 5 (zoneX, z.y).
-function computeZoneProgress(zIdx) {
+function computeZoneProgress(zIdx, withGnv) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, LANE_BOT, DUMP_Y } = WORLD;
-  // 11 waypoints (mêmes que buildMissionPath v25.1)
-  const pts = [
-    [DUMP_X,       DUMP_Y],   // 0 : départ DUMP (au-dessus du bac)
-    [DUMP_X_RIGHT, DUMP_Y],   // 1 : glisse à droite, au-dessus du bac
-    [DUMP_X_RIGHT, LANE_TOP], // 2 : monte sur lane haut (à droite du bac)
-    [routeX,       LANE_TOP], // 3 : va à droite vers la zone
-    [routeX,       z.y],      // 4 : descend vers la zone
-    [zoneX,        z.y],      // 5 ← CHARGE ici (fin du segment 5)
-    [routeX,       z.y],      // 6
-    [routeX,       LANE_BOT], // 7 : descend sur lane bas
-    [DUMP_X_RIGHT, LANE_BOT], // 8 : retour vers VUE 1 par lane bas
-    [DUMP_X_RIGHT, DUMP_Y],   // 9 : remonte à droite du bac
-    [DUMP_X,       DUMP_Y],   // 10 ← DUMP ici (glisse à gauche au-dessus du bac, décharge)
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
+  const basePts = [
+    [DUMP_X,       DUMP_Y],
+    [DUMP_X_RIGHT, DUMP_Y],
+    [DUMP_X_RIGHT, LANE_TOP],
+    [routeX,       LANE_TOP],
+    [routeX,       z.y],
+    [zoneX,        z.y],      // ← CHARGE (fin segment 5)
+    [routeX,       z.y],
+    [routeX,       GNV_LANE],
   ];
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const gnvStop = GNV_S[0];
+  const detourPts = withGnv ? [
+    [R_EDGE,       GNV_LANE],
+    [R_EDGE,       BOT_TOP_Y],
+    [gnvStop,      BOT_TOP_Y],
+    [gnvStop,      BOT_BOT_Y],
+    [DUMP_X_RIGHT, BOT_BOT_Y],
+    [DUMP_X_RIGHT, GNV_LANE],
+  ] : [];
+  const endPts = [
+    [DUMP_X_RIGHT, GNV_LANE],
+    [DUMP_X_RIGHT, DUMP_Y],
+    [DUMP_X,       DUMP_Y],
+  ];
+  const pts = [...basePts, ...detourPts, ...endPts];
   let totalL = 0, loadL = 0;
   for (let i = 1; i < pts.length; i++) {
     const dx = pts[i][0] - pts[i-1][0];
     const dy = pts[i][1] - pts[i-1][1];
-    const segL = Math.sqrt(dx*dx + dy*dy);
-    totalL += segL;
-    if (i === 5) loadL = totalL;  // fin segment 5 = position zone
+    totalL += Math.sqrt(dx*dx + dy*dy);
+    if (i === 5) loadL = totalL;
   }
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTrailers, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
+function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTrailers, tractorGnvArr, gnvStations, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -4291,6 +4540,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
       phaseStart: 0,
       startDelay: i * 2500,
       spawnedAt: 0,
+      dumpCount: 0,
     }))
   );
   const [tick, setTick] = useState(0);
@@ -4300,6 +4550,8 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
   const pinnedRef      = useRef(pinnedZones); useEffect(()=>{pinnedRef.current=pinnedZones;},[pinnedZones]);
   const countRef       = useRef(tractorCount);useEffect(()=>{countRef.current=tractorCount;},[tractorCount]);
   const boostRef       = useRef(speedBoost);  useEffect(()=>{boostRef.current=speedBoost;},[speedBoost]);
+  const gnvArrRef      = useRef(tractorGnvArr||[false,false,false]); useEffect(()=>{gnvArrRef.current=tractorGnvArr||[false,false,false];},[tractorGnvArr]);
+  const gnvStationsRef = useRef(gnvStations||0); useEffect(()=>{gnvStationsRef.current=gnvStations||0;},[gnvStations]);
   const fillRateRef    = useRef(fillRate);    useEffect(()=>{fillRateRef.current=fillRate;},[fillRate]);
   // v24 : refs pour les gisements
   const zoneStateRefT  = useRef(zoneState);      useEffect(()=>{zoneStateRefT.current=zoneState;},[zoneState]);
@@ -4426,9 +4678,11 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
           if (zIdx === null) continue;
           t.zoneIdx = zIdx;
           t.icon = UPGRADES[CITY_ZONES[zIdx].upgradeId].icon;
-          t.pathD = buildMissionPath(zIdx);
+          const withGnv = gnvStationsRef.current > 0 && t.dumpCount > 0 && t.dumpCount % 10 === 0;
+          t.gnvLoop = withGnv;
+          t.pathD = buildMissionPath(zIdx, withGnv);
           t.progress = 0;
-          t.zoneProgress = computeZoneProgress(zIdx);
+          t.zoneProgress = computeZoneProgress(zIdx, withGnv);
           t.phase = 'travelOut';
           t.phaseStart = now;
           needRerender = true;
@@ -4490,7 +4744,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
         }
         else if (t.phase === 'travelBack') {
           const baseDur = Math.max(1600, 5000 - fr * 200);
-          const dur = baseDur / boost;
+          const dur = baseDur * (t.gnvLoop ? 1.6 : 1) / boost;
           const p = Math.min(1, (now - t.phaseStart) / dur);
           t.progress = t.zoneProgress + p * (1 - t.zoneProgress);
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
@@ -4546,6 +4800,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
               t.payloadYield = 0;
               t.payloadIntrant = null;
             }
+            t.dumpCount = (t.dumpCount || 0) + 1;
             t.phase = 'idle';
             t.zoneIdx = null;
             t.icon = null;
@@ -4592,6 +4847,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
                 isLoaded={t.phase === 'travelBack' || t.phase === 'dumping'}
                 icon={t.icon}
                 trailerTilt={t.trailerTilt || 0}
+                isGnv={(gnvArrRef.current||[])[i]||false}
               />
             </g>
           </g>
@@ -4642,26 +4898,25 @@ function updateTractorTransform(el, path, progress) {
   }
 
   let transform;
+  let flipped = false;
   if (Math.abs(dx) >= Math.abs(dy)) {
-    // déplacement horizontal dominant
     if (dx >= 0) {
-      // vers la droite : miroir horizontal (cabine qui était à gauche passe à droite)
       transform = `translate(${p.x} ${p.y}) scale(-1 1)`;
+      flipped = true;
     } else {
-      // vers la gauche : orientation naturelle du sprite
       transform = `translate(${p.x} ${p.y})`;
     }
   } else {
-    // déplacement vertical dominant
     if (dy >= 0) {
-      // vers le BAS : cabine doit pointer en bas → rotate(-90°)
       transform = `translate(${p.x} ${p.y}) rotate(-90)`;
     } else {
-      // vers le HAUT : cabine doit pointer en haut → rotate(90°)
       transform = `translate(${p.x} ${p.y}) rotate(90)`;
     }
   }
   el.setAttribute('transform', transform);
+  // Counter-flip badge GNV quand sprite en miroir : centre badge x=28 → translate(56,0) scale(-1,1)
+  const badge = el.querySelector('.gnv-badge');
+  if (badge) badge.setAttribute('transform', flipped ? 'translate(56,0) scale(-1,1)' : '');
 }
 
 // ─── GAS METER ────────────────────────────────────────────────────────────────
@@ -4777,10 +5032,9 @@ function WasteParticles({ fillRate, owned }) {
 }
 
 // ─── GNV SECTION ─────────────────────────────────────────────────────────────
-function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, tractorGnv, bmPerHour, onBuyStation, onBuyTractor }) {
+function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHour, onBuyStation }) {
   const nextStationCost = gnvStations < 3 ? GNV_STATION_COSTS[gnvStations] : null;
   const canBuyStation   = nextStationCost !== null && euros >= nextStationCost;
-  const canBuyTractor   = !tractorGnv && euros >= 2000;
   const gnvPerHour      = bmPerHour * (gnvSplit / 100);
   const netPerHour      = bmPerHour * (1 - gnvSplit / 100);
 
@@ -4894,136 +5148,214 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, tractorG
         </div>
       )}
 
-      {/* Upgrade tracteur GNV */}
-      <div style={{padding:gnvStations>0?"0 16px 14px":"0 16px 14px",borderTop:gnvStations>0?"1px solid rgba(74,200,120,.09)":"none",paddingTop:"12px"}}>
-        {tractorGnv ? (
-          <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"9px 12px",
-            borderRadius:"10px",background:"rgba(74,200,120,.12)",border:"1px solid rgba(74,200,120,.3)"}}>
-            <span style={{fontSize:"20px"}}>🚜</span>
-            <div>
-              <div style={{fontSize:"12px",fontWeight:700,color:"#4ADB94"}}>Tracteur GNV activé ✅</div>
-              <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)",marginTop:"1px"}}>
-                +15% de remplissage sur tous les intrants · boucle vertueuse !
-              </div>
-            </div>
-          </div>
-        ) : (
-          <button onClick={onBuyTractor} disabled={!canBuyTractor} style={{
-            width:"100%",padding:"10px 14px",borderRadius:"11px",border:"none",
-            background:canBuyTractor?"linear-gradient(135deg,#1a7a4a,#22a86a)":"rgba(255,255,255,.05)",
-            color:canBuyTractor?"white":"rgba(255,255,255,.28)",
-            fontWeight:700,fontSize:"12px",cursor:canBuyTractor?"pointer":"not-allowed",
-            textAlign:"left",transition:"all .3s",
-            boxShadow:canBuyTractor?"0 3px 14px rgba(34,168,106,.38)":"none"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span>🚜 Passer le tracteur au GNV · +15% remplissage</span>
-              <span style={{fontSize:"11px",background:"rgba(255,255,255,.12)",padding:"2px 8px",
-                borderRadius:"8px",whiteSpace:"nowrap",marginLeft:"8px"}}>
-                {euros>=2000?`${fmtEuro(2000)}`:`manque ${fmtEuro(Math.max(0,2000-euros))}`}
-              </span>
-            </div>
-            <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)",marginTop:"3px"}}>
-              Votre tracteur roule au biométhane — la boucle circulaire en action
-            </div>
-          </button>
-        )}
-      </div>
+      {/* v25.7 — bloc "Upgrade tracteur GNV" supprimé : la conversion GNV se fait
+          désormais par tracteur dans la section FLOTTE DE TRACTEURS (chaque tracteur
+          converti apporte +15 % de remplissage des intrants, max ×3 = +45 %). */}
     </div>
   );
 }
 
-// ─── TRACTOR FLEET SECTION (v23) ─────────────────────────────────────────────
-// 3 upgrades payées en € (disponibles après raccordement GRDF)
-function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers, euros, onBuyTractor2, onBuyTractor3, onBuySpeedBoost, onBuyTrailer }) {
-  const row = (key, label, sublabel, cost, ownedAlready, onBuy, icon) => {
-    const canBuy = !ownedAlready && euros >= cost;
-    return (
-      <div key={key} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"12px",background:"rgba(11,22,35,.45)",border:`1px solid ${ownedAlready?"rgba(74,219,148,.28)":"rgba(74,158,219,.14)"}`,marginBottom:"8px"}}>
-        <div style={{fontSize:"22px",flex:"0 0 30px",textAlign:"center",opacity:ownedAlready?1:.85}}>{icon}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:"12px",fontWeight:700,color:ownedAlready?"#4ADB94":"#E6EDF3"}}>
-            {label} {ownedAlready && <span style={{fontSize:"10px",marginLeft:"4px"}}>✅</span>}
-          </div>
-          <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)",marginTop:"2px"}}>{sublabel}</div>
-        </div>
-        {!ownedAlready && (
-          <button onClick={onBuy} disabled={!canBuy} style={{
-            padding:"7px 12px",borderRadius:"8px",border:"none",
-            background: canBuy ? "linear-gradient(135deg,#1a7a4a,#22a86a)" : "rgba(255,255,255,.05)",
-            color: canBuy ? "white" : "rgba(255,255,255,.28)",
-            fontWeight:700,fontSize:"11px",cursor:canBuy?"pointer":"not-allowed",
-            whiteSpace:"nowrap",
-            boxShadow:canBuy?"0 3px 10px rgba(34,168,106,.3)":"none"
-          }}>
-            {canBuy ? fmtEuro(cost) : `manque ${fmtEuro(Math.max(0,cost-euros))}`}
-          </button>
-        )}
-      </div>
-    );
-  };
+// ─── TRACTOR FLEET SECTION (v25.3) ──────────────────────────────────────────
+// Accordéon par tracteur : remorque + conversion GNV intégrées dans chaque carte
+function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers, tractorGnvArr, gnvStations, euros, onBuyTractor2, onBuyTractor3, onBuySpeedBoost, onBuyTrailer, onBuyTractorGnvUnit }) {
+  const [expanded, setExpanded] = useState(0);
 
-  const tractorLabels = ["1ᵉʳ tracteur", "2ᵉ tracteur", "3ᵉ tracteur"];
   const trailerCost = TRACTOR_UPGRADES.trailer.cost;
+  const gnvUnitCost = TRACTOR_UPGRADES.gnvUnit.cost;
+
+  const tractorDefs = [
+    { idx:0, label:"1ᵉʳ tracteur",  owned:true,             buyFn:null,          cost:null,
+      desc:"Tracteur de base — toujours actif" },
+    { idx:1, label:"2ᵉ tracteur",   owned:tractorCount>=2,  buyFn:onBuyTractor2, cost:TRACTOR_UPGRADES.count2.cost,
+      desc:TRACTOR_UPGRADES.count2.desc },
+    { idx:2, label:"3ᵉ tracteur",   owned:tractorCount>=3,  buyFn:onBuyTractor3, cost:TRACTOR_UPGRADES.count3.cost,
+      desc:TRACTOR_UPGRADES.count3.desc },
+  ];
 
   return (
     <div style={{marginTop:"14px",padding:"14px 14px 10px",borderRadius:"18px",
       background:"linear-gradient(135deg,rgba(232,160,32,.06),rgba(11,22,35,.55))",
       border:"1px solid rgba(232,160,32,.22)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
+
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
         <div style={{fontSize:"18px"}}>🚛</div>
         <div>
           <div style={{fontSize:"13px",fontWeight:800,color:"#E8A020",textTransform:"uppercase",letterSpacing:".04em"}}>Flotte de tracteurs</div>
           <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)"}}>
-            Actuellement {tractorCount} tracteur{tractorCount>1?"s":""}{tractorSpeedBoost?" · route goudronnée":""}
+            {tractorCount} tracteur{tractorCount>1?"s":""} actif{tractorCount>1?"s":""}
+            {tractorSpeedBoost?" · Route goudronnée ⚡":""}
           </div>
         </div>
       </div>
 
-      {row("count2",     "2ᵉ tracteur",  TRACTOR_UPGRADES.count2.desc,     TRACTOR_UPGRADES.count2.cost,     tractorCount>=2,     onBuyTractor2,    "🚜")}
-      {row("count3",     "3ᵉ tracteur",  TRACTOR_UPGRADES.count3.desc,     TRACTOR_UPGRADES.count3.cost,     tractorCount>=3,     onBuyTractor3,    "🚜")}
-      {row("speedBoost", "Route goudronnée", TRACTOR_UPGRADES.speedBoost.desc, TRACTOR_UPGRADES.speedBoost.cost, tractorSpeedBoost, onBuySpeedBoost,  "⚡")}
+      {/* Cartes par tracteur */}
+      <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"10px"}}>
+        {tractorDefs.map(({idx,label,owned,buyFn,cost,desc}) => {
+          const isExp        = expanded === idx;
+          const hasTrailer   = (tractorTrailers||[])[idx];
+          const hasGnv       = (tractorGnvArr||[])[idx];
+          const canBuyTractor= !owned && euros >= cost;
+          const canBuyTrailer= owned && !hasTrailer && euros >= trailerCost;
+          const canBuyGnv    = owned && !hasGnv && gnvStations > 0 && euros >= gnvUnitCost;
+          const gnvLocked    = owned && !hasGnv && gnvStations === 0;
 
-      {/* ── Remorques individuelles ── */}
-      <div style={{marginTop:"12px",marginBottom:"6px",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,.45)",textTransform:"uppercase",letterSpacing:".06em"}}>
-        Remorques individuelles
-      </div>
-      {[0,1,2].filter(i => i < tractorCount).map(i => {
-        const hasTrailer = tractorTrailers[i];
-        const canBuy = !hasTrailer && euros >= trailerCost;
-        return (
-          <div key={`trailer${i}`} style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"12px",background:"rgba(11,22,35,.45)",border:`1px solid ${hasTrailer?"rgba(74,219,148,.28)":"rgba(74,158,219,.14)"}`,marginBottom:"8px"}}>
-            <div style={{fontSize:"22px",flex:"0 0 30px",textAlign:"center"}}>🔧</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:"12px",fontWeight:700,color:hasTrailer?"#4ADB94":"#E6EDF3"}}>
-                Remorque — {tractorLabels[i]} {hasTrailer && <span style={{fontSize:"10px",marginLeft:"4px"}}>✅</span>}
+          return (
+            <div key={idx} style={{
+              borderRadius:"14px",overflow:"hidden",
+              border:`1px solid ${owned?"rgba(74,219,148,.22)":"rgba(74,158,219,.14)"}`,
+              background:"rgba(11,22,35,.45)",
+            }}>
+              {/* Ligne principale */}
+              <div
+                style={{display:"flex",alignItems:"center",gap:"10px",padding:"12px 12px",cursor:owned?"pointer":"default"}}
+                onClick={() => owned && setExpanded(isExp ? -1 : idx)}
+              >
+                {/* Icône + badge diesel/GNV */}
+                <div style={{
+                  width:"40px",height:"40px",borderRadius:"10px",flexShrink:0,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",
+                  background:!owned?"rgba(255,255,255,.04)":hasGnv?"rgba(34,168,106,.18)":"rgba(180,20,20,.18)",
+                  border:`1.5px solid ${!owned?"rgba(255,255,255,.08)":hasGnv?"rgba(34,168,106,.5)":"rgba(180,20,20,.4)"}`,
+                  position:"relative",
+                }}>
+                  🚜
+                  {owned && (
+                    <div style={{
+                      position:"absolute",bottom:-4,right:-4,
+                      fontSize:"8px",fontWeight:900,padding:"1px 4px",borderRadius:"5px",
+                      background:hasGnv?"#22a86a":"#CC2222",
+                      color:"white",border:"1px solid rgba(255,255,255,.2)",
+                    }}>{hasGnv?"GNV":"DIE"}</div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"13px",fontWeight:700,color:owned?"#EDF4FF":"rgba(255,255,255,.4)"}}>
+                    {label}
+                    {owned && <span style={{marginLeft:"6px",fontSize:"10px",color:"#4ADB94"}}>✅</span>}
+                  </div>
+                  <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)",marginTop:"1px"}}>{desc}</div>
+                  {owned && (
+                    <div style={{display:"flex",gap:"4px",marginTop:"4px",flexWrap:"wrap"}}>
+                      {hasTrailer && <span style={{fontSize:"8px",background:"rgba(74,158,219,.2)",color:"#6DB5EC",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🔧 Remorque</span>}
+                      {hasGnv     && <span style={{fontSize:"8px",background:"rgba(34,168,106,.2)",color:"#4ADB94",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🌿 GNV</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Achat ou chevron */}
+                {!owned ? (
+                  <button onClick={(e)=>{e.stopPropagation();buyFn&&buyFn();}} disabled={!canBuyTractor} style={{
+                    padding:"8px 12px",borderRadius:"9px",border:"none",flexShrink:0,
+                    background:canBuyTractor?"linear-gradient(135deg,#1a7a4a,#22a86a)":"rgba(255,255,255,.05)",
+                    color:canBuyTractor?"white":"rgba(255,255,255,.25)",
+                    fontWeight:700,fontSize:"11px",cursor:canBuyTractor?"pointer":"not-allowed",whiteSpace:"nowrap",
+                  }}>
+                    {canBuyTractor?fmtEuro(cost):`manque ${fmtEuro(Math.max(0,cost-euros))}`}
+                  </button>
+                ) : (
+                  <div style={{fontSize:"16px",color:"rgba(255,255,255,.3)",padding:"4px",flexShrink:0}}>
+                    {isExp?"▲":"▼"}
+                  </div>
+                )}
               </div>
-              <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)",marginTop:"2px"}}>
-                {hasTrailer ? "+50 % capacité active" : TRACTOR_UPGRADES.trailer.desc}
-              </div>
+
+              {/* Accordéon */}
+              {owned && isExp && (
+                <div style={{
+                  borderTop:"1px solid rgba(255,255,255,.06)",
+                  padding:"10px 12px",display:"flex",flexDirection:"column",gap:"8px",
+                  background:"rgba(11,22,35,.35)",
+                }}>
+                  {/* Remorque */}
+                  <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"9px 10px",borderRadius:"10px",
+                    background:hasTrailer?"rgba(74,219,148,.08)":"rgba(255,255,255,.03)",
+                    border:`1px solid ${hasTrailer?"rgba(74,219,148,.28)":"rgba(74,158,219,.14)"}`}}>
+                    <span style={{fontSize:"18px",flexShrink:0}}>🔧</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"11px",fontWeight:700,color:hasTrailer?"#4ADB94":"#E6EDF3"}}>
+                        Remorque {hasTrailer&&"✅"}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(255,255,255,.45)",marginTop:"1px"}}>
+                        {hasTrailer?"+50 % capacité active":TRACTOR_UPGRADES.trailer.desc}
+                      </div>
+                    </div>
+                    {!hasTrailer && (
+                      <button onClick={()=>onBuyTrailer(idx)} disabled={!canBuyTrailer} style={{
+                        padding:"6px 10px",borderRadius:"7px",border:"none",flexShrink:0,
+                        background:canBuyTrailer?"linear-gradient(135deg,#1a4a7a,#2268a8)":"rgba(255,255,255,.04)",
+                        color:canBuyTrailer?"white":"rgba(255,255,255,.25)",
+                        fontWeight:700,fontSize:"10px",cursor:canBuyTrailer?"pointer":"not-allowed",whiteSpace:"nowrap",
+                      }}>
+                        {canBuyTrailer?fmtEuro(trailerCost):`manque ${fmtEuro(Math.max(0,trailerCost-euros))}`}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Conversion GNV */}
+                  <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"9px 10px",borderRadius:"10px",
+                    background:hasGnv?"rgba(34,168,106,.1)":gnvLocked?"rgba(255,255,255,.02)":"rgba(34,168,106,.05)",
+                    border:`1px solid ${hasGnv?"rgba(34,168,106,.35)":gnvLocked?"rgba(255,255,255,.07)":"rgba(34,168,106,.25)"}`}}>
+                    <span style={{fontSize:"18px",flexShrink:0,opacity:gnvLocked?.4:1}}>🌿</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"11px",fontWeight:700,color:hasGnv?"#4ADB94":gnvLocked?"rgba(255,255,255,.3)":"#E6EDF3"}}>
+                        {hasGnv?"Converti GNV ✅":"Conversion GNV"}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)",marginTop:"1px"}}>
+                        {hasGnv?"+15 % de remplissage des intrants · zéro émission · boucle vertueuse 🔄":
+                         gnvLocked?"🔒 Nécessite 1 station GNV d'abord":
+                         TRACTOR_UPGRADES.gnvUnit.desc}
+                      </div>
+                    </div>
+                    {!hasGnv && !gnvLocked && (
+                      <button onClick={()=>onBuyTractorGnvUnit(idx)} disabled={!canBuyGnv} style={{
+                        padding:"6px 10px",borderRadius:"7px",border:"none",flexShrink:0,
+                        background:canBuyGnv?"linear-gradient(135deg,#1a7a4a,#22a86a)":"rgba(255,255,255,.04)",
+                        color:canBuyGnv?"white":"rgba(255,255,255,.25)",
+                        fontWeight:700,fontSize:"10px",cursor:canBuyGnv?"pointer":"not-allowed",whiteSpace:"nowrap",
+                      }}>
+                        {canBuyGnv?fmtEuro(gnvUnitCost):`manque ${fmtEuro(Math.max(0,gnvUnitCost-euros))}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            {!hasTrailer && (
-              <button onClick={() => onBuyTrailer(i)} disabled={!canBuy} style={{
-                padding:"7px 12px",borderRadius:"8px",border:"none",
-                background: canBuy ? "linear-gradient(135deg,#1a4a7a,#2268a8)" : "rgba(255,255,255,.05)",
-                color: canBuy ? "white" : "rgba(255,255,255,.28)",
-                fontWeight:700,fontSize:"11px",cursor:canBuy?"pointer":"not-allowed",
-                whiteSpace:"nowrap",
-                boxShadow:canBuy?"0 3px 10px rgba(34,104,168,.3)":"none"
-              }}>
-                {canBuy ? fmtEuro(trailerCost) : `manque ${fmtEuro(Math.max(0,trailerCost-euros))}`}
-              </button>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
-      <div style={{fontSize:"10px",color:"rgba(255,255,255,.38)",marginTop:"6px",textAlign:"center",lineHeight:1.4}}>
+      {/* Route goudronnée */}
+      <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"12px",
+        background:tractorSpeedBoost?"rgba(74,219,148,.08)":"rgba(11,22,35,.45)",
+        border:`1px solid ${tractorSpeedBoost?"rgba(74,219,148,.28)":"rgba(74,158,219,.14)"}`}}>
+        <span style={{fontSize:"18px",flexShrink:0}}>⚡</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:"12px",fontWeight:700,color:tractorSpeedBoost?"#4ADB94":"#E6EDF3"}}>
+            Route goudronnée {tractorSpeedBoost&&"✅"}
+          </div>
+          <div style={{fontSize:"10px",color:"rgba(255,255,255,.5)",marginTop:"2px"}}>{TRACTOR_UPGRADES.speedBoost.desc}</div>
+        </div>
+        {!tractorSpeedBoost && (
+          <button onClick={onBuySpeedBoost} disabled={euros<TRACTOR_UPGRADES.speedBoost.cost} style={{
+            padding:"7px 12px",borderRadius:"8px",border:"none",flexShrink:0,
+            background:euros>=TRACTOR_UPGRADES.speedBoost.cost?"linear-gradient(135deg,#1a7a4a,#22a86a)":"rgba(255,255,255,.05)",
+            color:euros>=TRACTOR_UPGRADES.speedBoost.cost?"white":"rgba(255,255,255,.28)",
+            fontWeight:700,fontSize:"11px",cursor:euros>=TRACTOR_UPGRADES.speedBoost.cost?"pointer":"not-allowed",whiteSpace:"nowrap",
+          }}>
+            {euros>=TRACTOR_UPGRADES.speedBoost.cost?fmtEuro(TRACTOR_UPGRADES.speedBoost.cost):`manque ${fmtEuro(Math.max(0,TRACTOR_UPGRADES.speedBoost.cost-euros))}`}
+          </button>
+        )}
+      </div>
+
+      <div style={{fontSize:"10px",color:"rgba(255,255,255,.38)",marginTop:"8px",textAlign:"center",lineHeight:1.4}}>
         📌 Épinglez une zone sur la carte pour y prioriser les tracteurs
       </div>
     </div>
   );
 }
-
 // ─── GNV VEHICLE SYSTEM ───────────────────────────────────────────────────────
 const GNV_VEHICLES = ["🚗","🚌","🚚","🚐","🚑"];
 
@@ -5112,6 +5444,497 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
       <div style={{position:"absolute",top:"6px",right:"10px",
         fontSize:"9px",color:"rgba(74,200,120,.7)",fontWeight:600}}>
         {vehicles.filter(v=>v.phase==="refueling").length > 0 ? "🟢 En service" : "⬤ En attente"}
+      </div>
+    </div>
+  );
+}
+
+// ─── MINI TRACTOR — tracteur SVG miniaturisé pour les routes latérales ────────
+// Réutilise TractorSvgInner (même visuel que le tracteur du jeu, avec badge GNV).
+// flipped=true → face gauche (descend vers stations), flipped=false → face droite (remonte).
+function MiniTractor({ isGnv, flipped, size }) {
+  const h = size || 22;
+  const w = Math.round(h * 90 / 48);
+  return (
+    <svg viewBox="0 0 90 48" width={w} height={h}
+      style={{display:"block", overflow:"visible", flexShrink:0}}>
+      <g transform={flipped ? "translate(90,0) scale(-1,1)" : ""}>
+        <TractorSvgInner isLoaded={false} icon="" trailerTilt={0} isGnv={isGnv} />
+      </g>
+    </svg>
+  );
+}
+
+// ─── GNV CAR SPRITE — véhicule SVG cohérent avec les tracteurs ───────────────
+// Corps navy, vitres steel-blue, jantes anthracite. Badge GNV vert.
+// viewBox 0 0 42 22. facing='left'=sens R→L (par défaut), 'right'=sens L→R (flip).
+function GnvCarSprite({ type, facing }) {
+  const isVan = type === 'van';
+  const bodyH = isVan ? 16 : 12;
+  const bodyY = isVan ? 3 : 6;
+  const flip = facing === 'right' ? 'scale(-1,1) translate(-42,0)' : '';
+  return (
+    <g transform={flip}>
+      {/* Corps */}
+      <rect x="1" y={bodyY} width="40" height={bodyH} rx="3"
+        fill="#0B1623" stroke="#2268A8" strokeWidth="1"/>
+      {/* Habitacle */}
+      <rect x="6" y={bodyY+1} width="11" height={bodyH-4} rx="1.5"
+        fill="rgba(74,158,219,.35)" stroke="rgba(74,158,219,.2)" strokeWidth=".5"/>
+      <rect x="20" y={bodyY+1} width="9" height={bodyH-4} rx="1.5"
+        fill="rgba(74,158,219,.35)" stroke="rgba(74,158,219,.2)" strokeWidth=".5"/>
+      {/* Badge GNV */}
+      <rect x="1" y={bodyY+2} width="8" height="5" rx="1.5"
+        fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+      <text x="5" y={bodyY+6} textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
+      {/* Roue avant */}
+      <circle cx="9" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
+      <circle cx="9" cy="20" r="1.5" fill="#0a0f0a"/>
+      {/* Roue arrière */}
+      <circle cx="33" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
+      <circle cx="33" cy="20" r="1.5" fill="#0a0f0a"/>
+      {/* Phare avant */}
+      <rect x="1" y={bodyY+3} width="2" height="3" rx="1" fill="#E8A020" opacity=".8"/>
+    </g>
+  );
+}
+
+// ─── GNV VEHICLE WORLD — véhicules SVG animés dans le circuit unifié ──────────
+// Gère 2 flux : lane GNV (R→L, y=GNV_LANE) et retour (L→R, y=GNV_RET).
+// Rendu directement dans le SVG monde étendu.
+function GnvVehicleWorld({ gnvStations, gnvSplit }) {
+  const [vehicles, setVehicles] = useState([]);
+  const timerRef = useRef(null);
+  const hasActive = gnvStations > 0 && gnvSplit > 0;
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, R_EDGE } = WORLD;
+  let uid2 = 0;
+
+  useEffect(() => {
+    clearInterval(timerRef.current);
+    if (!hasActive) { setVehicles([]); return; }
+    const ms = Math.max(2200, 8000 - gnvSplit * 40 - gnvStations * 600);
+    timerRef.current = setInterval(() => {
+      const direction = Math.random() < 0.5 ? 'rl' : 'lr'; // R→L ou L→R
+      const type = Math.random() < 0.4 ? 'van' : 'car';
+      const stIdx = Math.floor(Math.random() * gnvStations);
+      const id = Date.now() + (uid2++);
+      const dur = 5200 + Math.random() * 1200;
+      setVehicles(prev => [...prev.slice(-6), { id, direction, type, stIdx, dur, startAt: performance.now() }]);
+      setTimeout(() => setVehicles(prev => prev.filter(v => v.id !== id)), dur + 200);
+    }, ms);
+    return () => clearInterval(timerRef.current);
+  }, [hasActive, gnvStations, gnvSplit]);
+
+  // Animer via rAF — position interpolée selon elapsed/dur
+  const [, forceRender] = useState(0);
+  const rafV = useRef(null);
+  useEffect(() => {
+    const loop = () => {
+      forceRender(x => x + 1);
+      rafV.current = requestAnimationFrame(loop);
+    };
+    rafV.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafV.current);
+  }, []);
+
+  // Véhicules lambda : entrent par la droite Vue 2 (R_EDGE) au niveau BOT_TOP_Y,
+  // vont jusqu'à la station GNV (GNV_S[stIdx] dans Vue 1 bas), font le C-loop,
+  // ressortent par la droite au niveau BOT_BOT_Y.
+  const xMax = R_EDGE;
+
+  return (
+    <>
+      {vehicles.map(v => {
+        const elapsed = performance.now() - v.startAt;
+        const p = Math.min(1, elapsed / v.dur);
+        const ease = p < 0.05 ? p / 0.05 : p > 0.95 ? (1-p)/0.05 : 1;
+        const stopX = GNV_S[Math.min(v.stIdx, GNV_S.length - 1)] || GNV_S[0];
+        const y = v.direction === 'rl' ? BOT_TOP_Y : BOT_BOT_Y;
+        // R→L : arrive de xMax, s'arrête à stopX (station GNV)
+        // L→R : repart de stopX vers xMax après le C-loop
+        const x = v.direction === 'rl'
+          ? xMax - p * (xMax - stopX)
+          : stopX + p * (xMax - stopX);
+        const facing = v.direction === 'rl' ? 'left' : 'right';
+        return (
+          <g key={v.id}
+            transform={`translate(${x - 21} ${y - 11})`}
+            opacity={ease}>
+            <GnvCarSprite type={v.type} facing={facing}/>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+// ─── GNV NETWORK VIEW — Vue 2 réseau aval ────────────────────────────────────
+// v25.8 — Visualisation spatiale : pipeline GRDF + bâtiments consommateurs +
+//         stations GNV avec branches + route animée (véhicules + tracteurs GNV).
+//         Read-only (contrôles dans le shop). Props: gnvStations, gnvSplit, gnvBm,
+//         bmPerHour, tractorGnvArr, tractorCount.
+// v25.8.2 — Deux circuits de circulation :
+//   CIRCUIT TRACTEURS (rose) : descend à droite → station road R→L → remonte à gauche
+//   CIRCUIT VÉHICULES (orange) : entre à droite → R→L stations → descend → L→R bâtiments → remonte
+//   Station road : sens R→L (véhicules depuis droite)
+//   Émoji transforms : véhicule face gauche = pas de flip ; tracteur 🚜 face droite = scaleX(-1)
+//   Bandes latérales roses : connectent la route des tracteurs (zone intrants) aux stations GNV
+function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr, tractorCount }) {
+  // Circuit 1 : route stations (R→L) — clients + tracteurs GNV
+  const [stRoadVeh,  setStRoadVeh]  = useState([]);
+  // Circuit 2 : route de retour (L→R) — véhicules clients devant les bâtiments
+  const [retRoadVeh, setRetRoadVeh] = useState([]);
+  // Circuit 3 : trajet complet tracteur acheté — descente bande droite → station → remontée bande gauche
+  const [gnvTrips,   setGnvTrips]   = useState([]);
+  const stTimerRef   = useRef(null);
+  const retTimerRef  = useRef(null);
+  const tripTimerRef = useRef(null);
+
+  const gnvConverted = tractorGnvArr.slice(0, tractorCount).filter(Boolean).length;
+  const hasActive    = gnvStations > 0 && gnvSplit > 0;
+  const gnvPerHour   = Math.round(bmPerHour * gnvSplit / 100);
+  const netPerHour   = Math.round(bmPerHour * (100 - gnvSplit) / 100);
+  // Positions stations : S1=22%, S2=50%, S3=78% (de gauche)
+  // En sens R→L : le premier atteint est S3 (78%), puis S2 (50%), puis S1 (22%)
+  const STATION_X = [22, 50, 78];
+
+  // Overlay trip : top=-350px depuis GnvNetworkView, height=600px → couvre toute Vue2
+  // Station road dans l'overlay : 350 (TOP zone) + 24 (header GnvNetworkView) = 374px
+  const TRIP_OVERLAY_H = 600;
+  const TRIP_STATION_Y = 374; // px depuis le haut de l'overlay
+
+  // ── CSS keyframes (injection unique dans le document) ──
+  useEffect(() => {
+    const CSS_ID = 'gnv-net-css-v4';
+    if (document.getElementById(CSS_ID)) return;
+    const s = document.createElement('style');
+    s.id = CSS_ID;
+    s.textContent = [
+      // Bulles flux pipe GRDF
+      "@keyframes gnvFlow{0%{left:-8px;opacity:0}8%{opacity:.85}92%{opacity:.85}100%{left:calc(100% + 8px);opacity:0}}",
+      // Pulsation station active
+      "@keyframes gnvPulse{0%,100%{box-shadow:0 0 6px rgba(74,219,148,.18)}50%{box-shadow:0 0 22px rgba(74,219,148,.62)}}",
+      // ── Station road R→L ──
+      "@keyframes gnvSt0RL{0%{left:107%;opacity:0}5%{opacity:1}60%{left:calc(22% - 10px)}77%{left:calc(22% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      "@keyframes gnvSt1RL{0%{left:107%;opacity:0}5%{opacity:1}43%{left:calc(50% - 10px)}61%{left:calc(50% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      "@keyframes gnvSt2RL{0%{left:107%;opacity:0}5%{opacity:1}28%{left:calc(78% - 10px)}47%{left:calc(78% - 10px)}97%{left:-8%}100%{left:-8%;opacity:0}}",
+      // ── Route de retour L→R ──
+      "@keyframes gnvRetLR{0%{left:-8%;opacity:0}5%{opacity:1}95%{opacity:1}100%{left:107%;opacity:0}}",
+      // ── Routes latérales ──
+      "@keyframes gnvTrDown{0%{top:-22px;opacity:0}4%{opacity:1}96%{opacity:1}100%{top:calc(100% + 4px);opacity:0}}",
+      "@keyframes gnvTrUp{0%{top:calc(100% + 4px);opacity:0}4%{opacity:1}96%{opacity:1}100%{top:-22px;opacity:0}}",
+      // ── Trajet complet tracteur : descente bande droite (top 0→374px) ──
+      "@keyframes gnvTripDown{0%{top:-30px;opacity:0}4%{opacity:1}100%{top:374px;opacity:1}}",
+      // ── Trajet complet tracteur : remontée bande gauche (top 374px→0) ──
+      "@keyframes gnvTripUp{0%{top:374px;opacity:1}96%{opacity:1}100%{top:-30px;opacity:0}}",
+    ].join('\n');
+    document.head.appendChild(s);
+  }, []);
+
+  // ── Spawn : route stations (R→L) ──
+  useEffect(() => {
+    clearInterval(stTimerRef.current);
+    if (!hasActive) { setStRoadVeh([]); return; }
+    const ms = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
+    stTimerRef.current = setInterval(() => {
+      const stIdx = Math.floor(Math.random() * gnvStations);
+      const isTractor = Math.random() < 0.45; // tracteurs des gisements passent régulièrement
+      const tractorIsGnv = isTractor && gnvConverted > 0 && Math.random() < 0.6;
+      const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const id = uid++;
+      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor, tractorIsGnv }]);
+      setTimeout(() => setStRoadVeh(prev => prev.filter(x => x.id !== id)), 5300);
+    }, ms);
+    return () => clearInterval(stTimerRef.current);
+  }, [hasActive, gnvStations, gnvSplit, gnvConverted]);
+
+  // ── Spawn : route de retour (L→R) ──
+  useEffect(() => {
+    clearInterval(retTimerRef.current);
+    if (!hasActive) { setRetRoadVeh([]); return; }
+    const ms = Math.max(2500, 9000 - gnvSplit * 40 - gnvStations * 800);
+    retTimerRef.current = setInterval(() => {
+      const icon = GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const id = uid++;
+      setRetRoadVeh(prev => [...prev.slice(-4), { id, icon }]);
+      setTimeout(() => setRetRoadVeh(prev => prev.filter(x => x.id !== id)), 6500);
+    }, ms);
+    return () => clearInterval(retTimerRef.current);
+  }, [hasActive, gnvStations, gnvSplit]);
+
+  // ── Spawn : trajet complet tracteur acheté (descente → station → remontée) ──
+  // Déclenché toutes les ~18s dès qu'il y a des tracteurs et des stations actives.
+  // Phases : 'down' (4.2s) → 'cross' (5.3s) → 'up' (4.3s) → supprimé
+  useEffect(() => {
+    clearInterval(tripTimerRef.current);
+    if (tractorCount === 0 || gnvStations === 0) { setGnvTrips([]); return; }
+    const spawn = () => {
+      const tractorIdx = Math.floor(Math.random() * tractorCount);
+      const stIdx      = Math.floor(Math.random() * gnvStations);
+      const isGnv      = (tractorGnvArr || [])[tractorIdx] || false;
+      const id = uid++;
+      setGnvTrips(prev => [...prev.slice(-2), { id, tractorIdx, stIdx, isGnv, phase: 'down' }]);
+      setTimeout(() => setGnvTrips(p => p.map(t => t.id === id ? { ...t, phase: 'cross' } : t)), 4200);
+      setTimeout(() => setGnvTrips(p => p.map(t => t.id === id ? { ...t, phase: 'up'   } : t)), 9500);
+      setTimeout(() => setGnvTrips(p => p.filter(t => t.id !== id)), 13800);
+    };
+    spawn(); // premier passage immédiat
+    tripTimerRef.current = setInterval(spawn, 18000);
+    return () => clearInterval(tripTimerRef.current);
+  }, [tractorCount, gnvStations]);
+
+  // ── Hauteurs (total = 250px) ──
+  // Header 24 + StRoad 30 + Stations 52 + Pipe 18 + RetRoad 30 + Buildings 40 + spacer + Footer 26
+  // Circuit tracteurs : rectangle formé par bandes verticales + lignes horizontales haut/bas station road
+  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 54px (bas de la station road = 24+30)
+  const ROAD_TOP = 24; // px depuis le haut de GnvNetworkView = bas du header
+  const ROAD_BOT = 54; // px depuis le haut = bas de la station road (24 + 30)
+  const CORNER_R = 12; // rayon des virages aux coins du circuit
+
+  return (
+    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"visible", background:"rgba(7,14,25,.55)"}}>
+
+      {/* ══ OVERLAY TRAJET COMPLET TRACTEUR — couvre Vue2 entière (350+250=600px) ══
+          position:absolute, top:-350px → commence au sommet de la zone TOP
+          overflow:hidden sur le parent Vue2 contient le débordement */}
+      <div style={{position:"absolute", top:"-350px", left:0, right:0, height:`${TRIP_OVERLAY_H}px`, pointerEvents:"none", zIndex:20}}>
+        {gnvTrips.map(trip => {
+          if (trip.phase === 'down') return (
+            <div key={trip.id} style={{position:"absolute", right:"4px",
+              animation:"gnvTripDown 4.2s linear forwards"}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={true} size={22}/>
+            </div>
+          );
+          if (trip.phase === 'cross') return (
+            <div key={trip.id} style={{position:"absolute", top:`${TRIP_STATION_Y}px`,
+              animation:`gnvSt${trip.stIdx}RL 5.3s linear forwards`}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={true} size={22}/>
+            </div>
+          );
+          if (trip.phase === 'up') return (
+            <div key={trip.id} style={{position:"absolute", left:"4px",
+              animation:"gnvTripUp 4.3s linear forwards"}}>
+              <MiniTractor isGnv={trip.isGnv} flipped={false} size={22}/>
+            </div>
+          );
+          return null;
+        })}
+      </div>
+
+      {/* ══ CIRCUIT TRACTEURS : rectangle de route avec virages ══
+          Bandes verticales (gauche/droite, height:100%) + lignes horizontales (haut/bas station road)
+          → ferment visuellement la boucle. Fond unifié #141e2e = même asphalte que la station road. */}
+
+      {/* ─ Bande DROITE : asphalte pur — les tracteurs sont sur les routes horizontales ─ */}
+      <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2,
+        background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
+        <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
+          width:"2px", height:"100%",
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+      </div>
+
+      {/* ─ Bande GAUCHE : asphalte pur ─ */}
+      <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2,
+        background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
+        <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
+          width:"2px", height:"100%",
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+      </div>
+
+      {/* ─ Lignes horizontales — ferment le rectangle du circuit ─ */}
+      {/* Haut : relie bande gauche → bande droite au niveau du haut de la station road */}
+      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_TOP}px`, height:"2px",
+        background:"rgba(240,80,180,.42)", zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas : relie bande gauche → bande droite au niveau du bas de la station road */}
+      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_BOT}px`, height:"2px",
+        background:"rgba(240,80,180,.28)", zIndex:6, pointerEvents:"none"}}/>
+
+      {/* ─ Coins de virage aux 4 intersections ─ */}
+      {/* Haut-droit */}
+      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderTop:"2px solid rgba(240,80,180,.42)", borderRight:"2px solid rgba(240,80,180,.45)",
+        borderTopRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas-droit */}
+      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_BOT}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderBottom:"2px solid rgba(240,80,180,.28)", borderRight:"2px solid rgba(240,80,180,.45)",
+        borderBottomRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Haut-gauche */}
+      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderTop:"2px solid rgba(240,80,180,.42)", borderLeft:"2px solid rgba(240,80,180,.45)",
+        borderTopLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas-gauche */}
+      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_BOT}px`,
+        width:`${CORNER_R}px`, height:`${CORNER_R}px`,
+        borderBottom:"2px solid rgba(240,80,180,.28)", borderLeft:"2px solid rgba(240,80,180,.45)",
+        borderBottomLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+
+      {/* ── Header KPIs ── */}
+      <div style={{flexShrink:0, height:"24px", display:"flex", alignItems:"center", gap:"6px",
+        padding:"0 12px", borderBottom:"1px solid rgba(255,255,255,.05)", position:"relative", zIndex:5}}>
+        <div style={{width:"2px", height:"13px",
+          background:"linear-gradient(180deg,rgba(74,158,219,.9),rgba(74,158,219,.1))",
+          borderRadius:"2px", boxShadow:"0 0 6px rgba(74,158,219,.5)"}}/>
+        <span style={{fontSize:"7px", color:"rgba(74,158,219,.7)", textTransform:"uppercase",
+          letterSpacing:".07em", fontWeight:700}}>Distribution réseau aval GRDF</span>
+        <div style={{marginLeft:"auto", display:"flex", gap:"4px"}}>
+          <div style={{background:"rgba(74,158,219,.1)", border:"1px solid rgba(74,158,219,.2)",
+            borderRadius:"4px", padding:"1px 5px", fontSize:"7px", color:"#4A9EDB", fontWeight:700}}>
+            🔌 {fmt(netPerHour)}/h
+          </div>
+          {gnvStations > 0 && (
+            <div style={{background:"rgba(74,219,148,.1)", border:"1px solid rgba(74,219,148,.2)",
+              borderRadius:"4px", padding:"1px 5px", fontSize:"7px", color:"#4ADB94", fontWeight:700}}>
+              ⛽ {fmt(gnvPerHour)}/h
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Station road R→L ──
+          Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche. */}
+      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
+        background:"#141e2e",
+        borderTop:"2px solid rgba(240,80,180,.45)",
+        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
+        {/* Marquage central rose — identique aux bandes verticales */}
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"2px",
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+        {/* Véhicules R→L — tracteurs = vrai SVG MiniTractor, autres = emoji */}
+        {stRoadVeh.map(v => (
+          <div key={v.id} style={{
+            position:"absolute", top:"4px",
+            animation:`gnvSt${v.stIdx}RL 5s linear 1 forwards`,
+          }}>
+            {v.isTractor
+              ? <MiniTractor isGnv={v.tractorIsGnv} flipped={true} size={22}/>
+              : <span style={{fontSize:"16px", lineHeight:"20px"}}>{v.icon}</span>
+            }
+          </div>
+        ))}
+      </div>
+
+      {/* ── Stations GNV ── */}
+      <div style={{flexShrink:0, height:"52px", position:"relative"}}>
+        {[0, 1, 2].map(i => {
+          const active = i < gnvStations;
+          const x = STATION_X[i];
+          return (
+            <div key={i} style={{position:"absolute", top:0, left:`${x}%`,
+              transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
+              {/* Branche montante (vers route) */}
+              <div style={{width:"2px", height:"8px",
+                background: active
+                  ? "linear-gradient(180deg,rgba(74,219,148,.75),rgba(74,219,148,.35))"
+                  : "rgba(255,255,255,.07)"}}/>
+              {/* Corps station */}
+              <div style={{
+                width:"40px", height:"36px", borderRadius:"7px",
+                background: active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)",
+                border: `1.5px solid ${active ? "rgba(74,219,148,.42)" : "rgba(255,255,255,.09)"}`,
+                display:"flex", flexDirection:"column", alignItems:"center",
+                justifyContent:"center", gap:"1px",
+                animation: active ? `gnvPulse 2.4s ${i * 0.8}s infinite ease-in-out` : "none",
+              }}>
+                <div style={{fontSize:"14px", filter: active ? "none" : "grayscale(1)",
+                  opacity: active ? 1 : 0.28}}>⛽</div>
+                <div style={{fontSize:"6px", fontWeight:700,
+                  color: active ? "#4ADB94" : "rgba(255,255,255,.18)"}}>
+                  {active ? `S${i+1}` : "🔒"}
+                </div>
+              </div>
+              {/* Branche descendante (vers pipe GRDF) */}
+              <div style={{width:"2px", height:"8px",
+                background: active
+                  ? "linear-gradient(180deg,rgba(74,219,148,.38),rgba(74,158,219,.38))"
+                  : "rgba(255,255,255,.06)"}}/>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Pipe GRDF — connexion depuis injection Vue 1 (← gauche) ── */}
+      <div style={{flexShrink:0, height:"18px", position:"relative"}}>
+        <div style={{position:"absolute", left:0, top:0, bottom:0, display:"flex",
+          alignItems:"center", paddingLeft:"10px", zIndex:5}}>
+          <div style={{fontSize:"6px", color:"rgba(74,158,219,.55)", fontWeight:700, letterSpacing:".03em"}}>← Inj.</div>
+        </div>
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"5px",
+          background:"linear-gradient(90deg,rgba(74,158,219,.95),rgba(74,158,219,.85),rgba(74,158,219,.45))",
+          boxShadow:"0 0 10px rgba(74,158,219,.4)", borderRadius:"0 3px 3px 0", overflow:"hidden"}}>
+          {[0,1,2,3,4].map(i => (
+            <div key={i} style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+              width:"7px", height:"7px", borderRadius:"50%",
+              background:"rgba(200,230,255,.9)", boxShadow:"0 0 5px rgba(200,230,255,.8)",
+              animation:`gnvFlow ${2 + i * 0.28}s ${-(i * 0.55)}s infinite linear`}}/>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Route de retour L→R — véhicules clients devant les bâtiments ── */}
+      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
+        background:"#141e2e",
+        borderTop:"2px solid rgba(240,80,180,.45)",
+        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
+        {/* Marquage central rose */}
+        <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
+          left:0, right:0, height:"2px",
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+        {/* Véhicules L→R (retour) — face droite */}
+        {retRoadVeh.map(v => (
+          <div key={v.id} style={{
+            position:"absolute", top:"5px", fontSize:"13px", lineHeight:"16px",
+            animation:"gnvRetLR 6.5s linear 1 forwards",
+            transform:"scaleX(-1)",
+          }}>
+            {v.icon}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Bâtiments réseau aval (consommateurs raccordés) ── */}
+      <div style={{flexShrink:0, height:"40px", position:"relative"}}>
+        {[8, 22, 40, 58, 72, 88].map((xPct, i) => {
+          const bw = [16,12,20,14,18,10][i];
+          const bh = [14,10,20,12,16,9][i];
+          const ic = i===2 ? "🏭" : i===4 ? "🏬" : i===1 ? "🏢" : "🏠";
+          return (
+            <div key={i} style={{position:"absolute", top:0, left:`${xPct}%`,
+              transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center"}}>
+              <div style={{width:"1px", height:"5px", background:"rgba(74,158,219,.22)"}}/>
+              <div style={{width:`${bw}px`, height:`${bh}px`,
+                background:"rgba(74,158,219,.07)", border:"1px solid rgba(74,158,219,.12)",
+                borderRadius:"0 0 2px 2px"}}/>
+              <div style={{fontSize:"7px", lineHeight:1, marginTop:"1px"}}>{ic}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Spacer */}
+      <div style={{flex:1}}/>
+
+      {/* ── Stats footer ── */}
+      <div style={{flexShrink:0, height:"26px", display:"flex", gap:"8px", alignItems:"center",
+        justifyContent:"center", padding:"0 12px",
+        background:"rgba(7,14,25,.7)", borderTop:"1px solid rgba(255,255,255,.05)"}}>
+        <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
+          ⛽ GNV : <strong style={{color:"#4ADB94"}}>{fmt(gnvBm)}</strong> m³
+        </span>
+        <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
+        <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
+          Stations : <strong style={{color: gnvStations > 0 ? "#4ADB94" : "rgba(255,255,255,.3)"}}>{gnvStations}/3</strong>
+        </span>
+        {gnvConverted > 0 && (
+          <>
+            <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
+            <span style={{fontSize:"8px", color:"rgba(240,80,180,.85)"}}>🚜 ×{gnvConverted} GNV</span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -5811,7 +6634,7 @@ function DigesteurScene({
   bmPerHour, fillRate, owned, stock, stockMax, stockPct, stockColor,
   binRotate, binTransX, pouring, handlePour,
   // v23 — flotte & ville
-  tractorCount, tractorSpeedBoost, tractorTrailers, pinnedZones, onTogglePin,
+  tractorCount, tractorSpeedBoost, tractorTrailers, tractorGnvArr, pinnedZones, onTogglePin,
   cityView, setCityView, injected, epurateurOk, compresseurOk,
   // v24 — gisements
   zoneState, localStock, setLocalStock, setStock, stockMaxRef,
@@ -5821,7 +6644,7 @@ function DigesteurScene({
   // v25.0.9 — composition par intrant (popup pédago)
   stockComposition, stockYield,
   // v25.1.6 — Props pour chaîne d'injection migrée + placeholder réseau aval
-  unlockAnim, bufferPct, bm, burnRate, gnvStations, canConnect,
+  unlockAnim, bufferPct, bm, burnRate, gnvStations, gnvSplit, gnvBm, canConnect,
   // v25.1.25 — Animation paiement de relance par zone
   relaunchAnim,
 }) {
@@ -5876,7 +6699,7 @@ function DigesteurScene({
     const base = -cityView * vw;
     let offset = dx;
     // Résistance aux bords
-    if ((cityView === 0 && offset > 0) || (cityView === 1 && offset < 0)) offset *= 0.3;
+    if ((cityView === 0 && offset > 0) || (cityView === 2 && offset < 0)) offset *= 0.3;
     sceneRef.current.style.transform = `translateX(${base + offset}px)`;
   };
   const onPointerUp = (e) => {
@@ -5887,8 +6710,8 @@ function DigesteurScene({
       const vw = viewportRef.current.offsetWidth;
       const threshold = vw * 0.2;
       let target = cityView;
-      if (dx < -threshold && cityView < 1) target = 1;
-      else if (dx > threshold && cityView > 0) target = 0;
+      if (dx < -threshold && cityView < 2) target = cityView + 1;
+      else if (dx > threshold && cityView > 0) target = cityView - 1;
       if (target !== cityView) setCityView(target);
       else applyTransform(cityView, true);
     } else {
@@ -5939,29 +6762,70 @@ function DigesteurScene({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        {/* Scène monde (200% largeur) */}
+        {/* Scène monde (300% largeur — 3 vues) */}
         <div
           ref={sceneRef}
           style={{
             position:"relative",
-            width:"200%",
+            width:"300%",
             display:"flex",
             willChange:"transform",
           }}
         >
-          {/* ════════ VUE 1 : DIGESTEUR + BAC + CHAÎNE D'INJECTION ════════ */}
-          {/* v25.1.6 — Structure verticale 350+250 :
-              · Top (350px) : digesteurs+bac+tracteur (zone scène SVG MONDE inchangée)
-              · Bottom (250px) : chaîne d'injection migrée depuis sous la scène
-              v25.1.16 — minWidth:0 + overflow:hidden : empêche les enfants (collecteur étendu,
-              SVG monde, etc.) de forcer la VUE 1 à dépasser 50% de la scène (= 50% du viewport
-              car scène = 200%). Sans ça, sur Android la VUE 1 prenait > 50% et poussait la VUE 2
-              hors écran. */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
-            {/* v25.1.20 — AnchorProvider englobe toute la VUE 1 : permet aux pipes
-                de se positionner dynamiquement entre bac, digesteurs, cuve, etc.
-                Plus besoin d'estimer les pixels manuellement. */}
-            <AnchorProvider>
+          {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
+          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
+            {/* ─── HEADER : collecteur digesteur + titre (haut de vue) ─── */}
+            <div style={{flexShrink:0, padding:"10px 10px 4px"}}>
+              <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"6px", padding:"4px 8px", borderRadius:"8px", background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)"}}>
+                <div style={{fontSize:"9px", color:"rgba(74,158,219,.65)", fontWeight:700}}>← Biogaz collecteur digesteur</div>
+              </div>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 4px"}}>
+                <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
+                {injected
+                  ? <span style={{fontSize:"10px", fontWeight:700, color:"#4A9EDB", padding:"2px 8px", borderRadius:"20px", background:"rgba(74,158,219,.17)"}}>✅ Raccordé</span>
+                  : <span style={{fontSize:"10px", fontWeight:700, color:canConnect?"#F5BE50":"rgba(255,255,255,.32)", padding:"2px 8px", borderRadius:"20px", background:canConnect?"rgba(232,160,32,.18)":"rgba(74,158,219,.06)"}}>{canConnect?"🔓 Prêt !":"🔒 Verrouillé"}</span>
+                }
+              </div>
+            </div>
+            {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
+            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
+              <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
+            </div>
+            {/* ─── RÉSEAU GRDF AVAL : tout en bas de la vue ─── */}
+            <div style={{flex:1, padding:"8px 10px 12px", background:"rgba(7,14,25,.55)", borderTop:"1px solid rgba(74,158,219,.1)", display:"flex", flexDirection:"column", justifyContent:"center"}}>
+              {!injected ? (
+                <div style={{textAlign:"center", opacity:.42, padding:"6px 0"}}>
+                  <div style={{fontSize:"18px", marginBottom:"4px"}}>🔒</div>
+                  <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)"}}>Raccordement GRDF</div>
+                  <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Injectez du biogaz pour activer</div>
+                </div>
+              ) : (
+                <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
+                  <div style={{fontSize:"10px", color:"rgba(74,158,219,.7)", fontWeight:700, textTransform:"uppercase", letterSpacing:".06em"}}>Réseau GRDF aval →</div>
+                  <div style={{display:"flex", gap:"6px"}}>
+                    <div style={{flex:1, background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,158,219,.25)", borderRadius:"6px", padding:"6px 8px"}}>
+                      <div style={{fontSize:"8px", color:"rgba(74,158,219,.6)"}}>Injection réseau</div>
+                      <div style={{fontSize:"13px", fontWeight:800, color:"#4A9EDB"}}>{Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h</div>
+                    </div>
+                    {gnvStations > 0 && (
+                      <div style={{flex:1, background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,219,148,.25)", borderRadius:"6px", padding:"6px 8px"}}>
+                        <div style={{fontSize:"8px", color:"rgba(74,219,148,.6)"}}>GNV ({gnvStations} station{gnvStations>1?"s":""})</div>
+                        <div style={{fontSize:"13px", fontWeight:800, color:"#4ADB94"}}>{Math.round(bmPerHour*gnvSplit/100)} m³/h</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{height:"5px", borderRadius:"3px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
+                    <div style={{height:"100%", borderRadius:"3px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation:"gasFlow 1.4s linear infinite"}}/>
+                  </div>
+                  <div style={{fontSize:"8px", color:"rgba(255,255,255,.28)", textAlign:"center"}}>→ Station GNV (Vue 1) → Réseau résidentiel (Vue 2)</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ════════ VUE 1 : DIGESTEUR + BAC ════════ */}
+          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+          <AnchorProvider>
             {/* ─── TOP : Digesteurs + Bac (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* v25.1 : layout INVERSÉ via flex-direction:row-reverse.
@@ -6265,104 +7129,68 @@ function DigesteurScene({
               </div>
             </div>
             </div>
-            {/* ─── BOTTOM : Chaîne d'injection (250px) ─── */}
-            {/* v25.1.6 — Migration de la chaîne d'injection ICI (depuis sous la scène).
-                v25.1.10 : pipe biogaz simplifié en 2 fragments indépendants (top et bottom),
-                chacun "sortant/entrant" par le bord gauche → suggère un trajet hors champ. */}
-            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px 32px", display:"flex", flexDirection:"column", overflow:"hidden", position:"relative"}}>
-              {/* v25.1.10 — PIPE BOTTOM : entre par la gauche de l'écran et arrive à la cuve.
-                  Symétrique du pipe TOP (qui sort par la gauche au-dessus des digesteurs). */}
-              <svg
-                width="180" height="40"
-                viewBox="0 0 180 40"
-                style={{
-                  position:"absolute", left:"-90px", top:"100px",
-                  pointerEvents:"none", zIndex:2, overflow:"visible"
-                }}
-              >
-                {/* Tube enveloppe horizontal */}
-                <path d="M 0 20 L 180 20"
-                  fill="none" stroke="#1E3848" strokeWidth="14" strokeLinecap="round"/>
-                <path d="M 0 20 L 180 20"
-                  fill="none" stroke="rgba(74,158,219,.4)" strokeWidth="15" strokeLinecap="round" opacity=".5"/>
-                {/* Flux animé (sens : gauche → cuve, donc même direction que dasharray) */}
-                <path d="M 0 20 L 180 20"
-                  fill="none"
-                  stroke={isDigesting ? "rgba(102,238,136,.7)" : "rgba(74,158,219,.18)"}
-                  strokeWidth="5"
-                  strokeDasharray="14 10" strokeLinecap="round"
-                  style={{animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
-                {/* Flèche pointant vers la DROITE (arrivée à la cuve) */}
-                <polygon points="180,20 168,14 168,26"
-                  fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
-                {/* Label "↓ Biogaz" */}
-                <text x="100" y="14"
-                  fontSize="9" fill={isDigesting?"rgba(102,238,136,.85)":"rgba(74,158,219,.5)"}
-                  fontWeight="700" letterSpacing=".5">
-                  ↓ Biogaz
-                </text>
-              </svg>
-              {/* Header compact : titre + statut */}
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px", padding:"0 4px", marginTop:"4px"}}>
-                <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
-                {injected
-                  ? <span style={{fontSize:"10px", fontWeight:700, color:"#4A9EDB", padding:"2px 8px", borderRadius:"20px", background:"rgba(74,158,219,.17)"}}>✅ Raccordé</span>
-                  : <span style={{fontSize:"10px", fontWeight:700, color:canConnect?"#F5BE50":"rgba(255,255,255,.32)", padding:"2px 8px", borderRadius:"20px", background:canConnect?"rgba(232,160,32,.18)":"rgba(74,158,219,.06)"}}>{canConnect?"🔓 Prêt !":"🔒 Verrouillé"}</span>
-                }
-              </div>
-              {/* Schéma compact (PipelineGraphic existant, taille auto) */}
-              {/* v25.1.20 — Anchor "cuve.left" sur le bord gauche pour que le pipe biogaz
-                  arrive précisément à l'entrée de la cuve tampon (premier élément). */}
-              <div style={{flex:1, minHeight:0, display:"flex", alignItems:"center", justifyContent:"center", position:"relative"}}>
-                <Anchor name="cuve.left" side="left" style={{display:"block", width:"100%"}}>
-                  <PipelineGraphic injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
-                </Anchor>
-              </div>
-              {/* Bandeau d'injection (si raccordé) */}
-              {injected && (
-                <div style={{display:"flex", alignItems:"center", gap:"8px", padding:"4px 8px", borderRadius:"8px", background:"rgba(11,22,35,.55)", border:"1px solid rgba(74,158,219,.12)"}}>
-                  <div style={{fontSize:"14px"}}>🔌</div>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div style={{height:"4px", borderRadius:"2px", background:"rgba(74,158,219,.12)", overflow:"hidden"}}>
-                      <div style={{height:"100%", borderRadius:"2px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#6DB5EC)", transition:"width .5s"}}/>
-                    </div>
+            {/* ─── BOTTOM : Station GNV + réseau GRDF (250px) ─── */}
+            <div style={{height:"250px", flexShrink:0, position:"relative", background:"rgba(7,14,25,.55)"}}>
+              {!injected ? (
+                <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center"}}>
+                  <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
+                    <div style={{fontSize:"20px", marginBottom:"4px"}}>⛽</div>
+                    <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)"}}>Station GNV</div>
+                    <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Disponible après raccordement</div>
                   </div>
-                  <div style={{fontSize:"12px", fontWeight:800, color:"#4A9EDB", whiteSpace:"nowrap"}}>{fmt(bm)} m³</div>
+                </div>
+              ) : (
+                <div style={{padding:"8px 12px", display:"flex", flexDirection:"column", gap:"6px", height:"100%", boxSizing:"border-box"}}>
+                  <div style={{fontSize:"10px", fontWeight:700, color:"rgba(255,255,255,.6)", textTransform:"uppercase", letterSpacing:".06em"}}>⛽ Station GNV · Réseau GRDF</div>
+                  {gnvStations === 0 ? (
+                    <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", opacity:.4}}>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:"20px"}}>⛽</div>
+                        <div style={{fontSize:"9px", color:"rgba(255,255,255,.5)", marginTop:"4px"}}>Aucune station active</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{flex:1, display:"flex", flexDirection:"column", gap:"6px", justifyContent:"center"}}>
+                      <div style={{display:"flex", gap:"6px", justifyContent:"center"}}>
+                        {[0,1,2].slice(0, gnvStations).map(si => (
+                          <div key={si} style={{background:"rgba(74,219,148,.12)", border:"1px solid rgba(74,219,148,.45)", borderRadius:"10px", padding:"8px 12px", textAlign:"center", animation:"gnvPulse 2s ease infinite"}}>
+                            <div style={{fontSize:"20px"}}>⛽</div>
+                            <div style={{fontSize:"9px", fontWeight:700, color:"#4ADB94", marginTop:"2px"}}>S{si+1}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{fontSize:"9px", color:"rgba(74,219,148,.6)", textAlign:"center"}}>
+                        {Math.round(bmPerHour*gnvSplit/100)} m³/h GNV · {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h réseau
+                      </div>
+                    </div>
+                  )}
+                  <div style={{height:"4px", borderRadius:"2px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
+                    <div style={{height:"100%", borderRadius:"2px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
+                  </div>
                 </div>
               )}
             </div>
-            {/* v25.1.21 — Le collecteur biogaz est rendu par DigesteurManifold (composant
-                inline avec branches descendantes vers chaque digesteur, extension à gauche
-                hors champ). La vis sans fin sous les digesteurs est rendue par
-                DigesteurFeeder. Reste le pipe DYNAMIQUE qui relie le coin bas-gauche
-                du bac à l'embout droit du DigesteurFeeder — c'est le seul qui demandait
-                du calibrage manuel auparavant. Il utilise maintenant le système d'ancres. */}
-            <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
-              color="#E8A020" flowColor="#F5BE50"
-              active={pouring} animate="auger" animSpeed=".35s"
-              strokeWidth={9}/>
-            </AnchorProvider>
+          </div>
+          <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
+            color="#E8A020" flowColor="#F5BE50"
+            active={pouring} animate="auger" animSpeed=".35s"
+            strokeWidth={9}/>
+          </AnchorProvider>
           </div>
 
-          {/* ════════ VUE 2 : VILLE + RÉSEAU AVAL ════════ */}
-          {/* v25.1.6 — Structure verticale 350+250 (cohérente avec VUE 1) :
-              · Top (350px) : parcelles d'approvisionnement (inchangé)
-              · Bottom (250px) : PLACEHOLDER pour le réseau aval GRDF (chantier C — à venir)
-                                 - Réseau général (résidentiel) animé selon burnRate
-                                 - Station GNV qui grandit selon gnvStationCount
-              v25.1.16 — minWidth:0 + overflow:hidden (cf. VUE 1, même raison). */}
-          <div style={{flex:"0 0 50%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+          {/* ════════ VUE 2 : GISEMENTS + RÉSEAU AVAL ════════ */}
+          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
-            {/* Label positionné PAR-DESSUS la lane mais plus centré pour ne pas coller à la bordure */}
+            {/* Les bandes latérales sont désormais dans le SVG monde (chemins x=400 et x=800) */}
             <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
-            {/* SVG local vue 2 : UNIQUEMENT les zones (pas les routes — voir SVG monde) */}
+            {/* SVG local vue 2 : UNIQUEMENT les zones — zIndex:2 < SVG monde (zIndex:3) */}
             <svg
               viewBox="0 0 400 280"
               preserveAspectRatio="none"
-              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none"}}
+              style={{position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:2}}
             >
               <g style={{pointerEvents:"auto"}}>
                 {CITY_ZONES.map(z => {
@@ -6400,41 +7228,28 @@ function DigesteurScene({
               </g>
             </svg>
             </div>
-            {/* ─── BOTTOM : Réseau GRDF aval (250px) — PLACEHOLDER chantier C ─── */}
-            {/* v25.1.6 — Pré-câblage de la zone qui accueillera dans la session suivante :
-                · Réseau général : visualisation animée selon `burnRate` (gaz consommé)
-                · Station GNV : sprite qui grandit selon `gnvStationCount` (0/1/2/3)
-                Pour l'instant : zone visuellement sobre avec un message d'introduction
-                qui ne s'affiche qu'une fois raccordé (avant raccordement, pas pertinent). */}
-            <div style={{height:"250px", flexShrink:0, padding:"4px 10px 8px", display:"flex", flexDirection:"column", overflow:"hidden"}}>
-              {injected ? (
-                <>
-                  {/* Pipe biogaz entrant : reçoit depuis VUE 1 (chaîne d'injection → réseau) */}
-                  <div style={{display:"flex", justifyContent:"flex-start", paddingLeft:"4px", marginTop:"-26px", marginBottom:"-4px", pointerEvents:"none"}}>
-                    <div style={{
-                      width:"4px", height:"24px",
-                      background:"linear-gradient(180deg, rgba(74,158,219,.9), rgba(74,158,219,.25))",
-                      borderRadius:"2px",
-                      boxShadow:"0 0 10px rgba(74,158,219,.6)"
-                    }}/>
+            {/* ─── BOTTOM : zone aval 250px — rendue dans le SVG monde étendu (v25.10) ─── */}
+            {/* Le SVG monde couvre maintenant 600px (350+250). GnvNetworkView remplacé. */}
+            <div style={{height:"250px", flexShrink:0, position:"relative"}}>
+              {/* KPIs overlay — positionnés absolument sur la zone aval */}
+              {injected && (
+                <div style={{position:"absolute", top:"4px", right:"36px", display:"flex", gap:"6px", zIndex:5, pointerEvents:"none"}}>
+                  <div style={{background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,158,219,.25)",
+                    borderRadius:"4px", padding:"2px 6px", fontSize:"7px", color:"#4A9EDB", fontWeight:700}}>
+                    🔌 {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h
                   </div>
-                  <div style={{fontSize:"9px", color:"rgba(74,158,219,.6)", textAlign:"left", marginBottom:"6px", textTransform:"uppercase", letterSpacing:".05em", fontWeight:700}}>
-                    ↓ Distribution réseau GRDF
-                  </div>
-                  <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)", marginBottom:"6px", padding:"0 4px"}}>
-                    🏘️ Réseau aval GRDF
-                  </div>
-                  <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"12px", border:"1px dashed rgba(74,158,219,.18)", background:"rgba(11,22,35,.45)"}}>
-                    <div style={{textAlign:"center", padding:"12px"}}>
-                      <div style={{fontSize:"22px", marginBottom:"4px", opacity:.5}}>🏘️ 🏭 ⛽</div>
-                      <div style={{fontSize:"10px", color:"rgba(255,255,255,.4)", fontStyle:"italic"}}>Représentation du réseau aval (à venir)</div>
-                      <div style={{fontSize:"9px", color:"rgba(255,255,255,.3)", marginTop:"3px"}}>Stations GNV : {gnvStations} · Brûlage : {fmt(burnRate)} m³/h</div>
+                  {gnvStations > 0 && (
+                    <div style={{background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,219,148,.25)",
+                      borderRadius:"4px", padding:"2px 6px", fontSize:"7px", color:"#4ADB94", fontWeight:700}}>
+                      ⛽ {Math.round(bmPerHour*gnvSplit/100)} m³/h
                     </div>
-                  </div>
-                </>
-              ) : (
-                <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"12px", border:"1px dashed rgba(74,158,219,.12)", background:"rgba(11,22,35,.35)"}}>
-                  <div style={{textAlign:"center", padding:"12px", opacity:.45}}>
+                  )}
+                </div>
+              )}
+              {!injected && (
+                <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
+                  background:"rgba(7,14,25,.45)"}}>
+                  <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
                     <div style={{fontSize:"20px", marginBottom:"4px"}}>🔒</div>
                     <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)"}}>Réseau aval GRDF</div>
                     <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Disponible après raccordement</div>
@@ -6444,77 +7259,178 @@ function DigesteurScene({
             </div>
           </div>
 
-          {/* ════════ SVG MONDE (superposé à la zone TOP des 2 vues) ════════ */}
-          {/* v25.1.13 — Limité à height:350px (zone TOP) :
-              · Avant : étiré sur 600px → tracteurs déformés ×1.77 + routes débordent en bas
-              · Après : 350px → ratio CSS/SVG = 1.25 (=identique à avant 25.1.6, no distorsion)
-              v25.1.13 — Rendu route amélioré : asphalte gris foncé + marquage central jaune
-              pointillé (sémantique route universellement reconnaissable). */}
+          {/* ════════ SVG MONDE — 3 vues (v25.11) ════════ */}
+          {/* viewBox 1200×480, CSS 100%×600px → yScale=1.25, xScale=1 par vue.
+              Vue 0 : x=0-400, Vue 1 : x=400-800, Vue 2 : x=800-1200. */}
           <svg
-            viewBox="0 0 800 280"
+            viewBox="0 0 1200 480"
             preserveAspectRatio="none"
-            style={{position:"absolute", left:0, top:0, width:"100%", height:"350px", pointerEvents:"none"}}
+            style={{position:"absolute", left:0, top:0, width:"100%", height:"600px", pointerEvents:"none", zIndex:3}}
           >
-            {/* Couche 1 : ASPHALTE (gris foncé épais) — donne le visuel "route" */}
-            <g stroke="#1a2538" strokeWidth="9" fill="none" strokeLinecap="round" opacity=".95">
-              {/* VUE 1 — lane droite du bac + segment au-dessus du bac */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-              {/* VUE 2 — 2 lanes horizontales + 2 routes verticales de colonne */}
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-            </g>
-            {/* Couche 2 : MARQUAGE CENTRAL pointillé jaune (signe universel "route") */}
-            <g stroke="#F5D888" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 6" opacity=".75">
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_TOP} L ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.LANE_BOT} L ${WORLD.V1_V2} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.DUMP_X_RIGHT} ${WORLD.DUMP_Y} L ${WORLD.DUMP_X} ${WORLD.DUMP_Y}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_TOP} L 795 ${WORLD.LANE_TOP}`}/>
-              <path d={`M ${WORLD.V1_V2} ${WORLD.LANE_BOT} L 795 ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 175} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 175} ${WORLD.LANE_BOT}`}/>
-              <path d={`M ${WORLD.V1_V2 + 345} ${WORLD.LANE_TOP} L ${WORLD.V1_V2 + 345} ${WORLD.LANE_BOT}`}/>
-            </g>
+            {(() => {
+              const { V1_V2, L_EDGE, R_EDGE, W, LANE_TOP, GNV_LANE, DUMP_X, DUMP_X_RIGHT, DUMP_Y,
+                      BOT_TOP_Y, BOT_BOT_Y, GRDF_PIPE_Y, GNV_S, V0_V1 } = WORLD;
+              return (
+                <>
+                  {/* ── Couche 1 : ASPHALTE ── */}
+                  <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square">
+                    {/* Route TOP haut Vue 1 : transit bac */}
+                    <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
+                    <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
+                    <path d={`M ${DUMP_X_RIGHT} ${DUMP_Y} L ${DUMP_X} ${DUMP_Y}`}/>
+                    {/* Route TOP Vue 2 : boucle gisements */}
+                    <path d={`M ${V1_V2} ${LANE_TOP} L ${W} ${LANE_TOP}`}/>
+                    <path d={`M ${V1_V2} ${GNV_LANE} L ${W} ${GNV_LANE}`}/>
+                    <path d={`M ${V1_V2+175} ${LANE_TOP} L ${V1_V2+175} ${GNV_LANE}`}/>
+                    <path d={`M ${V1_V2+345} ${LANE_TOP} L ${V1_V2+345} ${GNV_LANE}`}/>
+                    {/* Bande latérale droite Vue 1 (= bord gauche Vue 2) — s'étend sur toute la hauteur */}
+                    <path d={`M ${V1_V2} 0 L ${V1_V2} ${BOT_BOT_Y+10}`} strokeWidth="30"/>
+                    {/* Bande droite Vue 2 */}
+                    <path d={`M ${W} 0 L ${W} ${BOT_TOP_Y+10}`} strokeWidth="30"/>
+                    {/* ── Circuit bas Vue 2 (rectangulaire) ── */}
+                    {/* Bord droit Vue 2 descend de GNV_LANE à BOT_TOP_Y */}
+                    <path d={`M ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y}`}/>
+                    {/* Route haut du bas : R_EDGE → L_EDGE (tracteurs et lambda vont vers GNV) */}
+                    <path d={`M ${L_EDGE} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
+                    {/* Route bas du bas : L_EDGE → R_EDGE (retour après GNV) */}
+                    <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
+                    {/* Bord gauche Vue 2 : remontée tracteurs (BOT_BOT_Y → GNV_LANE) */}
+                    <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${L_EDGE} ${GNV_LANE}`}/>
+                    {/* ── Circuit C-loop Vue 1 bas (GNV station) ── */}
+                    {/* Route haut du bas : V1_V2 → GNV station */}
+                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
+                    {/* Route bas du bas : GNV station → V1_V2 */}
+                    <path d={`M ${GNV_S[0]} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    {/* Bord gauche C-loop : relie haut et bas au niveau GNV station */}
+                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${GNV_S[0]} ${BOT_BOT_Y}`}/>
+                  </g>
+                  {/* ── Couche 2 : BORDS roses ── */}
+                  <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
+                    <path d={`M ${V1_V2} ${LANE_TOP-5} L ${DUMP_X_RIGHT} ${LANE_TOP-5}`}/>
+                    <path d={`M ${V1_V2} ${LANE_TOP+5} L ${DUMP_X_RIGHT} ${LANE_TOP+5}`}/>
+                    <path d={`M ${V1_V2} ${LANE_TOP-5} L ${W} ${LANE_TOP-5}`}/>
+                    <path d={`M ${V1_V2} ${LANE_TOP+5} L ${W} ${LANE_TOP+5}`}/>
+                    <path d={`M ${V1_V2} ${GNV_LANE-5} L ${W} ${GNV_LANE-5}`}/>
+                    <path d={`M ${V1_V2} ${GNV_LANE+5} L ${W} ${GNV_LANE+5}`}/>
+                    <path d={`M ${L_EDGE} 0 L ${L_EDGE} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${R_EDGE} 0 L ${R_EDGE} ${BOT_TOP_Y+5}`}/>
+                    {/* Bords circuit bas Vue 2 */}
+                    <path d={`M ${L_EDGE} ${BOT_TOP_Y-5} L ${R_EDGE} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${L_EDGE} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
+                  </g>
+                  {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
+                  <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
+                    <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
+                    <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
+                    <path d={`M ${DUMP_X_RIGHT} ${DUMP_Y} L ${DUMP_X} ${DUMP_Y}`}/>
+                    <path d={`M ${V1_V2} ${LANE_TOP} L ${W} ${LANE_TOP}`}/>
+                    <path d={`M ${V1_V2} ${GNV_LANE} L ${W} ${GNV_LANE}`}/>
+                    <path d={`M ${V1_V2+175} ${LANE_TOP} L ${V1_V2+175} ${GNV_LANE}`}/>
+                    <path d={`M ${V1_V2+345} ${LANE_TOP} L ${V1_V2+345} ${GNV_LANE}`}/>
+                    {/* V0_V1 marquage supprimé — Vue 0 est une vue dédiée sans route */}
+                    <path d={`M ${V1_V2} 0 L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    {/* Marquage circuit bas Vue 2 */}
+                    <path d={`M ${L_EDGE} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
+                    <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
+                    {/* Marquage C-loop Vue 1 bas */}
+                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
+                    <path d={`M ${GNV_S[0]} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
+                  </g>
 
-            {/* Cadres de parcelle (subtils, affichés en arrière-plan) */}
-            <g fill="rgba(232,160,32,.04)" stroke="rgba(232,160,32,.18)" strokeWidth="1" strokeDasharray="2 3">
-              {PARCELLES.map(p => {
-                const padX = 30, padY = 18;
-                return (
-                  <rect key={`parc-${p.level}`}
-                    x={WORLD.V1_V2 + p.x - padX}
-                    y={p.y - padY}
-                    width={p.w + padX + 12}
-                    height={padY * 2}
-                    rx={8}
+                  {/* ── Cadres de parcelle ── */}
+                  <g fill="rgba(232,160,32,.04)" stroke="rgba(232,160,32,.18)" strokeWidth="1" strokeDasharray="2 3">
+                    {PARCELLES.map(p => {
+                      const padX = 30, padY = 18;
+                      return (
+                        <rect key={`parc-${p.level}`}
+                          x={V1_V2 + p.x - padX}
+                          y={p.y - padY}
+                          width={p.w + padX + 12}
+                          height={padY * 2}
+                          rx={8}
+                        />
+                      );
+                    })}
+                  </g>
+
+                  {/* ── TRACTEURS ── */}
+                  <TractorWorld
+                    fillRate={fillRate}
+                    owned={owned}
+                    tractorCount={tractorCount}
+                    speedBoost={tractorSpeedBoost}
+                    tractorTrailers={tractorTrailers}
+                    tractorGnvArr={tractorGnvArr}
+                    pinnedZones={pinnedZones}
+                    zoneState={zoneState}
+                    localStock={localStock}
+                    setLocalStock={setLocalStock}
+                    setStock={setStock}
+                    stockMaxRef={stockMaxRef}
+                    overlayRef={tractorOverlayRef}
+                    stockRef={stockRef}
+                    stockYieldRef={stockYieldRef}
+                    setStockYield={setStockYield}
+                    setStockComposition={setStockComposition}
+                    gnvStations={gnvStations}
                   />
-                );
-              })}
-            </g>
 
-            {/* ── TRACTEURS ── */}
-            <TractorWorld
-              fillRate={fillRate}
-              owned={owned}
-              tractorCount={tractorCount}
-              speedBoost={tractorSpeedBoost}
-              tractorTrailers={tractorTrailers}
-              pinnedZones={pinnedZones}
-              zoneState={zoneState}
-              localStock={localStock}
-              setLocalStock={setLocalStock}
-              setStock={setStock}
-              stockMaxRef={stockMaxRef}
-              overlayRef={tractorOverlayRef}
-              stockRef={stockRef}
-              stockYieldRef={stockYieldRef}
-              setStockYield={setStockYield}
-              setStockComposition={setStockComposition}
-            />
+                  {/* ── Zone GNV + GRDF (section basse, Vue 1 + Vue 2) ── */}
+                  {injected && (() => {
+                    return (
+                      <>
+                        {/* Label réseau aval */}
+                        <text x={V1_V2+12} y={BOT_TOP_Y-10} fontSize="6" fill="rgba(74,158,219,.55)"
+                          fontWeight="700" letterSpacing=".06em">DISTRIBUTION RÉSEAU AVAL GRDF</text>
+
+                        {/* ── STATIONS GNV — dans Vue 1 bas, sur le C-loop ── */}
+                        {GNV_S.map((sx, i) => {
+                          const active = i < gnvStations;
+                          return (
+                            <g key={i} transform={`translate(${sx},${BOT_TOP_Y+8})`}>
+                              <line x1="0" y1="0" x2="0" y2="8"
+                                stroke={active ? "rgba(74,219,148,.7)" : "rgba(255,255,255,.08)"}
+                                strokeWidth="1.5"/>
+                              <rect x="-18" y="8" width="36" height="26" rx="5"
+                                fill={active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)"}
+                                stroke={active ? "rgba(74,219,148,.45)" : "rgba(255,255,255,.1)"}
+                                strokeWidth="1"/>
+                              <text x="0" y="24" textAnchor="middle" fontSize="12">⛽</text>
+                              <text x="0" y="33" textAnchor="middle" fontSize="5" fontWeight="700"
+                                fill={active ? "#4ADB94" : "rgba(255,255,255,.2)"}>
+                                {active ? `S${i+1}` : '🔒'}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* ── PIPE GRDF — traverse Vue 1 et Vue 2 bas ── */}
+                        <rect x={V0_V1+10} y={GRDF_PIPE_Y} width={W-V0_V1-20} height="4" rx="2"
+                          fill="rgba(74,158,219,.15)" stroke="rgba(74,158,219,.4)" strokeWidth="1"/>
+                        <text x={V0_V1+15} y={GRDF_PIPE_Y+12} fontSize="5"
+                          fill="rgba(74,158,219,.55)" fontWeight="700">← Injection réseau GRDF</text>
+
+                        {/* ── BÂTIMENTS RÉSIDENTIELS Vue 2 bas (entre BOT_TOP_Y et BOT_BOT_Y) ── */}
+                        {[830,868,906,948,992,1034,1076,1116,1154].map((bx, bi) => {
+                          const h = 10 + (bi % 3) * 5;
+                          return (
+                            <g key={bi} transform={`translate(${bx},${BOT_TOP_Y+50})`}>
+                              <rect x="-7" y={0} width="14" height={h} rx="1.5"
+                                fill="rgba(11,22,35,.8)" stroke="rgba(74,158,219,.18)" strokeWidth=".7"/>
+                              <rect x="-4" y={1} width="3" height="3" rx=".5" fill="rgba(74,158,219,.22)"/>
+                              <rect x="1" y={1} width="3" height="3" rx=".5" fill="rgba(74,158,219,.22)"/>
+                            </g>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+
+                  {/* ── VÉHICULES LAMBDA (circuit bas Vue 1+Vue 2) ── */}
+                  {injected && <GnvVehicleWorld gnvStations={gnvStations} gnvSplit={gnvSplit}/>}
+                </>
+              );
+            })()}
           </svg>
 
           {/* v23.9 : Overlay HTML pour les particules de chargement (positionné
@@ -6524,7 +7440,7 @@ function DigesteurScene({
         </div>
 
         {/* ─── FLÈCHE HINT DE SWIPE ─── */}
-        {cityView === 0 && (
+        {cityView < 2 && (
           <div style={{
             position:"absolute", right:6, top:"50%", transform:"translateY(-50%)",
             fontSize:"22px", color:"#E8A020",
@@ -6533,7 +7449,7 @@ function DigesteurScene({
             filter:"drop-shadow(0 0 6px rgba(232,160,32,.5))",
           }}>›</div>
         )}
-        {cityView === 1 && (
+        {cityView > 0 && (
           <div style={{
             position:"absolute", left:6, top:"50%", transform:"translateY(-50%)",
             fontSize:"22px", color:"#E8A020",
@@ -6549,7 +7465,7 @@ function DigesteurScene({
           display:"flex", justifyContent:"center", gap:6,
           zIndex:20, pointerEvents:"none",
         }}>
-          {[0,1].map(i => (
+          {[0,1,2].map(i => (
             <div key={i}
               onClick={(e) => { e.stopPropagation(); setCityView(i); }}
               style={{
@@ -6617,9 +7533,6 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
         <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
           fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
 
-        {/* Label "Biogaz vers la cuve ↓" — positionné côté DROIT de l'extension
-            (près du digesteur #1) pour rester dans la zone visible de l'écran.
-            v25.1.13 : x=LEFT_EXT-50 au lieu de LEFT_EXT/2 (sinon coupé hors champ). */}
         <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
           fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
           fontWeight="700" letterSpacing=".3">
