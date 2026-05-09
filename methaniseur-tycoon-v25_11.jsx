@@ -7364,10 +7364,10 @@ function DigesteurScene({
                     <path d={`M ${V1_V2} ${GNV_LANE} L ${W} ${GNV_LANE}`}/>
                     <path d={`M ${V1_V2+175} ${LANE_TOP} L ${V1_V2+175} ${GNV_LANE}`}/>
                     <path d={`M ${V1_V2+345} ${LANE_TOP} L ${V1_V2+345} ${GNV_LANE}`}/>
-                    {/* Bande latérale droite Vue 1 (= bord gauche Vue 2) — s'étend sur toute la hauteur */}
-                    <path d={`M ${V1_V2} 0 L ${V1_V2} ${BOT_BOT_Y+10}`} strokeWidth="30"/>
-                    {/* Bande droite Vue 2 */}
-                    <path d={`M ${W} 0 L ${W} ${BOT_TOP_Y+10}`} strokeWidth="30"/>
+                    {/* Bande latérale droite Vue 1 (= bord gauche Vue 2) — zone monde uniquement (280 SVG = 350px CSS) */}
+                    <path d={`M ${V1_V2} 280 L ${V1_V2} ${BOT_BOT_Y+10}`} strokeWidth="30"/>
+                    {/* Bande droite Vue 2 — zone monde uniquement */}
+                    <path d={`M ${W} 280 L ${W} ${BOT_TOP_Y+10}`} strokeWidth="30"/>
                     {/* ── Circuit bas Vue 2 (rectangulaire) ── */}
                     {/* Bord droit Vue 2 descend de GNV_LANE à BOT_TOP_Y */}
                     <path d={`M ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y}`}/>
@@ -7395,14 +7395,9 @@ function DigesteurScene({
                     {/* Bords circuit bas Vue 2 */}
                     <path d={`M ${L_EDGE} ${BOT_TOP_Y-5} L ${R_EDGE} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
-                    {/* Bords C-loop Vue 1 bas — horizontaux */}
-                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y-5} L ${V1_V2} ${BOT_TOP_Y-5}`}/>
-                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y+5} L ${V1_V2} ${BOT_TOP_Y+5}`}/>
-                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
-                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y+5} L ${V1_V2} ${BOT_BOT_Y+5}`}/>
-                    {/* Bords C-loop Vue 1 bas — vertical */}
-                    <path d={`M ${GNV_C_X-5} ${BOT_TOP_Y} L ${GNV_C_X-5} ${BOT_BOT_Y}`}/>
-                    <path d={`M ${GNV_C_X+5} ${BOT_TOP_Y} L ${GNV_C_X+5} ${BOT_BOT_Y}`}/>
+                    {/* Bords C-loop Vue 1 bas — tracés en C connectés (coins sans gaps) */}
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_BOT_Y+5} L ${V1_V2} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
                   {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
                   <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
@@ -7414,14 +7409,12 @@ function DigesteurScene({
                     <path d={`M ${V1_V2+175} ${LANE_TOP} L ${V1_V2+175} ${GNV_LANE}`}/>
                     <path d={`M ${V1_V2+345} ${LANE_TOP} L ${V1_V2+345} ${GNV_LANE}`}/>
                     {/* V0_V1 marquage supprimé — Vue 0 est une vue dédiée sans route */}
-                    <path d={`M ${V1_V2} 0 L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${V1_V2} 280 L ${V1_V2} ${BOT_BOT_Y}`}/>
                     {/* Marquage circuit bas Vue 2 */}
                     <path d={`M ${L_EDGE} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
-                    {/* Marquage C-loop Vue 1 bas */}
-                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
-                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
-                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
+                    {/* Marquage C-loop Vue 1 bas — tracé en C connecté */}
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
                   </g>
 
                   {/* ── Cadres de parcelle ── */}
