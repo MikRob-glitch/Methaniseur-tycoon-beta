@@ -5641,6 +5641,11 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
               fill={active ? "#4ADB94" : "rgba(255,255,255,.2)"}>
               {active ? `S${i+1}` : '🔒'}
             </text>
+            {/* Raccordement station → réseau GRDF */}
+            {active && (
+              <line x1="0" y1="34" x2="0" y2={GRDF_PIPE_Y - (BOT_TOP_Y + 8)}
+                stroke="rgba(74,158,219,.55)" strokeWidth="1.5" strokeDasharray="3 3"/>
+            )}
           </g>
         );
       })}
@@ -7424,6 +7429,14 @@ function DigesteurScene({
                     {/* Bords circuit bas Vue 2 */}
                     <path d={`M ${L_EDGE} ${BOT_TOP_Y-5} L ${R_EDGE} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
+                    {/* Bords C-loop Vue 1 bas — horizontaux */}
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y-5} L ${V1_V2} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y+5} L ${V1_V2} ${BOT_TOP_Y+5}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y+5} L ${V1_V2} ${BOT_BOT_Y+5}`}/>
+                    {/* Bords C-loop Vue 1 bas — vertical */}
+                    <path d={`M ${GNV_C_X-5} ${BOT_TOP_Y} L ${GNV_C_X-5} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${GNV_C_X+5} ${BOT_TOP_Y} L ${GNV_C_X+5} ${BOT_BOT_Y}`}/>
                   </g>
                   {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
                   <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
@@ -7442,6 +7455,7 @@ function DigesteurScene({
                     {/* Marquage C-loop Vue 1 bas */}
                     <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
                     <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
                   </g>
 
                   {/* ── Cadres de parcelle ── */}
