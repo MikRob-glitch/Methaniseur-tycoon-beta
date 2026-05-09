@@ -4487,6 +4487,43 @@ function computeZoneProgress(zIdx, withGnv) {
   return totalL > 0 ? loadL / totalL : 0.5;
 }
 
+// Retourne la fraction de chemin à laquelle le tracteur arrive devant la station GNV
+// sur le chemin retour (segment [gnvStop, BOT_TOP_Y], index 10 dans la liste de pts).
+function computeGnvStopProgress(zIdx) {
+  const z = CITY_ZONES[zIdx];
+  const zoneX  = WORLD.V1_V2 + z.x;
+  const routeX = WORLD.V1_V2 + z.routeX;
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE, BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const gnvStop = GNV_S[0];
+  const pts = [
+    [DUMP_X,       DUMP_Y],       // 0
+    [DUMP_X_RIGHT, DUMP_Y],       // 1
+    [DUMP_X_RIGHT, LANE_TOP],     // 2
+    [routeX,       LANE_TOP],     // 3
+    [routeX,       z.y],          // 4
+    [zoneX,        z.y],          // 5 zone
+    [routeX,       z.y],          // 6
+    [routeX,       GNV_LANE],     // 7
+    [R_EDGE,       GNV_LANE],     // 8
+    [R_EDGE,       BOT_TOP_Y],    // 9
+    [gnvStop,      BOT_TOP_Y],    // 10 ← arrivée station GNV
+    [gnvStop,      BOT_BOT_Y],    // 11
+    [DUMP_X_RIGHT, BOT_BOT_Y],    // 12
+    [DUMP_X_RIGHT, GNV_LANE],     // 13
+    [DUMP_X_RIGHT, GNV_LANE],     // 14
+    [DUMP_X_RIGHT, DUMP_Y],       // 15
+    [DUMP_X,       DUMP_Y],       // 16
+  ];
+  let totalL = 0, gnvL = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i-1][0];
+    const dy = pts[i][1] - pts[i-1][1];
+    totalL += Math.sqrt(dx*dx + dy*dy);
+    if (i === 10) gnvL = totalL;
+  }
+  return totalL > 0 ? gnvL / totalL : 0.72;
+}
+
 function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTrailers, tractorGnvArr, gnvStations, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
@@ -4649,6 +4686,9 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
           t.pathD = buildMissionPath(zIdx, withGnv);
           t.progress = 0;
           t.zoneProgress = computeZoneProgress(zIdx, withGnv);
+          t.gnvStopProgress = withGnv ? computeGnvStopProgress(zIdx) : null;
+          t.gnvStopStart = null;
+          t.gnvStopDone = false;
           t.phase = 'travelOut';
           t.phaseStart = now;
           needRerender = true;
@@ -4711,6 +4751,29 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
         else if (t.phase === 'travelBack') {
           const baseDur = Math.max(1600, 5000 - fr * 200);
           const dur = baseDur * (t.gnvLoop ? 1.6 : 1) / boost;
+          const GNV_STOP_DUR = 1600; // ms d'arrêt devant la station GNV
+
+          // Arrêt à la station GNV sur le chemin retour
+          if (t.gnvLoop && t.gnvStopProgress && !t.gnvStopDone) {
+            const elapsed = now - t.phaseStart;
+            const progIfNoStop = t.zoneProgress + Math.min(1, elapsed / dur) * (1 - t.zoneProgress);
+            if (!t.gnvStopStart && progIfNoStop >= t.gnvStopProgress) {
+              t.gnvStopStart = now;
+            }
+            if (t.gnvStopStart) {
+              const paused = now - t.gnvStopStart;
+              if (paused < GNV_STOP_DUR) {
+                // Figé à la position station
+                t.progress = t.gnvStopProgress;
+                updateTractorTransform(tractorRefs.current[i], path, t.progress);
+                continue;
+              }
+              // Fin de l'arrêt : compenser la durée de pause dans phaseStart
+              t.gnvStopDone = true;
+              t.phaseStart -= GNV_STOP_DUR;
+            }
+          }
+
           const p = Math.min(1, (now - t.phaseStart) / dur);
           t.progress = t.zoneProgress + p * (1 - t.zoneProgress);
           updateTractorTransform(tractorRefs.current[i], path, t.progress);
@@ -5480,13 +5543,12 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
     if (!hasActive) { setVehicles([]); return; }
     const ms = Math.max(2200, 8000 - gnvSplit * 40 - gnvStations * 600);
     timerRef.current = setInterval(() => {
-      const direction = Math.random() < 0.5 ? 'rl' : 'lr'; // R→L ou L→R
       const type = Math.random() < 0.4 ? 'van' : 'car';
       const stIdx = Math.floor(Math.random() * gnvStations);
       const id = Date.now() + (uid2++);
-      const dur = 5200 + Math.random() * 1200;
-      setVehicles(prev => [...prev.slice(-6), { id, direction, type, stIdx, dur, startAt: performance.now() }]);
-      setTimeout(() => setVehicles(prev => prev.filter(v => v.id !== id)), dur + 200);
+      const dur = 8000 + Math.random() * 2000; // cycle complet : approche + stop + départ
+      setVehicles(prev => [...prev.slice(-5), { id, type, stIdx, dur, startAt: performance.now() }]);
+      setTimeout(() => setVehicles(prev => prev.filter(v => v.id !== id)), dur + 300);
     }, ms);
     return () => clearInterval(timerRef.current);
   }, [hasActive, gnvStations, gnvSplit]);
@@ -5503,9 +5565,11 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
     return () => cancelAnimationFrame(rafV.current);
   }, []);
 
-  // Véhicules lambda : entrent par la droite Vue 2 (R_EDGE) au niveau BOT_TOP_Y,
-  // vont jusqu'à la station GNV (GNV_S[stIdx] dans Vue 1 bas), font le C-loop,
-  // ressortent par la droite au niveau BOT_BOT_Y.
+  // Véhicules lambda : cycle complet par véhicule
+  //   Phase 0→0.38 : approche depuis R_EDGE vers stopX sur BOT_TOP_Y (sens R→L)
+  //   Phase 0.38→0.58 : arrêt à la station (ravitaillement)
+  //   Phase 0.58→1.0 : départ de stopX vers R_EDGE sur BOT_BOT_Y (sens L→R)
+  const ARRIVE = 0.38, STOP = 0.58;
   const xMax = R_EDGE;
 
   return (
@@ -5513,20 +5577,36 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
       {vehicles.map(v => {
         const elapsed = performance.now() - v.startAt;
         const p = Math.min(1, elapsed / v.dur);
-        const ease = p < 0.05 ? p / 0.05 : p > 0.95 ? (1-p)/0.05 : 1;
+        const fadeIn  = p < 0.04 ? p / 0.04 : 1;
+        const fadeOut = p > 0.96 ? (1 - p) / 0.04 : 1;
+        const opacity = Math.min(fadeIn, fadeOut);
         const stopX = GNV_S[Math.min(v.stIdx, GNV_S.length - 1)] || GNV_S[0];
-        const y = v.direction === 'rl' ? BOT_TOP_Y : BOT_BOT_Y;
-        // R→L : arrive de xMax, s'arrête à stopX (station GNV)
-        // L→R : repart de stopX vers xMax après le C-loop
-        const x = v.direction === 'rl'
-          ? xMax - p * (xMax - stopX)
-          : stopX + p * (xMax - stopX);
-        const facing = v.direction === 'rl' ? 'left' : 'right';
+
+        let x, y, facing, isRefueling = false;
+        if (p <= ARRIVE) {
+          const t = p / ARRIVE;
+          x = xMax - t * (xMax - stopX);
+          y = BOT_TOP_Y;
+          facing = 'left';
+        } else if (p <= STOP) {
+          x = stopX;
+          y = BOT_TOP_Y;
+          facing = 'left';
+          isRefueling = true;
+        } else {
+          const t = (p - STOP) / (1 - STOP);
+          x = stopX + t * (xMax - stopX);
+          y = BOT_BOT_Y;
+          facing = 'right';
+        }
+
         return (
-          <g key={v.id}
-            transform={`translate(${x - 21} ${y - 11})`}
-            opacity={ease}>
+          <g key={v.id} transform={`translate(${x - 21} ${y - 11})`} opacity={opacity}>
             <GnvCarSprite type={v.type} facing={facing}/>
+            {isRefueling && (
+              <text x="21" y="-6" textAnchor="middle" fontSize="10" fill="#4ADB94"
+                style={{animation:"bufferPulse 0.7s ease infinite"}}>⛽</text>
+            )}
           </g>
         );
       })}
@@ -7108,28 +7188,30 @@ function DigesteurScene({
               ) : (
                 <div style={{padding:"8px 12px", display:"flex", flexDirection:"column", gap:"6px", height:"100%", boxSizing:"border-box"}}>
                   <div style={{fontSize:"10px", fontWeight:700, color:"rgba(255,255,255,.6)", textTransform:"uppercase", letterSpacing:".06em"}}>⛽ Station GNV · Réseau GRDF</div>
-                  {gnvStations === 0 ? (
-                    <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", opacity:.4}}>
-                      <div style={{textAlign:"center"}}>
-                        <div style={{fontSize:"20px"}}>⛽</div>
-                        <div style={{fontSize:"9px", color:"rgba(255,255,255,.5)", marginTop:"4px"}}>Aucune station active</div>
-                      </div>
+                  <div style={{flex:1, display:"flex", flexDirection:"column", gap:"8px", justifyContent:"center", alignItems:"center"}}>
+                    <div style={{display:"flex", gap:"5px"}}>
+                      {[0,1,2].map(i => (
+                        <div key={i} style={{
+                          width:"32px", height:"6px", borderRadius:"3px",
+                          background: i < gnvStations ? "rgba(74,219,148,.55)" : "rgba(255,255,255,.07)",
+                          border:`1px solid ${i < gnvStations ? "rgba(74,219,148,.4)" : "rgba(255,255,255,.07)"}`,
+                          transition:"all .4s",
+                        }}/>
+                      ))}
                     </div>
-                  ) : (
-                    <div style={{flex:1, display:"flex", flexDirection:"column", gap:"6px", justifyContent:"center"}}>
-                      <div style={{display:"flex", gap:"6px", justifyContent:"center"}}>
-                        {[0,1,2].slice(0, gnvStations).map(si => (
-                          <div key={si} style={{background:"rgba(74,219,148,.12)", border:"1px solid rgba(74,219,148,.45)", borderRadius:"10px", padding:"8px 12px", textAlign:"center", animation:"gnvPulse 2s ease infinite"}}>
-                            <div style={{fontSize:"20px"}}>⛽</div>
-                            <div style={{fontSize:"9px", fontWeight:700, color:"#4ADB94", marginTop:"2px"}}>S{si+1}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{fontSize:"9px", color:"rgba(74,219,148,.6)", textAlign:"center"}}>
-                        {Math.round(bmPerHour*gnvSplit/100)} m³/h GNV · {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h réseau
-                      </div>
-                    </div>
-                  )}
+                    {gnvStations === 0 ? (
+                      <div style={{fontSize:"9px", color:"rgba(255,255,255,.35)"}}>Aucune station active</div>
+                    ) : (
+                      <>
+                        <div style={{fontSize:"10px", fontWeight:700, color:"#4ADB94"}}>
+                          {gnvStations} station{gnvStations > 1 ? "s" : ""} active{gnvStations > 1 ? "s" : ""}
+                        </div>
+                        <div style={{fontSize:"9px", color:"rgba(74,219,148,.6)"}}>
+                          {Math.round(bmPerHour*gnvSplit/100)} m³/h GNV · {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h réseau
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <div style={{height:"4px", borderRadius:"2px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
                     <div style={{height:"100%", borderRadius:"2px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
                   </div>
