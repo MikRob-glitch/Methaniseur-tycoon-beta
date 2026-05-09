@@ -5563,13 +5563,14 @@ function GnvCarSprite({ type, facing }) {
 }
 
 // ─── GNV VEHICLE WORLD — véhicules SVG animés dans le circuit unifié ──────────
-// Gère 2 flux : lane GNV (R→L, y=GNV_LANE) et retour (L→R, y=GNV_RET).
-// Rendu directement dans le SVG monde étendu.
+// Route en C : arrivée (R→L route haute) → arrêt station → glisse jusqu'au coude
+// (GNV_S[0]) → descente verticale → départ (L→R route basse).
+// Inclut aussi le rendu des stations GNV et du pipe GRDF animé.
 function GnvVehicleWorld({ gnvStations, gnvSplit }) {
   const [vehicles, setVehicles] = useState([]);
   const timerRef = useRef(null);
   const hasActive = gnvStations > 0 && gnvSplit > 0;
-  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, R_EDGE } = WORLD;
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, R_EDGE, GRDF_PIPE_Y, V0_V1, W } = WORLD;
   let uid2 = 0;
 
   useEffect(() => {
@@ -5580,60 +5581,118 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
       const type = Math.random() < 0.4 ? 'van' : 'car';
       const stIdx = Math.floor(Math.random() * gnvStations);
       const id = Date.now() + (uid2++);
-      const dur = 8000 + Math.random() * 2000; // cycle complet : approche + stop + départ
+      const dur = 10000 + Math.random() * 2000;
       setVehicles(prev => [...prev.slice(-5), { id, type, stIdx, dur, startAt: performance.now() }]);
       setTimeout(() => setVehicles(prev => prev.filter(v => v.id !== id)), dur + 300);
     }, ms);
     return () => clearInterval(timerRef.current);
   }, [hasActive, gnvStations, gnvSplit]);
 
-  // Animer via rAF — position interpolée selon elapsed/dur
   const [, forceRender] = useState(0);
   const rafV = useRef(null);
   useEffect(() => {
-    const loop = () => {
-      forceRender(x => x + 1);
-      rafV.current = requestAnimationFrame(loop);
-    };
+    const loop = () => { forceRender(x => x + 1); rafV.current = requestAnimationFrame(loop); };
     rafV.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafV.current);
   }, []);
 
-  // Véhicules lambda : cycle complet par véhicule
-  //   Phase 0→0.38 : approche depuis R_EDGE vers stopX sur BOT_TOP_Y (sens R→L)
-  //   Phase 0.38→0.58 : arrêt à la station (ravitaillement)
-  //   Phase 0.58→1.0 : départ de stopX vers R_EDGE sur BOT_BOT_Y (sens L→R)
-  const ARRIVE = 0.38, STOP = 0.58;
-  const xMax = R_EDGE;
+  // Phases du cycle (fractions de p)
+  const ARRIVE = 0.32;   // fin approche R→L
+  const REFUEL = 0.47;   // fin ravitaillement
+  const SLIDE  = 0.55;   // fin glissade vers coude C (GNV_S[0])
+  const DESCEND= 0.63;   // fin descente verticale
+  // 0.63→1.0 : départ L→R sur route basse
+  const xMax    = R_EDGE;
+  const cBendX  = GNV_S[0]; // x=560, coude C unique
+
+  // Stations actuellement en ravitaillement
+  const now = performance.now();
+  const refuelingSet = new Set();
+  vehicles.forEach(v => {
+    const p = Math.min(1, (now - v.startAt) / v.dur);
+    if (p > ARRIVE && p <= REFUEL) refuelingSet.add(v.stIdx);
+  });
 
   return (
     <>
+      {/* ── Stations GNV avec animation de remplissage ── */}
+      {GNV_S.map((sx, i) => {
+        const active   = i < gnvStations;
+        const refueling = active && refuelingSet.has(i);
+        return (
+          <g key={i} transform={`translate(${sx},${BOT_TOP_Y+8})`}>
+            <line x1="0" y1="0" x2="0" y2="8"
+              stroke={active ? "rgba(74,219,148,.7)" : "rgba(255,255,255,.08)"}
+              strokeWidth="1.5"/>
+            <rect x="-18" y="8" width="36" height="26" rx="5"
+              fill={active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)"}
+              stroke={active ? (refueling ? "rgba(74,219,148,.95)" : "rgba(74,219,148,.45)") : "rgba(255,255,255,.1)"}
+              strokeWidth={refueling ? 2 : 1}/>
+            {/* Flash de remplissage pendant le ravitaillement */}
+            {refueling && (
+              <rect x="-16" y="10" width="32" height="22" rx="4" fill="rgba(74,219,148,.5)">
+                <animate attributeName="opacity" values="0;0.7;0.1;0.7;0"
+                  keyTimes="0;0.3;0.5;0.8;1" dur="1.1s" repeatCount="indefinite"/>
+              </rect>
+            )}
+            <text x="0" y="24" textAnchor="middle" fontSize="12">⛽</text>
+            <text x="0" y="33" textAnchor="middle" fontSize="5" fontWeight="700"
+              fill={active ? "#4ADB94" : "rgba(255,255,255,.2)"}>
+              {active ? `S${i+1}` : '🔒'}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* ── Pipe GRDF — bulles de gaz R→L quand injection active ── */}
+      <rect x={V0_V1+10} y={GRDF_PIPE_Y} width={W-V0_V1-20} height="4" rx="2"
+        fill="rgba(74,158,219,.15)" stroke="rgba(74,158,219,.4)" strokeWidth="1"/>
+      <text x={V0_V1+15} y={GRDF_PIPE_Y+12} fontSize="5"
+        fill="rgba(74,158,219,.55)" fontWeight="700">← Injection réseau GRDF</text>
+      {[0,1,2,3,4,5].map(i => (
+        <circle key={i} cy={GRDF_PIPE_Y+2} r="1.8" fill="rgba(200,230,255,.9)">
+          <animate attributeName="cx"
+            from={W-10} to={V0_V1+10}
+            dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
+          <animate attributeName="opacity"
+            values="0;0.9;0.9;0" keyTimes="0;0.05;0.95;1"
+            dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
+        </circle>
+      ))}
+
+      {/* ── Véhicules : route en C ── */}
       {vehicles.map(v => {
-        const elapsed = performance.now() - v.startAt;
+        const elapsed = now - v.startAt;
         const p = Math.min(1, elapsed / v.dur);
         const fadeIn  = p < 0.04 ? p / 0.04 : 1;
         const fadeOut = p > 0.96 ? (1 - p) / 0.04 : 1;
         const opacity = Math.min(fadeIn, fadeOut);
         const stopX = GNV_S[Math.min(v.stIdx, GNV_S.length - 1)] || GNV_S[0];
 
-        let x, y, facing, isRefueling = false;
+        let x, y, facing;
         if (p <= ARRIVE) {
           const t = p / ARRIVE;
           x = xMax - t * (xMax - stopX);
           y = BOT_TOP_Y;
           facing = 'left';
-        } else if (p <= STOP) {
-          x = stopX;
-          y = BOT_TOP_Y;
-          facing = 'left';
-          isRefueling = true;
-        } else {
-          const t = (p - STOP) / (1 - STOP);
-          x = stopX + t * (xMax - stopX);
-          y = BOT_BOT_Y;
+        } else if (p <= REFUEL) {
+          x = stopX; y = BOT_TOP_Y; facing = 'left';
+        } else if (p <= SLIDE) {
+          const t = (p - REFUEL) / (SLIDE - REFUEL);
+          x = stopX - t * (stopX - cBendX);
+          y = BOT_TOP_Y; facing = 'left';
+        } else if (p <= DESCEND) {
+          const t = (p - SLIDE) / (DESCEND - SLIDE);
+          x = cBendX;
+          y = BOT_TOP_Y + t * (BOT_BOT_Y - BOT_TOP_Y);
           facing = 'right';
+        } else {
+          const t = (p - DESCEND) / (1 - DESCEND);
+          x = cBendX + t * (xMax - cBendX);
+          y = BOT_BOT_Y; facing = 'right';
         }
 
+        const isRefueling = p > ARRIVE && p <= REFUEL;
         return (
           <g key={v.id} transform={`translate(${x - 21} ${y - 11})`} opacity={opacity}>
             <GnvCarSprite type={v.type} facing={facing}/>
@@ -7219,38 +7278,7 @@ function DigesteurScene({
                     <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Disponible après raccordement</div>
                   </div>
                 </div>
-              ) : (
-                <div style={{padding:"8px 12px", display:"flex", flexDirection:"column", gap:"6px", height:"100%", boxSizing:"border-box"}}>
-                  <div style={{fontSize:"10px", fontWeight:700, color:"rgba(255,255,255,.6)", textTransform:"uppercase", letterSpacing:".06em"}}>⛽ Station GNV · Réseau GRDF</div>
-                  <div style={{flex:1, display:"flex", flexDirection:"column", gap:"8px", justifyContent:"center", alignItems:"center"}}>
-                    <div style={{display:"flex", gap:"5px"}}>
-                      {[0,1,2].map(i => (
-                        <div key={i} style={{
-                          width:"32px", height:"6px", borderRadius:"3px",
-                          background: i < gnvStations ? "rgba(74,219,148,.55)" : "rgba(255,255,255,.07)",
-                          border:`1px solid ${i < gnvStations ? "rgba(74,219,148,.4)" : "rgba(255,255,255,.07)"}`,
-                          transition:"all .4s",
-                        }}/>
-                      ))}
-                    </div>
-                    {gnvStations === 0 ? (
-                      <div style={{fontSize:"9px", color:"rgba(255,255,255,.35)"}}>Aucune station active</div>
-                    ) : (
-                      <>
-                        <div style={{fontSize:"10px", fontWeight:700, color:"#4ADB94"}}>
-                          {gnvStations} station{gnvStations > 1 ? "s" : ""} active{gnvStations > 1 ? "s" : ""}
-                        </div>
-                        <div style={{fontSize:"9px", color:"rgba(74,219,148,.6)"}}>
-                          {Math.round(bmPerHour*gnvSplit/100)} m³/h GNV · {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h réseau
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div style={{height:"4px", borderRadius:"2px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
-                    <div style={{height:"100%", borderRadius:"2px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation: isDigesting ? "gasFlow 1.4s linear infinite" : "none"}}/>
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           <Pipe from="feeder.right" to="bac.bottom-left" mode="L-up"
             color="#E8A020" flowColor="#F5BE50"
@@ -7463,33 +7491,6 @@ function DigesteurScene({
                         {/* Label réseau aval */}
                         <text x={V1_V2+12} y={BOT_TOP_Y-10} fontSize="6" fill="rgba(74,158,219,.55)"
                           fontWeight="700" letterSpacing=".06em">DISTRIBUTION RÉSEAU AVAL GRDF</text>
-
-                        {/* ── STATIONS GNV — dans Vue 1 bas, sur le C-loop ── */}
-                        {GNV_S.map((sx, i) => {
-                          const active = i < gnvStations;
-                          return (
-                            <g key={i} transform={`translate(${sx},${BOT_TOP_Y+8})`}>
-                              <line x1="0" y1="0" x2="0" y2="8"
-                                stroke={active ? "rgba(74,219,148,.7)" : "rgba(255,255,255,.08)"}
-                                strokeWidth="1.5"/>
-                              <rect x="-18" y="8" width="36" height="26" rx="5"
-                                fill={active ? "rgba(74,219,148,.12)" : "rgba(255,255,255,.04)"}
-                                stroke={active ? "rgba(74,219,148,.45)" : "rgba(255,255,255,.1)"}
-                                strokeWidth="1"/>
-                              <text x="0" y="24" textAnchor="middle" fontSize="12">⛽</text>
-                              <text x="0" y="33" textAnchor="middle" fontSize="5" fontWeight="700"
-                                fill={active ? "#4ADB94" : "rgba(255,255,255,.2)"}>
-                                {active ? `S${i+1}` : '🔒'}
-                              </text>
-                            </g>
-                          );
-                        })}
-
-                        {/* ── PIPE GRDF — traverse Vue 1 et Vue 2 bas ── */}
-                        <rect x={V0_V1+10} y={GRDF_PIPE_Y} width={W-V0_V1-20} height="4" rx="2"
-                          fill="rgba(74,158,219,.15)" stroke="rgba(74,158,219,.4)" strokeWidth="1"/>
-                        <text x={V0_V1+15} y={GRDF_PIPE_Y+12} fontSize="5"
-                          fill="rgba(74,158,219,.55)" fontWeight="700">← Injection réseau GRDF</text>
 
                         {/* ── BÂTIMENTS RÉSIDENTIELS Vue 2 bas (entre BOT_TOP_Y et BOT_BOT_Y) ── */}
                         {[830,868,906,948,992,1034,1076,1116,1154].map((bx, bi) => {
