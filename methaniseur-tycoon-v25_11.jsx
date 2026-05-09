@@ -4403,6 +4403,7 @@ const WORLD = {
   V1_V2:        800,           // frontière Vue 1 / Vue 2 (400+400)
   GNV_LANE:     255,           // transition TOP→BOTTOM (y, inchangé)
   GNV_S:        [560, 620, 680], // x stations GNV dans Vue 1 bas (C-loop)
+  GNV_C_X:      455,           // x coude C (gauche des stations, dans Vue 1)
   R_EDGE:       1190,          // bord droit Vue 2
   L_EDGE:       815,           // bord gauche Vue 2 = DUMP_X_RIGHT
   BOT_TOP_Y:    300,           // y "haut du bas" — route tracteurs/lambda vers GNV
@@ -5536,7 +5537,7 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
   const [vehicles, setVehicles] = useState([]);
   const timerRef = useRef(null);
   const hasActive = gnvStations > 0 && gnvSplit > 0;
-  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, R_EDGE, GRDF_PIPE_Y, V0_V1, W } = WORLD;
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, GNV_C_X, R_EDGE, GRDF_PIPE_Y, V0_V1, W } = WORLD;
   let uid2 = 0;
 
   useEffect(() => {
@@ -5569,7 +5570,7 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
   const DESCEND= 0.63;   // fin descente verticale
   // 0.63→1.0 : départ L→R sur route basse
   const xMax    = R_EDGE;
-  const cBendX  = GNV_S[0]; // x=560, coude C unique
+  const cBendX  = GNV_C_X;  // coude C à gauche des stations
 
   // Stations actuellement en ravitaillement
   const now = performance.now();
@@ -5618,7 +5619,7 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
       {[0,1,2,3,4,5].map(i => (
         <circle key={i} cy={GRDF_PIPE_Y+2} r="1.8" fill="rgba(200,230,255,.9)">
           <animate attributeName="cx"
-            from={W-10} to={V0_V1+10}
+            from={V0_V1+10} to={W-10}
             dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
           <animate attributeName="opacity"
             values="0;0.9;0.9;0" keyTimes="0;0.05;0.95;1"
@@ -7344,7 +7345,7 @@ function DigesteurScene({
           >
             {(() => {
               const { V1_V2, L_EDGE, R_EDGE, W, LANE_TOP, GNV_LANE, DUMP_X, DUMP_X_RIGHT, DUMP_Y,
-                      BOT_TOP_Y, BOT_BOT_Y, GRDF_PIPE_Y, GNV_S, V0_V1 } = WORLD;
+                      BOT_TOP_Y, BOT_BOT_Y, GRDF_PIPE_Y, GNV_S, GNV_C_X, V0_V1 } = WORLD;
               return (
                 <>
                   {/* ── Couche 1 : ASPHALTE ── */}
@@ -7371,13 +7372,10 @@ function DigesteurScene({
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
                     {/* Bord gauche Vue 2 : remontée tracteurs (BOT_BOT_Y → GNV_LANE) */}
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${L_EDGE} ${GNV_LANE}`}/>
-                    {/* ── Circuit C-loop Vue 1 bas (GNV station) ── */}
-                    {/* Route haut du bas : V1_V2 → GNV station */}
-                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
-                    {/* Route bas du bas : GNV station → V1_V2 */}
-                    <path d={`M ${GNV_S[0]} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
-                    {/* Bord gauche C-loop : relie haut et bas au niveau GNV station */}
-                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${GNV_S[0]} ${BOT_BOT_Y}`}/>
+                    {/* ── Circuit C-loop Vue 1 bas (coude à GNV_C_X) ── */}
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
                   </g>
                   {/* ── Couche 2 : BORDS roses ── */}
                   <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
@@ -7408,8 +7406,8 @@ function DigesteurScene({
                     <path d={`M ${L_EDGE} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
                     {/* Marquage C-loop Vue 1 bas */}
-                    <path d={`M ${GNV_S[0]} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
-                    <path d={`M ${GNV_S[0]} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${V1_V2} ${BOT_TOP_Y}`}/>
+                    <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
                   </g>
 
                   {/* ── Cadres de parcelle ── */}
