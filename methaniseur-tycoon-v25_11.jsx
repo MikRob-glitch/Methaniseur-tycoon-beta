@@ -7384,7 +7384,8 @@ function DigesteurScene({
                   <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
                     {/* Bords gisement loop — outer continus, inner segmentés aux T-junctions */}
                     <path d={`M ${V1_V2} ${LANE_TOP-5} L ${W} ${LANE_TOP-5}`}/>
-                    <path d={`M ${V1_V2} ${LANE_TOP+5} L ${V1_V2+170} ${LANE_TOP+5}`}/>
+                    <path d={`M ${V1_V2} ${LANE_TOP+5} L ${L_EDGE-5} ${LANE_TOP+5}`}/>
+                    <path d={`M ${L_EDGE+5} ${LANE_TOP+5} L ${V1_V2+170} ${LANE_TOP+5}`}/>
                     <path d={`M ${V1_V2+180} ${LANE_TOP+5} L ${V1_V2+340} ${LANE_TOP+5}`}/>
                     <path d={`M ${V1_V2+350} ${LANE_TOP+5} L ${W} ${LANE_TOP+5}`}/>
                     <path d={`M ${V1_V2} ${GNV_LANE-5} L ${L_EDGE-5} ${GNV_LANE-5}`}/>
@@ -7405,8 +7406,9 @@ function DigesteurScene({
                     <path d={`M ${V1_V2} ${BOT_BOT_Y+5} L ${R_EDGE} ${BOT_BOT_Y+5}`}/>
                     <path d={`M ${V1_V2} ${BOT_BOT_Y-5} L ${L_EDGE-5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${L_EDGE+5} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
-                    <path d={`M ${L_EDGE-5} ${GNV_LANE-5} L ${L_EDGE-5} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${L_EDGE-5} ${LANE_TOP+5} L ${L_EDGE-5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE-5} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${L_EDGE+5} ${LANE_TOP+5} L ${L_EDGE+5} ${GNV_LANE-5}`}/>
                     <path d={`M ${L_EDGE+5} ${GNV_LANE+5} L ${L_EDGE+5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${L_EDGE+5} ${BOT_BOT_Y-5}`}/>
                     {/* Bords C-loop Vue 1 bas — tracés en C connectés (coins sans gaps) */}
