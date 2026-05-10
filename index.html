@@ -7401,9 +7401,8 @@ function DigesteurScene({
                     {/* Bande droite Vue 2 â€” zone monde uniquement */}
                     <path d={`M ${W} 280 L ${W} ${BOT_TOP_Y+10}`} strokeWidth="30"/>
                     {/* â”€â”€ Circuit bas Vue 2 â€” routes Ã©tendues Ã  V1_V2 pour rejoindre C-loop â”€â”€ */}
-                    {/* Bord droit Vue 2 descend de GNV_LANE Ã  BOT_BOT_Y (circuit complet) */}
+                    {/* Bord droit Vue 2 descend de GNV_LANE Ã  BOT_TOP_Y (virage tracteurs) */}
                     <path d={`M ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y}`}/>
-                    <path d={`M ${R_EDGE} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
                     {/* Route haut du bas : Ã©tendue de V1_V2 Ã  R_EDGE */}
                     <path d={`M ${V1_V2} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
                     {/* Route bas du bas : Ã©tendue de V1_V2 Ã  R_EDGE */}
@@ -7428,23 +7427,25 @@ function DigesteurScene({
                     <path d={`M ${V1_V2+180} ${GNV_LANE-5} L ${V1_V2+340} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2+350} ${GNV_LANE-5} L ${R_EDGE-5} ${GNV_LANE-5}`}/>
                     <path d={`M ${R_EDGE+5} ${GNV_LANE-5} L ${W} ${GNV_LANE-5}`}/>
-                    <path d={`M ${V1_V2} ${GNV_LANE+5} L ${W} ${GNV_LANE+5}`}/>
+                    <path d={`M ${V1_V2} ${GNV_LANE+5} L ${R_EDGE-5} ${GNV_LANE+5}`}/>
+                    <path d={`M ${R_EDGE+5} ${GNV_LANE+5} L ${W} ${GNV_LANE+5}`}/>
                     {/* Bords verticaux gisement loop â€” entre inner borders uniquement */}
                     <path d={`M ${V1_V2+170} ${LANE_TOP+5} L ${V1_V2+170} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2+180} ${LANE_TOP+5} L ${V1_V2+180} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2+340} ${LANE_TOP+5} L ${V1_V2+340} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2+350} ${LANE_TOP+5} L ${V1_V2+350} ${GNV_LANE-5}`}/>
-                    {/* Circuit bas Vue 2 â€” L_EDGE segmentÃ© Ã  BOT_TOP_Y, T propre Ã  GNV_LANE et R_EDGE */}
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${R_EDGE+5} ${BOT_TOP_Y-5} L ${R_EDGE+5} ${GNV_LANE-5}`}/>
+                    {/* Circuit bas Vue 2 â€” T-junctions propres Ã  R_EDGE (pas de virage fermant la route) */}
+                    {/* BOT_TOP_Y : bords horizontaux ouverts, pas de virage Ã  R_EDGE */}
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${R_EDGE+5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_TOP_Y+5}`}/>
-                    <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE-5} ${BOT_TOP_Y+5} L ${R_EDGE-5} ${GNV_LANE+5}`}/>
-                    {/* Bords verticaux R_EDGE : BOT_TOP_Y â†’ BOT_BOT_Y (fermeture droite circuit) */}
-                    <path d={`M ${R_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE+5} ${BOT_BOT_Y+5}`}/>
-                    <path d={`M ${R_EDGE-5} ${BOT_TOP_Y-5} L ${R_EDGE-5} ${BOT_BOT_Y-5}`}/>
-                    {/* BOT_BOT_Y outer/inner s'arrÃªtent aux T-junctions R_EDGEÂ±5 */}
-                    <path d={`M ${V1_V2} ${BOT_BOT_Y+5} L ${R_EDGE+5} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE-5} ${BOT_TOP_Y+5}`}/>
+                    {/* Bords verticaux R_EDGE (GNV_LANEâ†’BOT_TOP_Y) â€” T-junction style, entre inner edges */}
+                    <path d={`M ${R_EDGE+5} ${GNV_LANE+5} L ${R_EDGE+5} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${R_EDGE-5} ${GNV_LANE+5} L ${R_EDGE-5} ${BOT_TOP_Y+5}`}/>
+                    {/* BOT_BOT_Y : bords horizontaux ouverts */}
+                    <path d={`M ${V1_V2} ${BOT_BOT_Y+5} L ${R_EDGE} ${BOT_BOT_Y+5}`}/>
                     <path d={`M ${V1_V2} ${BOT_BOT_Y-5} L ${L_EDGE-5} ${BOT_BOT_Y-5}`}/>
-                    <path d={`M ${L_EDGE+5} ${BOT_BOT_Y-5} L ${R_EDGE-5} ${BOT_BOT_Y-5}`}/>
+                    <path d={`M ${L_EDGE+5} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${L_EDGE-5} ${LANE_TOP+5} L ${L_EDGE-5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE-5} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_BOT_Y+5}`}/>
                     <path d={`M ${L_EDGE+5} ${LANE_TOP+5} L ${L_EDGE+5} ${GNV_LANE-5}`}/>
@@ -7466,7 +7467,7 @@ function DigesteurScene({
                     {/* Marquage circuit bas Vue 2 */}
                     <path d={`M ${V1_V2} ${BOT_TOP_Y} L ${R_EDGE} ${BOT_TOP_Y}`}/>
                     <path d={`M ${V1_V2} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y}`}/>
-                    <path d={`M ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_BOT_Y}`}/>
+                    <path d={`M ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y}`}/>
                     <path d={`M ${L_EDGE} ${BOT_BOT_Y} L ${L_EDGE} ${GNV_LANE}`}/>
                     {/* Marquage C-loop Vue 1 bas â€” tracÃ© en C connectÃ© */}
                     <path d={`M ${V1_V2} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
