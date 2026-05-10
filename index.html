@@ -6919,8 +6919,8 @@ function DigesteurScene({
         >
           {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
-            {/* ─── CHAÎNE : pleine hauteur ─── */}
-            <div style={{flex:1, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
+            {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
+            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
             </div>
           </div>
@@ -7564,12 +7564,12 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
         style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
 
-        {/* Branches vers chaque digesteur (v25.1.23 : éteintes si !isDigesting) */}
+        {/* Branches vers chaque digesteur — +4px pour fermer le gap flex et rejoindre le pipe */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
-            <rect x={px-4} y={cY} width={8} height={svgH-cY} rx={3}
+            <rect x={px-4} y={cY} width={8} height={svgH-cY+4} rx={3}
               fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
-            <rect x={px-2} y={cY+2} width={4} height={svgH-cY-4} rx={2}
+            <rect x={px-2} y={cY+2} width={4} height={svgH-cY} rx={2}
               fill={isDigesting ? "rgba(102,238,136,.4)" : "rgba(74,158,219,.15)"}
               style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
           </React.Fragment>
@@ -7682,10 +7682,10 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
   const TW   = total===1 ? 80 : total===2 ? 66 : 52;   // largeur cuve
   const DW   = total===1 ? 88 : total===2 ? 74 : 60;   // largeur dôme
   const TH   = total===1 ? 76 : total===2 ? 68 : 58;   // hauteur cuve
-  const PH   = total===1 ? 50 : total===2 ? 38 : 28;   // pipe collecteur FIXE — ancré au sommet de la cuve
-  const DMIN = total===1 ? 20 : total===2 ? 16 : 13;   // dôme vide
-  const DMAX = total===1 ? 52 : total===2 ? 46 : 40;   // dôme plein
-  const TOTAL_ABOVE = PH + DMAX;  // hauteur conteneur pipe+dôme — constante
+  const PH   = total===1 ? 22 : total===2 ? 18 : 15;   // stub visible au-dessus du dôme plein
+  const DMIN = total===1 ? 24 : total===2 ? 20 : 16;   // dôme vide
+  const DMAX = total===1 ? 66 : total===2 ? 56 : 44;   // dôme plein
+  const TOTAL_ABOVE = PH + DMAX;  // hauteur conteneur pipe+dôme — constante (pipe pleine hauteur)
   const domeH  = Math.round(DMIN + chargePct * (DMAX - DMIN));
   const liqH   = Math.round(chargePct * (TH - 4));
   const cx     = TW / 2;
@@ -7705,49 +7705,48 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
           Dôme : ancré en bas, monte avec chargePct */}
       <div style={{position:"relative", width:`${DW}px`, height:`${TOTAL_ABOVE}px`}}>
 
-        {/* Dôme — ancré en bas du conteneur, gonfle vers le haut */}
-        <div style={{position:"absolute", bottom:0, left:0, right:0, width:`${DW}px`}}>
+        {/* Dôme — ancré en bas, gonfle vers le haut, derrière le pipe */}
+        <div style={{
+          position:"absolute", bottom:0, left:0, right:0,
+          width:`${DW}px`, height:`${domeH}px`,
+          borderRadius:"50% 50% 0 0 / 100% 100% 0 0",
+          background: isDigesting
+            ? "linear-gradient(180deg,#D8F0B0 0%,#7CC84C 42%,#2E7020 100%)"
+            : "linear-gradient(180deg,#5A7A50 0%,#2A4A22 60%,#162A10 100%)",
+          border:`3px solid ${isDigesting?"#9ADA60":"#3A5A30"}`,
+          borderBottom:"none",
+          overflow:"hidden",
+          boxShadow: isDigesting
+            ? `0 0 ${14+chargePct*22}px rgba(100,220,60,${.4+chargePct*.3}),0 -3px 16px rgba(100,220,60,.2)`
+            : "none",
+          transition:"height .35s cubic-bezier(.22,.68,0,1.2),box-shadow .6s,background .8s,border-color .8s",
+          animation: isDigesting ? "domePulse 3.5s ease-in-out infinite" : "none",
+          zIndex:1,
+        }}>
+          {/* Reflet gauche */}
           <div style={{
-            width:`${DW}px`,
-            height:`${domeH}px`,
-            borderRadius:"50% 50% 0 0 / 100% 100% 0 0",
-            background: isDigesting
-              ? "linear-gradient(180deg,#D8F0B0 0%,#7CC84C 42%,#2E7020 100%)"
-              : "linear-gradient(180deg,#5A7A50 0%,#2A4A22 60%,#162A10 100%)",
-            border:`3px solid ${isDigesting?"#9ADA60":"#3A5A30"}`,
-            borderBottom:"none",
-            position:"relative",
-            overflow:"hidden",
-            boxShadow: isDigesting
-              ? `0 0 ${14+chargePct*22}px rgba(100,220,60,${.4+chargePct*.3}),0 -3px 16px rgba(100,220,60,.2)`
-              : "none",
-            transition:"height .35s cubic-bezier(.22,.68,0,1.2),box-shadow .6s,background .8s,border-color .8s",
-            animation: isDigesting ? "domePulse 3.5s ease-in-out infinite" : "none",
-            flexShrink:0,
-          }}>
-            {/* Reflet gauche */}
-            <div style={{
-              position:"absolute", top:"10%", left:"12%",
-              width:"18%", height:"62%",
-              background:"rgba(255,255,255,.22)",
-              borderRadius:"50%", filter:"blur(4px)",
+            position:"absolute", top:"10%", left:"12%",
+            width:"18%", height:"62%",
+            background:"rgba(255,255,255,.22)",
+            borderRadius:"50%", filter:"blur(4px)",
+          }}/>
+          {/* Sangles */}
+          {[30,63].map((top,i) => (
+            <div key={i} style={{
+              position:"absolute", left:0, right:0, top:`${top}%`,
+              height:"3px", background:"rgba(15,50,10,.45)", borderRadius:"2px",
             }}/>
-            {/* Sangles */}
-            {[30,63].map((top,i) => (
-              <div key={i} style={{
-                position:"absolute", left:0, right:0, top:`${top}%`,
-                height:"3px", background:"rgba(15,50,10,.45)", borderRadius:"2px",
-              }}/>
-            ))}
-          </div>
+          ))}
         </div>
 
-        {/* Pipe collecteur — FIXE en haut, hauteur PH constante */}
+        {/* Pipe collecteur — pleine hauteur TOTAL_ABOVE, devant le dôme (zIndex:2)
+            Descend du manifold jusqu'au haut de la cuve ; le dôme gonfle autour */}
         <div style={{
           position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
-          width:"8px", height:`${PH}px`,
+          width:"8px", height:`${TOTAL_ABOVE}px`,
           background:"#1E3848", border:"1px solid rgba(74,158,219,.32)",
           borderRadius:"4px 4px 0 0", overflow:"hidden",
+          zIndex:2,
         }}>
           {isDigesting && (
             <div style={{
