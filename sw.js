@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-25';   // v25.11.20 — Vue 0 : retrait barre "← Biogaz collecteur digesteur" et badge statut injection
+const CACHE_NAME = 'methaniseur-tycoon-v25-26';   // v25.11.21 — Vue 0 : retrait titre "🔌 Chaîne d'injection GRDF"
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
