@@ -7420,7 +7420,8 @@ function DigesteurScene({
                     <path d={`M ${V1_V2+350} ${LANE_TOP+5} L ${V1_V2+350} ${GNV_LANE-5}`}/>
                     {/* Circuit bas Vue 2 — T-junctions propres à R_EDGE (pas de virage fermant la route) */}
                     {/* BOT_TOP_Y : bords horizontaux ouverts, pas de virage à R_EDGE */}
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${R_EDGE-5} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${L_EDGE-5} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${L_EDGE+5} ${BOT_TOP_Y-5} L ${R_EDGE-5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_TOP_Y+5}`}/>
                     <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE} ${BOT_TOP_Y+5}`}/>
                     {/* Bords verticaux R_EDGE (GNV_LANE→BOT_TOP_Y) — T-junction style, entre inner edges */}
@@ -7437,12 +7438,10 @@ function DigesteurScene({
                     <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${L_EDGE+5} ${BOT_BOT_Y-5}`}/>
                     {/* Bords C-loop Vue 1 bas — T-junctions en bas (pas de coin fermant BOT_BOT_Y) */}
                     {/* Outer : horizontal haut + vertical, puis BOT_BOT_Y outer séparé depuis inner face */}
-                    {/* + crossroads à GNV_C_X/BOT_TOP_Y : gaps dans les deux axes */}
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_TOP_Y-5}`}/>
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X-5} ${BOT_TOP_Y+5}`}/>
-                    <path d={`M ${GNV_C_X-5} ${BOT_TOP_Y+5} L ${GNV_C_X-5} ${BOT_BOT_Y+5}`}/>
-                    <path d={`M ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_BOT_Y+5}`}/>
                     <path d={`M ${GNV_C_X-5} ${BOT_BOT_Y+5} L ${V1_V2} ${BOT_BOT_Y+5}`}/>
+                    {/* Inner : horizontal haut + vertical, puis BOT_BOT_Y inner séparé (T-junction gap) */}
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
                   {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
