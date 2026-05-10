@@ -7682,9 +7682,9 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
   const TW   = total===1 ? 80 : total===2 ? 66 : 52;   // largeur cuve
   const DW   = total===1 ? 88 : total===2 ? 74 : 60;   // largeur dôme
   const TH   = total===1 ? 76 : total===2 ? 68 : 58;   // hauteur cuve
-  const PH   = total===1 ? 22 : total===2 ? 18 : 15;   // stub visible au-dessus du dôme plein
+  const PH   = total===1 ?  6 : total===2 ?  5 :  4;   // stub au-dessus du dôme plein
   const DMIN = total===1 ? 24 : total===2 ? 20 : 16;   // dôme vide
-  const DMAX = total===1 ? 66 : total===2 ? 56 : 44;   // dôme plein
+  const DMAX = total===1 ? 60 : total===2 ? 52 : 44;   // dôme plein
   const TOTAL_ABOVE = PH + DMAX;  // hauteur conteneur pipe+dôme — constante (pipe pleine hauteur)
   const domeH  = Math.round(DMIN + chargePct * (DMAX - DMIN));
   const liqH   = Math.round(chargePct * (TH - 4));
