@@ -7691,10 +7691,11 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
   const TW   = total===1 ? 80 : total===2 ? 66 : 52;   // largeur cuve
   const DW   = total===1 ? 88 : total===2 ? 74 : 60;   // largeur dôme
   const TH   = total===1 ? 76 : total===2 ? 68 : 58;   // hauteur cuve
-  const PH   = total===1 ? 16 : total===2 ? 12 : 10;   // hauteur tuyau montant
+  const PH   = total===1 ? 16 : total===2 ? 12 : 10;   // hauteur pipe MINIMUM (collecteur fixe)
   const DMIN = total===1 ? 24 : total===2 ? 20 : 16;   // dôme vide
   const DMAX = total===1 ? 66 : total===2 ? 56 : 44;   // dôme plein
   const domeH  = Math.round(DMIN + chargePct * (DMAX - DMIN));
+  const pipeH  = PH + (DMAX - domeH);  // pipe coulissant : pipeH+domeH=PH+DMAX=constante
   const liqH   = Math.round(chargePct * (TH - 4));
   const cx     = TW / 2;
   const b1Y    = Math.round(TH * 0.32);
@@ -7708,11 +7709,12 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
       animation: isNew ? "digesteurAppear 0.8s cubic-bezier(.22,.68,0,1.2) forwards" : "none",
     }}>
 
-      {/* Tuyau montant vers collecteur */}
+      {/* Pipe coulissant vers collecteur — longueur inverse du dôme, collecteur fixe */}
       <div style={{
-        width:"8px", height:`${PH}px`,
+        width:"8px", height:`${pipeH}px`,
         background:"#1E3848", border:"1px solid rgba(74,158,219,.32)",
         borderRadius:"4px 4px 0 0", position:"relative", overflow:"hidden",
+        transition:"height .35s cubic-bezier(.22,.68,0,1.2)",
       }}>
         {isDigesting && (
           <div style={{
