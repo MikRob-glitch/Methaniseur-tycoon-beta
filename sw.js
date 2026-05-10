@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-30';   // v25.11.25 — Chaîne Vue0 décalée Y pour aligner cuve tampon avec manifold Vue1 (yOffset/digesteurs)
+const CACHE_NAME = 'methaniseur-tycoon-v25-31';   // v25.11.26 — Pipe biogaz Vue0 : SVG ancré à droite + extension jusqu'à la frontière Vue0/Vue1
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

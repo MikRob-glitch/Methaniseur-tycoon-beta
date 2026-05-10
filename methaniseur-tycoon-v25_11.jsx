@@ -3788,7 +3788,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
   // Offset Y pour aligner l'entrée biogaz (y=7 SVG) avec le manifold de Vue 1
   const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
   return (
-    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
+    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"flex-end",overflow:"visible"}}>
       <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block",overflow:"visible"}}>
         <defs>
           <linearGradient id="gvTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0098CC" stopOpacity={act(0)?1:.25}/><stop offset="100%" stopColor="#164e63" stopOpacity={act(0)?1:.15}/></linearGradient>
@@ -3802,9 +3802,9 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
 
         <g transform={`translate(0, ${yOffset})`}>
 
-        {/* ── Biogaz entry : pipe horizontal depuis droite + stub vertical vers cuve ── */}
-        <rect x={cx} y="3" width="66" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
-        {act(0)&&<rect x={cx} y="4" width="66" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
+        {/* ── Biogaz entry : pipe horizontal depuis Vue1 jusqu'à la cuve (bord droit SVG = frontière vues) ── */}
+        <rect x={cx} y="3" width="70" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+        {act(0)&&<rect x={cx} y="4" width="70" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
         <rect x={cx-4} y="3" width="8" height="14" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
 
         {/* ── Cuve tampon ── */}
