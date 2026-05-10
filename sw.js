@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-29';   // v25.11.24 — Digesteur : réduction TOTAL_ABOVE pour descendre le collecteur sur Android
+const CACHE_NAME = 'methaniseur-tycoon-v25-30';   // v25.11.25 — Chaîne Vue0 décalée Y pour aligner cuve tampon avec manifold Vue1 (yOffset/digesteurs)
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

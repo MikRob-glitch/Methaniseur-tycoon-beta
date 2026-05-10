@@ -3810,7 +3810,7 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
   );
 }
 
-function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockAnim, bufferPct, buffer }) {
+function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockAnim, bufferPct, buffer, digesteurs }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const id=setInterval(()=>setTick(t=>(t+1)%1000),40); return ()=>clearInterval(id); }, []);
   const act = i => { if(i===0) return buffer>0; if(i===1) return epurateurOk; if(i===2) return compresseurOk; if(i===3) return injected; return false; };
@@ -3819,9 +3819,11 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
   const bladeAngle = tick*(act(2)?4:0);
   const cx = 90; // pipeline center (décalé à droite pour labels gauche)
   const LX = 62; // droite de la zone label gauche (textAnchor="end")
+  // Offset Y pour aligner l'entrée biogaz (y=7 SVG) avec le manifold de Vue 1
+  const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
   return (
-    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block"}}>
+    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
+      <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block",overflow:"visible"}}>
         <defs>
           <linearGradient id="gvTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0098CC" stopOpacity={act(0)?1:.25}/><stop offset="100%" stopColor="#164e63" stopOpacity={act(0)?1:.15}/></linearGradient>
           <linearGradient id="gvLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(74,188,223,.5)"/><stop offset="100%" stopColor="rgba(74,188,223,.85)"/></linearGradient>
@@ -3831,6 +3833,8 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <filter id="glow3" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <clipPath id="vTankBody"><rect x={cx-26} y="15" width="52" height="58" rx="3"/></clipPath>
         </defs>
+
+        <g transform={`translate(0, ${yOffset})`}>
 
         {/* ── Biogaz entry : pipe horizontal depuis droite + stub vertical vers cuve ── */}
         <rect x={cx} y="3" width="66" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
@@ -3921,6 +3925,8 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         {injected&&<rect x={cx} y="334" width="66" height="6" rx="3" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1" strokeDasharray="6 5" strokeDashoffset={flow}/>}
         <polygon points="154,333 154,341 159,337" fill={injected?"#4A9EDB":"rgba(74,158,219,.22)"}/>
         <text x={cx+2} y="330" textAnchor="start" fontSize="5.5" fontWeight="800" fill={injected?"#6DB5EC":"rgba(255,255,255,.3)"}>Réseau GRDF aval →</text>
+
+        </g>
       </svg>
     </div>
   );
@@ -6921,7 +6927,7 @@ function DigesteurScene({
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
             {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
             <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
-              <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
+              <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer} digesteurs={digesteurs}/>
             </div>
           </div>
 
