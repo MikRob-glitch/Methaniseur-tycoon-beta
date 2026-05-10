@@ -7347,20 +7347,6 @@ function DigesteurScene({
             {/* Le SVG monde couvre maintenant 600px (350+250). GnvNetworkView remplacé. */}
             <div style={{height:"250px", flexShrink:0, position:"relative"}}>
               {/* KPIs overlay — positionnés absolument sur la zone aval */}
-              {injected && (
-                <div style={{position:"absolute", top:"4px", right:"36px", display:"flex", gap:"6px", zIndex:5, pointerEvents:"none"}}>
-                  <div style={{background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,158,219,.25)",
-                    borderRadius:"4px", padding:"2px 6px", fontSize:"7px", color:"#4A9EDB", fontWeight:700}}>
-                    🔌 {Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h
-                  </div>
-                  {gnvStations > 0 && (
-                    <div style={{background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,219,148,.25)",
-                      borderRadius:"4px", padding:"2px 6px", fontSize:"7px", color:"#4ADB94", fontWeight:700}}>
-                      ⛽ {Math.round(bmPerHour*gnvSplit/100)} m³/h
-                    </div>
-                  )}
-                </div>
-              )}
               {!injected && (
                 <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
                   background:"rgba(7,14,25,.45)"}}>
@@ -7451,10 +7437,12 @@ function DigesteurScene({
                     <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${L_EDGE+5} ${BOT_BOT_Y-5}`}/>
                     {/* Bords C-loop Vue 1 bas — T-junctions en bas (pas de coin fermant BOT_BOT_Y) */}
                     {/* Outer : horizontal haut + vertical, puis BOT_BOT_Y outer séparé depuis inner face */}
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_BOT_Y+5}`}/>
+                    {/* + crossroads à GNV_C_X/BOT_TOP_Y : gaps dans les deux axes */}
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${GNV_C_X-5} ${BOT_TOP_Y-5}`}/>
+                    <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X-5} ${BOT_TOP_Y+5}`}/>
+                    <path d={`M ${GNV_C_X-5} ${BOT_TOP_Y+5} L ${GNV_C_X-5} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${GNV_C_X-5} ${BOT_BOT_Y+5} L ${V1_V2} ${BOT_BOT_Y+5}`}/>
-                    {/* Inner : horizontal haut + vertical, puis BOT_BOT_Y inner séparé (T-junction gap) */}
-                    <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
                   {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
