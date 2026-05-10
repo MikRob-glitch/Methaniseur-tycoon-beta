@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-19';   // v25.11.14 — T-junctions propres : R_EDGE BOT_TOP_Y-5 gap, C-loop GNV_C_X outer→BOT_BOT_Y+5 / inner→BOT_BOT_Y-5
+const CACHE_NAME = 'methaniseur-tycoon-v25-20';   // v25.11.15 — Carrefours bleus → patron rouge : GNV_LANE-5 continu à R_EDGE, BOT_TOP_Y+5→R_EDGE, R_EDGE-5→BOT_TOP_Y-5, L_EDGE-5→BOT_BOT_Y-5
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

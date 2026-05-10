@@ -7391,8 +7391,7 @@ function DigesteurScene({
                     <path d={`M ${V1_V2} ${GNV_LANE-5} L ${L_EDGE-5} ${GNV_LANE-5}`}/>
                     <path d={`M ${L_EDGE+5} ${GNV_LANE-5} L ${V1_V2+170} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2+180} ${GNV_LANE-5} L ${V1_V2+340} ${GNV_LANE-5}`}/>
-                    <path d={`M ${V1_V2+350} ${GNV_LANE-5} L ${R_EDGE-5} ${GNV_LANE-5}`}/>
-                    <path d={`M ${R_EDGE+5} ${GNV_LANE-5} L ${W} ${GNV_LANE-5}`}/>
+                    <path d={`M ${V1_V2+350} ${GNV_LANE-5} L ${W} ${GNV_LANE-5}`}/>
                     <path d={`M ${V1_V2} ${GNV_LANE+5} L ${R_EDGE-5} ${GNV_LANE+5}`}/>
                     <path d={`M ${R_EDGE+5} ${GNV_LANE+5} L ${W} ${GNV_LANE+5}`}/>
                     {/* Bords verticaux gisement loop — entre inner borders uniquement */}
@@ -7404,16 +7403,16 @@ function DigesteurScene({
                     {/* BOT_TOP_Y : bords horizontaux ouverts, pas de virage à R_EDGE */}
                     <path d={`M ${V1_V2} ${BOT_TOP_Y-5} L ${R_EDGE-5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_TOP_Y+5}`}/>
-                    <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE-5} ${BOT_TOP_Y+5}`}/>
+                    <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${R_EDGE} ${BOT_TOP_Y+5}`}/>
                     {/* Bords verticaux R_EDGE (GNV_LANE→BOT_TOP_Y) — T-junction style, entre inner edges */}
                     <path d={`M ${R_EDGE+5} ${GNV_LANE+5} L ${R_EDGE+5} ${BOT_TOP_Y-5}`}/>
-                    <path d={`M ${R_EDGE-5} ${GNV_LANE+5} L ${R_EDGE-5} ${BOT_TOP_Y+5}`}/>
+                    <path d={`M ${R_EDGE-5} ${GNV_LANE+5} L ${R_EDGE-5} ${BOT_TOP_Y-5}`}/>
                     {/* BOT_BOT_Y : bords horizontaux ouverts */}
                     <path d={`M ${V1_V2} ${BOT_BOT_Y+5} L ${R_EDGE} ${BOT_BOT_Y+5}`}/>
                     <path d={`M ${V1_V2} ${BOT_BOT_Y-5} L ${L_EDGE-5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${L_EDGE+5} ${BOT_BOT_Y-5} L ${R_EDGE} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${L_EDGE-5} ${LANE_TOP+5} L ${L_EDGE-5} ${BOT_TOP_Y-5}`}/>
-                    <path d={`M ${L_EDGE-5} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_BOT_Y+5}`}/>
+                    <path d={`M ${L_EDGE-5} ${BOT_TOP_Y+5} L ${L_EDGE-5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${L_EDGE+5} ${LANE_TOP+5} L ${L_EDGE+5} ${GNV_LANE-5}`}/>
                     <path d={`M ${L_EDGE+5} ${GNV_LANE+5} L ${L_EDGE+5} ${BOT_TOP_Y-5}`}/>
                     <path d={`M ${L_EDGE+5} ${BOT_TOP_Y+5} L ${L_EDGE+5} ${BOT_BOT_Y-5}`}/>
