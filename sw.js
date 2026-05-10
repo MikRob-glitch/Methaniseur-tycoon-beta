@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-26';   // v25.11.21 — Vue 0 : retrait titre "🔌 Chaîne d'injection GRDF"
+const CACHE_NAME = 'methaniseur-tycoon-v25-27';   // v25.11.22 — Vue 0 : retrait section aval ; digesteur : pipe collecteur fixe+long ancré cuve-top
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

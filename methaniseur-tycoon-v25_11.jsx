@@ -6885,39 +6885,9 @@ function DigesteurScene({
         >
           {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
-            {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
-            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
+            {/* ─── CHAÎNE : pleine hauteur ─── */}
+            <div style={{flex:1, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer}/>
-            </div>
-            {/* ─── RÉSEAU GRDF AVAL : tout en bas de la vue ─── */}
-            <div style={{flex:1, padding:"8px 10px 12px", background:"rgba(7,14,25,.55)", borderTop:"1px solid rgba(74,158,219,.1)", display:"flex", flexDirection:"column", justifyContent:"center"}}>
-              {!injected ? (
-                <div style={{textAlign:"center", opacity:.42, padding:"6px 0"}}>
-                  <div style={{fontSize:"18px", marginBottom:"4px"}}>🔒</div>
-                  <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)"}}>Raccordement GRDF</div>
-                  <div style={{fontSize:"9px", color:"rgba(255,255,255,.32)", marginTop:"2px"}}>Injectez du biogaz pour activer</div>
-                </div>
-              ) : (
-                <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
-                  <div style={{fontSize:"10px", color:"rgba(74,158,219,.7)", fontWeight:700, textTransform:"uppercase", letterSpacing:".06em"}}>Réseau GRDF aval →</div>
-                  <div style={{display:"flex", gap:"6px"}}>
-                    <div style={{flex:1, background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,158,219,.25)", borderRadius:"6px", padding:"6px 8px"}}>
-                      <div style={{fontSize:"8px", color:"rgba(74,158,219,.6)"}}>Injection réseau</div>
-                      <div style={{fontSize:"13px", fontWeight:800, color:"#4A9EDB"}}>{Math.round(bmPerHour*(100-gnvSplit)/100)} m³/h</div>
-                    </div>
-                    {gnvStations > 0 && (
-                      <div style={{flex:1, background:"rgba(11,22,35,.75)", border:"1px solid rgba(74,219,148,.25)", borderRadius:"6px", padding:"6px 8px"}}>
-                        <div style={{fontSize:"8px", color:"rgba(74,219,148,.6)"}}>GNV ({gnvStations} station{gnvStations>1?"s":""})</div>
-                        <div style={{fontSize:"13px", fontWeight:800, color:"#4ADB94"}}>{Math.round(bmPerHour*gnvSplit/100)} m³/h</div>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{height:"5px", borderRadius:"3px", background:"rgba(74,158,219,.1)", overflow:"hidden"}}>
-                    <div style={{height:"100%", borderRadius:"3px", width:`${Math.min(100,(burnRate/300)*100)}%`, background:"linear-gradient(90deg,#2A7DBB,#4A9EDB)", transition:"width .5s", animation:"gasFlow 1.4s linear infinite"}}/>
-                  </div>
-                  <div style={{fontSize:"8px", color:"rgba(255,255,255,.28)", textAlign:"center"}}>→ Station GNV (Vue 1) → Réseau résidentiel (Vue 2)</div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -7678,11 +7648,11 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
   const TW   = total===1 ? 80 : total===2 ? 66 : 52;   // largeur cuve
   const DW   = total===1 ? 88 : total===2 ? 74 : 60;   // largeur dôme
   const TH   = total===1 ? 76 : total===2 ? 68 : 58;   // hauteur cuve
-  const PH   = total===1 ? 16 : total===2 ? 12 : 10;   // hauteur pipe MINIMUM (collecteur fixe)
-  const DMIN = total===1 ? 24 : total===2 ? 20 : 16;   // dôme vide
-  const DMAX = total===1 ? 66 : total===2 ? 56 : 44;   // dôme plein
+  const PH   = total===1 ? 50 : total===2 ? 38 : 28;   // pipe collecteur FIXE — ancré au sommet de la cuve
+  const DMIN = total===1 ? 20 : total===2 ? 16 : 13;   // dôme vide
+  const DMAX = total===1 ? 52 : total===2 ? 46 : 40;   // dôme plein
+  const TOTAL_ABOVE = PH + DMAX;  // hauteur conteneur pipe+dôme — constante
   const domeH  = Math.round(DMIN + chargePct * (DMAX - DMIN));
-  const pipeH  = PH + (DMAX - domeH);  // pipe coulissant : pipeH+domeH=PH+DMAX=constante
   const liqH   = Math.round(chargePct * (TH - 4));
   const cx     = TW / 2;
   const b1Y    = Math.round(TH * 0.32);
@@ -7696,56 +7666,62 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
       animation: isNew ? "digesteurAppear 0.8s cubic-bezier(.22,.68,0,1.2) forwards" : "none",
     }}>
 
-      {/* Pipe coulissant vers collecteur — longueur inverse du dôme, collecteur fixe */}
-      <div style={{
-        width:"8px", height:`${pipeH}px`,
-        background:"#1E3848", border:"1px solid rgba(74,158,219,.32)",
-        borderRadius:"4px 4px 0 0", position:"relative", overflow:"hidden",
-        transition:"height .35s cubic-bezier(.22,.68,0,1.2)",
-      }}>
-        {isDigesting && (
-          <div style={{
-            position:"absolute", inset:"1px 1px 0",
-            background:"repeating-linear-gradient(to bottom,rgba(102,238,136,.65) 0px,rgba(102,238,136,.65) 5px,transparent 5px,transparent 10px)",
-            animation:"gasFlow .7s linear infinite",
-          }}/>
-        )}
-      </div>
+      {/* Conteneur pipe+dôme — hauteur fixe TOTAL_ABOVE
+          Pipe : ancré en haut (position absolute, longueur PH toujours constante)
+          Dôme : ancré en bas, monte avec chargePct */}
+      <div style={{position:"relative", width:`${DW}px`, height:`${TOTAL_ABOVE}px`}}>
 
-      {/* ── DÔME CSS — demi-cercle, rendu garanti ── */}
-      <div style={{width:`${DW}px`, position:"relative"}}>
-        <div style={{
-          width:`${DW}px`,
-          height:`${domeH}px`,
-          borderRadius:"50% 50% 0 0 / 100% 100% 0 0",
-          background: isDigesting
-            ? "linear-gradient(180deg,#D8F0B0 0%,#7CC84C 42%,#2E7020 100%)"
-            : "linear-gradient(180deg,#5A7A50 0%,#2A4A22 60%,#162A10 100%)",
-          border:`3px solid ${isDigesting?"#9ADA60":"#3A5A30"}`,
-          borderBottom:"none",
-          position:"relative",
-          overflow:"hidden",
-          boxShadow: isDigesting
-            ? `0 0 ${14+chargePct*22}px rgba(100,220,60,${.4+chargePct*.3}),0 -3px 16px rgba(100,220,60,.2)`
-            : "none",
-          transition:"height .35s cubic-bezier(.22,.68,0,1.2),box-shadow .6s,background .8s,border-color .8s",
-          animation: isDigesting ? "domePulse 3.5s ease-in-out infinite" : "none",
-          flexShrink:0,
-        }}>
-          {/* Reflet gauche (blur) */}
+        {/* Dôme — ancré en bas du conteneur, gonfle vers le haut */}
+        <div style={{position:"absolute", bottom:0, left:0, right:0, width:`${DW}px`}}>
           <div style={{
-            position:"absolute", top:"10%", left:"12%",
-            width:"18%", height:"62%",
-            background:"rgba(255,255,255,.22)",
-            borderRadius:"50%", filter:"blur(4px)",
-          }}/>
-          {/* Sangles */}
-          {[30,63].map((top,i) => (
-            <div key={i} style={{
-              position:"absolute", left:0, right:0, top:`${top}%`,
-              height:"3px", background:"rgba(15,50,10,.45)", borderRadius:"2px",
+            width:`${DW}px`,
+            height:`${domeH}px`,
+            borderRadius:"50% 50% 0 0 / 100% 100% 0 0",
+            background: isDigesting
+              ? "linear-gradient(180deg,#D8F0B0 0%,#7CC84C 42%,#2E7020 100%)"
+              : "linear-gradient(180deg,#5A7A50 0%,#2A4A22 60%,#162A10 100%)",
+            border:`3px solid ${isDigesting?"#9ADA60":"#3A5A30"}`,
+            borderBottom:"none",
+            position:"relative",
+            overflow:"hidden",
+            boxShadow: isDigesting
+              ? `0 0 ${14+chargePct*22}px rgba(100,220,60,${.4+chargePct*.3}),0 -3px 16px rgba(100,220,60,.2)`
+              : "none",
+            transition:"height .35s cubic-bezier(.22,.68,0,1.2),box-shadow .6s,background .8s,border-color .8s",
+            animation: isDigesting ? "domePulse 3.5s ease-in-out infinite" : "none",
+            flexShrink:0,
+          }}>
+            {/* Reflet gauche */}
+            <div style={{
+              position:"absolute", top:"10%", left:"12%",
+              width:"18%", height:"62%",
+              background:"rgba(255,255,255,.22)",
+              borderRadius:"50%", filter:"blur(4px)",
             }}/>
-          ))}
+            {/* Sangles */}
+            {[30,63].map((top,i) => (
+              <div key={i} style={{
+                position:"absolute", left:0, right:0, top:`${top}%`,
+                height:"3px", background:"rgba(15,50,10,.45)", borderRadius:"2px",
+              }}/>
+            ))}
+          </div>
+        </div>
+
+        {/* Pipe collecteur — FIXE en haut, hauteur PH constante */}
+        <div style={{
+          position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
+          width:"8px", height:`${PH}px`,
+          background:"#1E3848", border:"1px solid rgba(74,158,219,.32)",
+          borderRadius:"4px 4px 0 0", overflow:"hidden",
+        }}>
+          {isDigesting && (
+            <div style={{
+              position:"absolute", inset:"1px 1px 0",
+              background:"repeating-linear-gradient(to bottom,rgba(102,238,136,.65) 0px,rgba(102,238,136,.65) 5px,transparent 5px,transparent 10px)",
+              animation:"gasFlow .7s linear infinite",
+            }}/>
+          )}
         </div>
       </div>
 
