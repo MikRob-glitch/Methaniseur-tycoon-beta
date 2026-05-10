@@ -6921,15 +6921,8 @@ function DigesteurScene({
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(11,22,35,.6)"}}>
             {/* ─── HEADER : collecteur digesteur + titre (haut de vue) ─── */}
             <div style={{flexShrink:0, padding:"10px 10px 4px"}}>
-              <div style={{display:"flex", alignItems:"center", gap:"6px", marginBottom:"6px", padding:"4px 8px", borderRadius:"8px", background:"rgba(74,158,219,.08)", border:"1px solid rgba(74,158,219,.14)"}}>
-                <div style={{fontSize:"9px", color:"rgba(74,158,219,.65)", fontWeight:700}}>← Biogaz collecteur digesteur</div>
-              </div>
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 4px"}}>
+              <div style={{display:"flex", justifyContent:"flex-start", alignItems:"center", padding:"0 4px"}}>
                 <div style={{fontSize:"11px", fontWeight:700, color:"rgba(255,255,255,.82)"}}>🔌 Chaîne d'injection GRDF</div>
-                {injected
-                  ? <span style={{fontSize:"10px", fontWeight:700, color:"#4A9EDB", padding:"2px 8px", borderRadius:"20px", background:"rgba(74,158,219,.17)"}}>✅ Raccordé</span>
-                  : <span style={{fontSize:"10px", fontWeight:700, color:canConnect?"#F5BE50":"rgba(255,255,255,.32)", padding:"2px 8px", borderRadius:"20px", background:canConnect?"rgba(232,160,32,.18)":"rgba(74,158,219,.06)"}}>{canConnect?"🔓 Prêt !":"🔒 Verrouillé"}</span>
-                }
               </div>
             </div>
             {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
