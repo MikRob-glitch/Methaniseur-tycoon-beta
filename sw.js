@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-38';   // v25.11.31 — colCenter corrigé (1.5vw-56), overflow:visible SVG manifold, tube interne jonction branches
+const CACHE_NAME = 'methaniseur-tycoon-v25-39';   // v25.11.34 — suppression animation véhicules GNV dans bloc Valorisation GNV
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

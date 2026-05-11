@@ -5265,11 +5265,6 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
             </div>
           </div>
 
-          {/* Animation véhicules */}
-          {gnvSplit > 0 && (
-            <GnvVehicleSystem gnvStations={gnvStations} gnvSplit={gnvSplit} />
-          )}
-
           {/* Acheter station suivante */}
           {nextStationCost && (
             <button onClick={onBuyStation} disabled={!canBuyStation} style={{
