@@ -3781,8 +3781,8 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
 // que le SVG monde des routes. Gère deux tuyaux qui franchissent les frontières
 // entre vues sans être clippés par le overflow:hidden des containers de vue.
 //
-//  · Biogaz  : tuyau horizontal de la cuve tampon (Vue0) jusqu'à la frontière Vue0/Vue1
-//              (la partie Vue1 est portée par DigesteurManifold)
+//  · Biogaz  : collecteur horizontal digesteurs (Vue1) → cuve tampon (Vue0)
+//              traverse la frontière Vue0/Vue1 — DigesteurManifold ne gère plus que les branches
 //  · GRDF aval : du poste d'injection (Vue0) vers le réseau aval (230 px en Vue1)
 //
 // Calcul des positions :
@@ -3790,15 +3790,9 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
 //   → cx=90 en SVG  ≡  scene x = (vw-160)+90 = vw-70
 //   → frontière Vue0/Vue1 = vw
 //   Les y SVG sont des coordonnées scène directes (ratio 1:1).
-function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
+function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }) {
   const divRef = useRef(null);
-  const [vw, setVw]     = useState(0);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => (t+1)%1000), 40);
-    return () => clearInterval(id);
-  }, []);
+  const [vw, setVw] = useState(0);
 
   useEffect(() => {
     if (!divRef.current) return;
@@ -3809,15 +3803,19 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
     return () => ro.disconnect();
   }, []);
 
-  const flow    = -(tick * 0.9) % 20;
   const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
 
   const pipeX    = vw - 70;   // aligne sur cx=90 du SVG Vue0 (right-aligned 160px)
-  const boundary = vw;        // frontière Vue0/Vue1
 
-  // Biogaz : cuve tampon → frontière  (Vue1 manifold prend le relais de l'autre côté)
-  const biogazY    = 3 + yOffset;   // y SVG = y scène (1:1)
-  const biogazEndX = boundary;
+  // Biogaz : digesteurs (Vue1) → cuve tampon (Vue0) — traverse la frontière
+  const biogazY    = 3 + yOffset;
+  const digesteurZoneScale = digesteurs===1?1:digesteurs===2?0.97:0.93;
+  const UNIT_W_D   = digesteurs===1?88:digesteurs===2?74:60;
+  const GAP_D      = digesteurs===3?4:8;
+  const totalW_D   = digesteurs*UNIT_W_D+(digesteurs-1)*GAP_D;
+  const colCenter  = 1.5*vw - 42;
+  const xN_off     = (digesteurs-1)*(UNIT_W_D+GAP_D)+UNIT_W_D/2 - totalW_D/2;
+  const biogazEndX = colCenter + xN_off*digesteurZoneScale + 4;
 
   // GRDF aval : connecteur L depuis poste injection → tuyau GRDF du SVG monde
   // SVG monde : GRDF_PIPE_Y=375, rendu height=600px pour viewBox 480px → yScale=1.25
@@ -3825,8 +3823,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
   const grdfWorldY  = Math.round(375 * 600 / 480);  // 469 px (scene y du tuyau GRDF monde)
   const grdfWorldX  = Math.round(410 * vw / 400);   // scene x du début du pipe GRDF monde
 
-  const biogazOn = buffer > 0;
-  const grdfOn   = injected;
+  const grdfOn = injected;
 
   if (vw === 0) return (
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}/>
@@ -3836,20 +3833,24 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
       <svg style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",display:"block",overflow:"visible"}}>
 
-        {/* ── BIOGAZ : coude vertical (cuve tampon) + tuyau horizontal → frontière Vue0/Vue1 ── */}
-        {/* Coude vertical cx-4 à cx+4, y=3 à y=17 (rencontre la cuve tampon) */}
+        {/* ── BIOGAZ : collecteur digesteurs (Vue1) → cuve tampon (Vue0) ── */}
+        {/* Coude vertical : jonction cuve tampon */}
         <rect x={pipeX-4} y={biogazY} width={8} height={14} rx={2}
-          fill={biogazOn?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"}
-          stroke={biogazOn?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"}
-          strokeWidth="1"/>
-        {/* Tuyau horizontal : cx → frontière */}
-        <rect x={pipeX} y={biogazY} width={biogazEndX-pipeX} height={8} rx={2}
-          fill={biogazOn?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"}
-          stroke={biogazOn?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"}
-          strokeWidth="1"/>
-        {biogazOn&&<rect x={pipeX} y={biogazY+1} width={biogazEndX-pipeX} height={6} rx={2}
-          fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1"
-          strokeDasharray="7 5" strokeDashoffset={flow}/>}
+          fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
+          stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
+          strokeWidth="1.5"/>
+        {/* Tuyau horizontal : cuve tampon ← digesteurs */}
+        <rect x={pipeX} y={biogazY} width={biogazEndX-pipeX} height={8} rx={4}
+          fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
+          stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
+          strokeWidth="1.5"/>
+        <line x1={biogazEndX} y1={biogazY+4} x2={pipeX} y2={biogazY+4}
+          stroke="rgba(102,238,136,.6)" strokeWidth="4"
+          strokeDasharray="10 8" strokeLinecap="round"
+          style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
+        <text x={vw+10} y={biogazY-4} textAnchor="start" fontSize="8"
+          fill={isDigesting?"rgba(102,238,136,.95)":"rgba(74,158,219,.6)"}
+          fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
 
         {/* ── GRDF AVAL : connecteur L — poste injection ↓ → tuyau GRDF SVG monde ── */}
         {/* Vertical : cx (vw-70), depuis sortie poste injection (y=322+yOffset) jusqu'à GRDF_PIPE_Y scène */}
@@ -7548,7 +7549,7 @@ function DigesteurScene({
 
           {/* v25.11.27 — Tuyaux inter-vues (biogaz + réseau GRDF aval).
               Position:absolute dans le div scène (width:300%), non clippé. */}
-          <CrossBoundaryPipesOverlay digesteurs={digesteurs} buffer={buffer} injected={injected}/>
+          <CrossBoundaryPipesOverlay digesteurs={digesteurs} buffer={buffer} injected={injected} isDigesting={isDigesting}/>
 
           {/* v23.9 : Overlay HTML pour les particules de chargement (positionné
               sur toute la scène monde, les particules sont créées en JS pur avec
@@ -7601,32 +7602,22 @@ function DigesteurScene({
   );
 }
 
-// ─── DIGESTEUR MANIFOLD — collecteur biogaz horizontal ───────────────────────
+// ─── DIGESTEUR MANIFOLD — branches biogaz (le collecteur horizontal est dans CrossBoundaryPipesOverlay)
 function DigesteurManifold({ digesteurs, isDigesting }) {
-  // IMPORTANT: on utilise DW (largeur dôme) pour le positionnement,
-  // pas TW (cuve), car la rangée de digesteurs est espacée selon DW.
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
-  // v25.1.11 : EXTENSION vers la GAUCHE pour que le tube collecteur sorte de l'écran.
-  // v25.1.14 : SVG en position:absolute pour que l'extension ne force PAS la largeur
-  //   de la colonne digesteurs (qui sur Android coupait le bac à droite).
-  const LEFT_EXT = 140;
-  const svgW   = totalW + LEFT_EXT;
   const svgH   = 38;
   const cY     = 14;
-  const centers = Array.from({length:digesteurs}, (_,i) => LEFT_EXT + i*(UNIT_W+GAP) + UNIT_W/2);
+  const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
 
   return (
-    // v25.1.14 : Wrapper avec hauteur réservée 38px et width:totalW (sans LEFT_EXT)
-    // pour que le flex parent calcule la largeur SANS l'extension. Le SVG en absolu
-    // déborde visuellement à gauche sans impacter le layout.
-    <div style={{position:"relative", width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
-      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}
-        style={{position:"absolute", right:0, top:0, overflow:"visible", display:"block"}}>
+    <div style={{width:`${totalW}px`, height:`${svgH}px`}}>
+      <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`}
+        style={{display:"block"}}>
 
-        {/* Branches vers chaque digesteur — +4px pour fermer le gap flex et rejoindre le pipe */}
+        {/* Branches vers chaque digesteur */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
             <rect x={px-4} y={cY} width={8} height={svgH-cY+4} rx={3}
@@ -7637,26 +7628,7 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
           </React.Fragment>
         ))}
 
-        {/* v25.1.11 — Tube collecteur ÉTENDU vers la gauche (x=0 = bord écran)
-            jusqu'aux digesteurs (xN). L'animation va vers la GAUCHE (gasFlowReverse). */}
-        <rect x={0} y={cY-4} width={xN-0+4} height={8} rx={4}
-          fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
-        <line x1={0} y1={cY} x2={xN} y2={cY}
-          stroke="rgba(102,238,136,.6)" strokeWidth="4"
-          strokeDasharray="10 8" strokeLinecap="round"
-          style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
-
-        {/* Flèche pointant vers la GAUCHE (sortie hors champ vers la cuve) */}
-        <polygon points={`-2,${cY} 10,${cY-6} 10,${cY+6}`}
-          fill={isDigesting ? "rgba(102,238,136,.85)" : "rgba(74,158,219,.5)"}/>
-
-        <text x={LEFT_EXT-4} y={cY-9} textAnchor="end"
-          fontSize="8" fill={isDigesting ? "rgba(102,238,136,.95)" : "rgba(74,158,219,.6)"}
-          fontWeight="700" letterSpacing=".3">
-          ◀ Biogaz vers la cuve
-        </text>
-
-        {/* Badge Biogaz (centré entre les digesteurs, inchangé) */}
+        {/* Badge Biogaz */}
         {digesteurs > 1 && (
           <React.Fragment>
             <rect x={(x1+xN)/2-19} y={0} width={38} height={12} rx={6}
