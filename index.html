@@ -3867,13 +3867,28 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
       <svg style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",display:"block",overflow:"visible"}}>
 
-        {/* ── BIOGAZ : collecteur digesteurs (Vue1) → cuve tampon (Vue0) ── */}
+        {/* ── BIOGAZ : branches verticales (sortie haute digesteurs → collecteur) ── */}
+        {/* Dessinées EN PREMIER pour que le tube horizontal les coiffe proprement */}
+        {/* branchBot = biogazY + 32*scale : correspond au top de la rangée de digesteurs en scène */}
+        {Array.from({length:digesteurs}, (_,i) => {
+          const bx = colCenter + (i*(UNIT_W_D+GAP_D) + UNIT_W_D/2 - totalW_D/2) * digesteurZoneScale;
+          const branchBot = biogazY + 32*digesteurZoneScale + 2;
+          return (
+            <React.Fragment key={i}>
+              <rect x={bx-4} y={biogazY} width={8} height={branchBot-biogazY} rx={3}
+                fill="#1E3848" stroke="rgba(74,158,219,.42)" strokeWidth="1.5"/>
+              <rect x={bx-2} y={biogazY+8} width={4} height={Math.max(0, branchBot-biogazY-8)} rx={2}
+                fill={isDigesting ? "rgba(102,238,136,.4)" : "rgba(74,158,219,.15)"}
+                style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
+            </React.Fragment>
+          );
+        })}
         {/* Coude vertical : jonction cuve tampon */}
         <rect x={pipeX-4} y={biogazY} width={8} height={14} rx={2}
           fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
           stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
           strokeWidth="1.5"/>
-        {/* Tuyau horizontal : cuve tampon ← digesteurs */}
+        {/* Tuyau horizontal : cuve tampon ← digesteurs (coiffe les tops de branches) */}
         <rect x={pipeX} y={biogazY} width={biogazEndX-pipeX} height={8} rx={4}
           fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
           stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
@@ -7636,51 +7651,27 @@ function DigesteurScene({
   );
 }
 
-// ─── DIGESTEUR MANIFOLD — branches biogaz + tube de jonction interne
-// Le tube collecteur cross-boundary est dans CrossBoundaryPipesOverlay.
-// Ce composant gère : tube interne (branches visuellement reliées) + branches.
-function DigesteurManifold({ digesteurs, isDigesting }) {
+// ─── DIGESTEUR MANIFOLD — spacer layout 38px + badge uniquement
+// Branches et tube collecteur gérés par CrossBoundaryPipesOverlay (coordonnées scène).
+function DigesteurManifold({ digesteurs }) {
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
   const totalW = digesteurs * UNIT_W + (digesteurs - 1) * GAP;
   const svgH   = 38;
-  const cY     = 14;
   const centers = Array.from({length:digesteurs}, (_,i) => i*(UNIT_W+GAP) + UNIT_W/2);
   const x1 = centers[0], xN = centers[digesteurs-1];
 
   return (
-    <div style={{width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
-      <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`}
-        style={{display:"block", overflow:"visible"}}>
-
-        {/* Branches vers chaque digesteur — +4px pour franchir le gap flex et rejoindre le dôme */}
-        {centers.map((px,i) => (
-          <React.Fragment key={i}>
-            <rect x={px-4} y={cY} width={8} height={svgH-cY+4} rx={3}
-              fill="#1E3848" stroke="rgba(74,158,219,.3)" strokeWidth=".8"/>
-            <rect x={px-2} y={cY+2} width={4} height={svgH-cY} rx={2}
-              fill={isDigesting ? "rgba(102,238,136,.4)" : "rgba(74,158,219,.15)"}
-              style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
-          </React.Fragment>
-        ))}
-
-        {/* Tube de jonction interne : relie visuellement toutes les branches.
-            L'overlay fournit l'animation gasFlowReverse qui passe par-dessus. */}
-        <rect x={0} y={cY-4} width={xN+4} height={8} rx={4}
-          fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
-          stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
-          strokeWidth="1.5"/>
-
-        {/* Badge Biogaz */}
-        {digesteurs > 1 && (
-          <React.Fragment>
-            <rect x={(x1+xN)/2-19} y={0} width={38} height={12} rx={6}
-              fill="rgba(11,22,35,.9)" stroke="rgba(74,158,219,.28)" strokeWidth="1"/>
-            <text x={(x1+xN)/2} y={9} textAnchor="middle"
-              fontSize="7" fill="rgba(74,158,219,.9)" fontWeight="700">Biogaz</text>
-          </React.Fragment>
-        )}
-      </svg>
+    <div style={{width:`${totalW}px`, height:`${svgH}px`}}>
+      {digesteurs > 1 && (
+        <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`}
+          style={{display:"block"}}>
+          <rect x={(x1+xN)/2-19} y={1} width={38} height={12} rx={6}
+            fill="rgba(11,22,35,.9)" stroke="rgba(74,158,219,.28)" strokeWidth="1"/>
+          <text x={(x1+xN)/2} y={10} textAnchor="middle"
+            fontSize="7" fill="rgba(74,158,219,.9)" fontWeight="700">Biogaz</text>
+        </svg>
+      )}
     </div>
   );
 }
