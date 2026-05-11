@@ -3847,7 +3847,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   const UNIT_W_D   = digesteurs===1?88:digesteurs===2?74:60;
   const GAP_D      = digesteurs===3?4:8;
   const totalW_D   = digesteurs*UNIT_W_D+(digesteurs-1)*GAP_D;
-  const colCenter  = 1.5*vw - 42;
+  const colCenter  = 1.5*vw - 56;  // vw+4 (padding) + (vw-120)/2 : row-reverse bac78+gap6+pipe22+gap6=116
   const xN_off     = (digesteurs-1)*(UNIT_W_D+GAP_D)+UNIT_W_D/2 - totalW_D/2;
   const biogazEndX = colCenter + xN_off*digesteurZoneScale + 4;
 
@@ -7636,7 +7636,9 @@ function DigesteurScene({
   );
 }
 
-// ─── DIGESTEUR MANIFOLD — branches biogaz (le collecteur horizontal est dans CrossBoundaryPipesOverlay)
+// ─── DIGESTEUR MANIFOLD — branches biogaz + tube de jonction interne
+// Le tube collecteur cross-boundary est dans CrossBoundaryPipesOverlay.
+// Ce composant gère : tube interne (branches visuellement reliées) + branches.
 function DigesteurManifold({ digesteurs, isDigesting }) {
   const UNIT_W = digesteurs === 1 ? 88 : digesteurs === 2 ? 74 : 60;
   const GAP    = digesteurs === 3 ? 4 : 8;
@@ -7647,11 +7649,11 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
   const x1 = centers[0], xN = centers[digesteurs-1];
 
   return (
-    <div style={{width:`${totalW}px`, height:`${svgH}px`}}>
+    <div style={{width:`${totalW}px`, height:`${svgH}px`, overflow:"visible"}}>
       <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`}
-        style={{display:"block"}}>
+        style={{display:"block", overflow:"visible"}}>
 
-        {/* Branches vers chaque digesteur */}
+        {/* Branches vers chaque digesteur — +4px pour franchir le gap flex et rejoindre le dôme */}
         {centers.map((px,i) => (
           <React.Fragment key={i}>
             <rect x={px-4} y={cY} width={8} height={svgH-cY+4} rx={3}
@@ -7661,6 +7663,13 @@ function DigesteurManifold({ digesteurs, isDigesting }) {
               style={{animation: isDigesting ? "chargePulse 1.4s ease infinite" : "none"}}/>
           </React.Fragment>
         ))}
+
+        {/* Tube de jonction interne : relie visuellement toutes les branches.
+            L'overlay fournit l'animation gasFlowReverse qui passe par-dessus. */}
+        <rect x={0} y={cY-4} width={xN+4} height={8} rx={4}
+          fill={isDigesting?"#1E3848":"rgba(74,158,219,.08)"}
+          stroke={isDigesting?"rgba(74,158,219,.42)":"rgba(74,158,219,.2)"}
+          strokeWidth="1.5"/>
 
         {/* Badge Biogaz */}
         {digesteurs > 1 && (

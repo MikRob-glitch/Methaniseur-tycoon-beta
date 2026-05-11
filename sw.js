@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-35';   // v25.11.30 — collecteur biogaz dans overlay (digesteurs→cuve tampon), DigesteurManifold branches seulement
+const CACHE_NAME = 'methaniseur-tycoon-v25-36';   // v25.11.31 — colCenter corrigé (1.5vw-56), overflow:visible SVG manifold, tube interne jonction branches
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
