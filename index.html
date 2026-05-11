@@ -3810,6 +3810,106 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
   );
 }
 
+// ─── CROSS-BOUNDARY PIPES OVERLAY ────────────────────────────────────────────
+// SVG absolu dans le div scène (position:relative, width:300%) — même technique
+// que le SVG monde des routes. Gère deux tuyaux qui franchissent les frontières
+// entre vues sans être clippés par le overflow:hidden des containers de vue.
+//
+//  · Biogaz  : tuyau horizontal de la cuve tampon (Vue0) jusqu'à la frontière Vue0/Vue1
+//              (la partie Vue1 est portée par DigesteurManifold)
+//  · GRDF aval : du poste d'injection (Vue0) vers le réseau aval (230 px en Vue1)
+//
+// Calcul des positions :
+//   Vue0 SVG = viewBox 160×350 rendu 1:1 (350 px de haut), ancré à droite dans Vue0.
+//   → cx=90 en SVG  ≡  scene x = (vw-160)+90 = vw-70
+//   → frontière Vue0/Vue1 = vw
+//   Les y SVG sont des coordonnées scène directes (ratio 1:1).
+function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
+  const divRef = useRef(null);
+  const [vw, setVw]     = useState(0);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => (t+1)%1000), 40);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!divRef.current) return;
+    const measure = () => setVw(divRef.current.offsetWidth / 3);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(divRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const flow    = -(tick * 0.9) % 20;
+  const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
+
+  const pipeX    = vw - 70;   // aligne sur cx=90 du SVG Vue0 (right-aligned 160px)
+  const boundary = vw;        // frontière Vue0/Vue1
+
+  // Biogaz : cuve tampon → frontière  (Vue1 manifold prend le relais de l'autre côté)
+  const biogazY    = 3 + yOffset;   // y SVG = y scène (1:1)
+  const biogazEndX = boundary;
+
+  // GRDF aval : poste injection → 230 px dans Vue1
+  const grdfY    = 333 + yOffset;
+  const grdfEndX = boundary + 230;
+
+  const biogazOn = buffer > 0;
+  const grdfOn   = injected;
+
+  if (vw === 0) return (
+    <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}/>
+  );
+
+  return (
+    <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
+      <svg style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",display:"block",overflow:"visible"}}>
+
+        {/* ── BIOGAZ : coude vertical (cuve tampon) + tuyau horizontal → frontière Vue0/Vue1 ── */}
+        {/* Coude vertical cx-4 à cx+4, y=3 à y=17 (rencontre la cuve tampon) */}
+        <rect x={pipeX-4} y={biogazY} width={8} height={14} rx={2}
+          fill={biogazOn?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"}
+          stroke={biogazOn?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"}
+          strokeWidth="1"/>
+        {/* Tuyau horizontal : cx → frontière */}
+        <rect x={pipeX} y={biogazY} width={biogazEndX-pipeX} height={8} rx={2}
+          fill={biogazOn?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"}
+          stroke={biogazOn?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"}
+          strokeWidth="1"/>
+        {biogazOn&&<rect x={pipeX} y={biogazY+1} width={biogazEndX-pipeX} height={6} rx={2}
+          fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1"
+          strokeDasharray="7 5" strokeDashoffset={flow}/>}
+
+        {/* ── GRDF AVAL : stub vertical (poste injection) + tuyau horizontal → Vue1 ── */}
+        {/* Stub vertical : cx-4 à cx+4, y=322 à y=338 */}
+        <rect x={pipeX-4} y={grdfY-11} width={8} height={16} rx={3}
+          fill={grdfOn?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"}
+          stroke={grdfOn?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"}
+          strokeWidth="1"/>
+        {/* Tuyau horizontal GRDF aval */}
+        <rect x={pipeX} y={grdfY} width={grdfEndX-pipeX} height={8} rx={3}
+          fill={grdfOn?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"}
+          stroke={grdfOn?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"}
+          strokeWidth="1"/>
+        {grdfOn&&<rect x={pipeX} y={grdfY+1} width={grdfEndX-pipeX} height={6} rx={3}
+          fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1"
+          strokeDasharray="6 5" strokeDashoffset={-flow}/>}
+        <text x={pipeX+2} y={grdfY-3} textAnchor="start" fontSize="5.5" fontWeight="800"
+          fill={grdfOn?"#6DB5EC":"rgba(255,255,255,.3)"}>Réseau GRDF aval →</text>
+        {/* Embout réseau en Vue1 */}
+        <circle cx={grdfEndX} cy={grdfY+4} r={5}
+          fill={grdfOn?"#4A9EDB":"rgba(74,158,219,.22)"}
+          stroke={grdfOn?"rgba(74,158,219,.8)":"rgba(74,158,219,.3)"}
+          strokeWidth="1.5"/>
+
+      </svg>
+    </div>
+  );
+}
+
 function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockAnim, bufferPct, buffer, digesteurs }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const id=setInterval(()=>setTick(t=>(t+1)%1000),40); return ()=>clearInterval(id); }, []);
@@ -3836,10 +3936,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
 
         <g transform={`translate(0, ${yOffset})`}>
 
-        {/* ── Biogaz entry : pipe horizontal depuis Vue1 jusqu'à la cuve (bord droit SVG = frontière vues) ── */}
-        <rect x={cx} y="3" width="70" height="8" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
-        {act(0)&&<rect x={cx} y="4" width="70" height="6" rx="2" fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1" strokeDasharray="7 5" strokeDashoffset={flow}/>}
-        <rect x={cx-4} y="3" width="8" height="14" rx="2" fill={act(0)?"rgba(58,172,204,.3)":"rgba(74,158,219,.08)"} stroke={act(0)?"rgba(74,158,219,.5)":"rgba(74,158,219,.2)"} strokeWidth="1"/>
+        {/* ── Biogaz entry : coude vertical + tuyau horizontal dans CrossBoundaryPipesOverlay ── */}
 
         {/* ── Cuve tampon ── */}
         <ellipse cx={cx} cy="15" rx="26" ry="6" fill={act(0)?"#0098CC":"rgba(42,140,192,.25)"} stroke={act(0)?"#3AACCC":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
@@ -3919,12 +4016,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         <text x={LX} y="280" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(3)?"#6DB5EC":"rgba(255,255,255,.3)"}>Poste d'injection</text>
         <text x={LX} y="290" textAnchor="end" fontSize="6" fill={act(3)?"rgba(255,255,255,.62)":"rgba(255,255,255,.18)"}>Odorisation · Comptage</text>
 
-        {/* ── GRDF exit : descend puis part à droite → réseau aval ── */}
-        <rect x={cx-4} y="322" width="8" height="16" rx="3" fill={injected?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"} stroke={injected?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"} strokeWidth="1"/>
-        <rect x={cx} y="333" width="66" height="8" rx="3" fill={injected?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"} stroke={injected?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"} strokeWidth="1"/>
-        {injected&&<rect x={cx} y="334" width="66" height="6" rx="3" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1" strokeDasharray="6 5" strokeDashoffset={flow}/>}
-        <polygon points="154,333 154,341 159,337" fill={injected?"#4A9EDB":"rgba(74,158,219,.22)"}/>
-        <text x={cx+2} y="330" textAnchor="start" fontSize="5.5" fontWeight="800" fill={injected?"#6DB5EC":"rgba(255,255,255,.3)"}>Réseau GRDF aval →</text>
+        {/* ── GRDF exit : stub vertical + horizontal dans CrossBoundaryPipesOverlay ── */}
 
         </g>
       </svg>
@@ -7493,6 +7585,10 @@ function DigesteurScene({
               );
             })()}
           </svg>
+
+          {/* v25.11.27 — Tuyaux inter-vues (biogaz + réseau GRDF aval).
+              Position:absolute dans le div scène (width:300%), non clippé. */}
+          <CrossBoundaryPipesOverlay digesteurs={digesteurs} buffer={buffer} injected={injected}/>
 
           {/* v23.9 : Overlay HTML pour les particules de chargement (positionné
               sur toute la scène monde, les particules sont créées en JS pur avec
