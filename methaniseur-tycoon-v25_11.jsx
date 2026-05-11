@@ -3819,9 +3819,11 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
   const biogazY    = 3 + yOffset;   // y SVG = y scène (1:1)
   const biogazEndX = boundary;
 
-  // GRDF aval : poste injection → 230 px dans Vue1
-  const grdfY    = 333 + yOffset;
-  const grdfEndX = boundary + 230;
+  // GRDF aval : connecteur L depuis poste injection → tuyau GRDF du SVG monde
+  // SVG monde : GRDF_PIPE_Y=375, rendu height=600px pour viewBox 480px → yScale=1.25
+  // V0_V1=400 en SVG monde → scene x=vw ; V0_V1+10 → scene x=410*vw/400
+  const grdfWorldY  = Math.round(375 * 600 / 480);  // 469 px (scene y du tuyau GRDF monde)
+  const grdfWorldX  = Math.round(410 * vw / 400);   // scene x du début du pipe GRDF monde
 
   const biogazOn = buffer > 0;
   const grdfOn   = injected;
@@ -3849,27 +3851,19 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected }) {
           fill="none" stroke="rgba(74,158,219,.55)" strokeWidth="1"
           strokeDasharray="7 5" strokeDashoffset={flow}/>}
 
-        {/* ── GRDF AVAL : stub vertical (poste injection) + tuyau horizontal → Vue1 ── */}
-        {/* Stub vertical : cx-4 à cx+4, y=322 à y=338 */}
-        <rect x={pipeX-4} y={grdfY-11} width={8} height={16} rx={3}
-          fill={grdfOn?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"}
-          stroke={grdfOn?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"}
+        {/* ── GRDF AVAL : connecteur L — poste injection ↓ → tuyau GRDF SVG monde ── */}
+        {/* Vertical : cx (vw-70), depuis sortie poste injection (y=322+yOffset) jusqu'à GRDF_PIPE_Y scène */}
+        <rect x={pipeX-4} y={322+yOffset} width={8} height={grdfWorldY-(322+yOffset)} rx={3}
+          fill={grdfOn?"rgba(42,125,187,.5)":"rgba(74,158,219,.08)"}
+          stroke={grdfOn?"rgba(74,158,219,.45)":"rgba(74,158,219,.15)"}
           strokeWidth="1"/>
-        {/* Tuyau horizontal GRDF aval */}
-        <rect x={pipeX} y={grdfY} width={grdfEndX-pipeX} height={8} rx={3}
-          fill={grdfOn?"rgba(42,125,187,.6)":"rgba(74,158,219,.09)"}
-          stroke={grdfOn?"rgba(74,158,219,.55)":"rgba(74,158,219,.17)"}
+        {/* Horizontal bas : rejoint le début du tuyau GRDF dans le SVG monde (V0_V1+10) */}
+        <rect x={pipeX-4} y={grdfWorldY} width={grdfWorldX-(pipeX-4)} height={5} rx={2}
+          fill={grdfOn?"rgba(42,125,187,.5)":"rgba(74,158,219,.08)"}
+          stroke={grdfOn?"rgba(74,158,219,.45)":"rgba(74,158,219,.15)"}
           strokeWidth="1"/>
-        {grdfOn&&<rect x={pipeX} y={grdfY+1} width={grdfEndX-pipeX} height={6} rx={3}
-          fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="1"
-          strokeDasharray="6 5" strokeDashoffset={-flow}/>}
-        <text x={pipeX+2} y={grdfY-3} textAnchor="start" fontSize="5.5" fontWeight="800"
-          fill={grdfOn?"#6DB5EC":"rgba(255,255,255,.3)"}>Réseau GRDF aval →</text>
-        {/* Embout réseau en Vue1 */}
-        <circle cx={grdfEndX} cy={grdfY+4} r={5}
-          fill={grdfOn?"#4A9EDB":"rgba(74,158,219,.22)"}
-          stroke={grdfOn?"rgba(74,158,219,.8)":"rgba(74,158,219,.3)"}
-          strokeWidth="1.5"/>
+        <text x={pipeX+4} y={322+yOffset-3} textAnchor="start" fontSize="5.5" fontWeight="800"
+          fill={grdfOn?"#6DB5EC":"rgba(255,255,255,.25)"}>Réseau GRDF aval ↓</text>
 
       </svg>
     </div>

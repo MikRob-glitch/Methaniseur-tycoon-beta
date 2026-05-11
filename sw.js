@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-33';   // v25.11.28 — Stubs biogaz + GRDF entièrement dans CrossBoundaryPipesOverlay (plus de clipping Vue0)
+const CACHE_NAME = 'methaniseur-tycoon-v25-34';   // v25.11.29 — GRDF overlay : connecteur L aligné sur GRDF_PIPE_Y du SVG monde (469px scène)
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
