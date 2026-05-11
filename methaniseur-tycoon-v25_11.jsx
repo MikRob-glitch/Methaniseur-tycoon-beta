@@ -3862,7 +3862,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
         <line x1={biogazEndX} y1={biogazY+4} x2={pipeX} y2={biogazY+4}
           stroke="rgba(102,238,136,.6)" strokeWidth="4"
           strokeDasharray="10 8" strokeLinecap="round"
-          style={{animation: isDigesting ? "gasFlowReverse 1s linear infinite" : "none"}}/>
+          style={{animation: isDigesting ? "gasFlow 1s linear infinite" : "none"}}/>
         <text x={vw+10} y={biogazY-4} textAnchor="start" fontSize="8"
           fill={isDigesting?"rgba(102,238,136,.95)":"rgba(74,158,219,.6)"}
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
