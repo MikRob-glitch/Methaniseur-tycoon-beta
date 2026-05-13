@@ -4872,14 +4872,31 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
             if (t.gnvStopStart) {
               const paused = now - t.gnvStopStart;
               if (paused < GNV_STOP_DUR) {
-                // Figé à la position station
+                // Figé à la position station — lookbehind pour rester horizontal (évite rotation 90°)
                 t.progress = t.gnvStopProgress;
-                updateTractorTransform(tractorRefs.current[i], path, t.progress);
+                const tractorEl = tractorRefs.current[i];
+                if (tractorEl && path) {
+                  const totalLen = path.getTotalLength();
+                  if (totalLen > 0) {
+                    const cDist = t.gnvStopProgress * totalLen;
+                    const pt = path.getPointAtLength(cDist);
+                    const ptPrev = path.getPointAtLength(Math.max(0, cDist - 2));
+                    const ldx = pt.x - ptPrev.x;
+                    const ldy = pt.y - ptPrev.y;
+                    let tr;
+                    if (Math.abs(ldx) >= Math.abs(ldy)) {
+                      tr = ldx >= 0 ? `translate(${pt.x} ${pt.y}) scale(-1 1)` : `translate(${pt.x} ${pt.y})`;
+                    } else {
+                      tr = ldy >= 0 ? `translate(${pt.x} ${pt.y}) rotate(-90)` : `translate(${pt.x} ${pt.y}) rotate(90)`;
+                    }
+                    tractorEl.setAttribute('transform', tr);
+                  }
+                }
                 continue;
               }
-              // Fin de l'arrêt : compenser la durée de pause dans phaseStart
+              // Fin de l'arrêt : décaler phaseStart en avant pour neutraliser la pause
               t.gnvStopDone = true;
-              t.phaseStart -= GNV_STOP_DUR;
+              t.phaseStart += GNV_STOP_DUR;
             }
           }
 
