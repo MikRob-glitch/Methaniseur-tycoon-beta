@@ -1,6 +1,16 @@
 
-// Source de vérité — Méthaniseur Tycoon v25.11
+// Source de vérité — Méthaniseur Tycoon v25.12
 // Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.12 : SÉCURITÉ — lockdown RLS Supabase (étape 1)
+//         · password_hash plus jamais côté client (RPC verify_login SECURITY DEFINER)
+//         · supabaseCheckMaia → RPC maia_exists (existence seule, pas de hash leak)
+//         · GRANT par colonne sur anon (anti-énumération password_hash)
+//         · Trigger anti-vandalisme : scores monotones côté Postgres
+//         · Policies INSERT/UPDATE bornées (caps 10⁹, format MAIA validé)
+//         · select=* → liste explicite (compat GRANT colonnes)
+//         · Message login unifié (anti-énumération MAIA existants)
+//         ⚠️ Restant pour étape 2 : Edge Functions pour valider scores serveur-side
+//         (un joueur peut encore inflate SES PROPRES scores via DevTools)
 // v25.9 : ROUTES LATÉRALES TRACTEURS — circuit complet visible
 //         · Bandes latérales gauche/droite élargies à 30px (asphalte + tirets centraux)
 //         · Tracteurs 🚜 animés : descendent côté droit (gisements→stations), montent côté gauche
@@ -62,13 +72,42 @@ const hashPassword = async (password) => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-// Vérifie si un identifiant MAIA existe déjà en base
+// v25.12 — SÉCURITÉ : on ne récupère plus le password_hash côté client.
+// Vérifie SEULEMENT l'existence d'un MAIA via la RPC maia_exists (SECURITY DEFINER).
+// Utilisé par App init (valider session locale) et doRegister (empêcher doublons).
+// Pour le login, voir supabaseVerifyLogin ci-dessous.
 const supabaseCheckMaia = async (maia) => {
   if (!SUPABASE_KEY) return null;
-  const res = await fetch(
-    SUPABASE_URL + `/rest/v1/players?maia=eq.${encodeURIComponent(maia)}&select=maia,username,region,password_hash`,
-    { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
-  );
+  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/maia_exists", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+    },
+    body: JSON.stringify({ p_maia: maia }),
+  });
+  if (!res.ok) return null;
+  const exists = await res.json();
+  // Compat appelants existants : objet truthy si trouvé, sinon null.
+  return exists ? { maia } : null;
+};
+
+// v25.12 — Login : maia+hash comparés dans la RPC verify_login (SECURITY DEFINER).
+// Le password_hash ne traverse jamais le réseau dans le sens serveur→client.
+// Retourne {maia, username, region} si OK, sinon null.
+const supabaseVerifyLogin = async (maia, passwordHash) => {
+  if (!SUPABASE_KEY) return null;
+  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/verify_login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+    },
+    body: JSON.stringify({ p_maia: maia, p_hash: passwordHash }),
+  });
+  if (!res.ok) return null;
   const rows = await res.json();
   return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 };
@@ -199,7 +238,7 @@ const supabaseLoadGame = async (maia) => {
   if (!SUPABASE_KEY || !maia) return null;
   try {
     const res = await fetch(
-      SUPABASE_URL + `/rest/v1/players?maia=eq.${encodeURIComponent(maia)}&select=*`,
+      SUPABASE_URL + `/rest/v1/players?maia=eq.${encodeURIComponent(maia)}&select=id,maia,username,region,score_network,score_gnv,is_connected,buffer,epurateur,compresseur,digesteurs,euros,mo,tut_step,owned,stock,charge,stock_yield,charge_yield,stock_composition,charge_composition,gnv_stations,gnv_split,gnv_bm,tractor_gnv,auto_dump,auto_dump_threshold,tractor_count,tractor_speed_boost,tractor_trailers,tractor_gnv_arr,pinned_zones,local_stock,zone_state,saturated_since,offline_until,reliability,updated_at,last_saved`,
       { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
     );
     const rows = await res.json();
@@ -798,13 +837,11 @@ function App() {
     setAuthLoading(true); setAuthError("");
     try {
       const hash = await hashPassword(p);
-      const agent = await supabaseCheckMaia(m);
+      // v25.12 — comparaison hash côté serveur via RPC (sécurité).
+      const agent = await supabaseVerifyLogin(m, hash);
       if (!agent) {
-        setAuthError("Identifiant MAIA inconnu. Créez votre compte.");
-        setAuthLoading(false); return;
-      }
-      if (agent.password_hash !== hash) {
-        setAuthError("Mot de passe incorrect.");
+        // Message unifié : ne pas révéler si le MAIA existe ou pas (anti-énumération)
+        setAuthError("Identifiant ou mot de passe incorrect.");
         setAuthLoading(false); return;
       }
       const u = agent.username;
