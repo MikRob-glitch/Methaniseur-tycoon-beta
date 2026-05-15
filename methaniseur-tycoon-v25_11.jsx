@@ -1,6 +1,14 @@
 
-// Source de vérité — Méthaniseur Tycoon v25.12
+// Source de vérité — Méthaniseur Tycoon v25.13
 // Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.13 : SÉCURITÉ — Edge Function players-api (étape 2)
+//         · Toutes les écritures (register/login/save) passent par l'Edge Function
+//         · Validation serveur des scores (monotone + plafond 10⁹ + gain max plausible)
+//         · Session token UUID (renvoyé au login, valable 24h, refresh à chaque save)
+//         · Logout invalide le token côté serveur
+//         · password_hash ne traverse JAMAIS le réseau côté client→serveur sauf au login
+//         ⚠️ Les anciens utilisateurs devront se RECONNECTER une fois (pas de session_token)
+//         ⚠️ Restant : REVOKE INSERT/UPDATE depuis anon (lockdown final, à faire après stabilisation)
 // v25.12 : SÉCURITÉ — lockdown RLS Supabase (étape 1)
 //         · password_hash plus jamais côté client (RPC verify_login SECURITY DEFINER)
 //         · supabaseCheckMaia → RPC maia_exists (existence seule, pas de hash leak)
@@ -93,120 +101,92 @@ const supabaseCheckMaia = async (maia) => {
   return exists ? { maia } : null;
 };
 
-// v25.12 — Login : maia+hash comparés dans la RPC verify_login (SECURITY DEFINER).
+// v25.13 — Login via Edge Function players-api (renvoie un session_token UUID).
 // Le password_hash ne traverse jamais le réseau dans le sens serveur→client.
-// Retourne {maia, username, region} si OK, sinon null.
+// Retourne {maia, username, region} si OK, sinon null. Stocke session_token en localStorage.
 const supabaseVerifyLogin = async (maia, passwordHash) => {
-  if (!SUPABASE_KEY) return null;
-  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/verify_login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
-    },
-    body: JSON.stringify({ p_maia: maia, p_hash: passwordHash }),
-  });
+  const res = await _callPlayersApi({ action: "login", maia, password_hash: passwordHash });
   if (!res.ok) return null;
-  const rows = await res.json();
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (res.session_token) setSessionToken(res.session_token);
+  return { maia: res.maia, username: res.username, region: res.region };
 };
 
-// Crée un nouveau compte agent (inscription)
-const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
+// v25.13 — Toutes les écritures passent par l'Edge Function players-api.
+//          Le client n'écrit plus directement dans la table players.
+//          Auth via session_token UUID (renvoyé au login, stocké en localStorage).
+const PLAYERS_API = SUPABASE_URL + "/functions/v1/players-api";
+
+// Helper interne : POST sur l'Edge Function
+const _callPlayersApi = async (payload) => {
   if (!SUPABASE_KEY) return { ok: false, error: "Supabase non configuré" };
-  const id = `${maia}`.toLowerCase().replace(/\s+/g, '_');
-  const res = await fetch(SUPABASE_URL + "/rest/v1/players", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
-      "Prefer": "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify({
-      id, maia, password_hash: passwordHash,
-      username, region,
-      // ── Score & raccordement ─────────────────────────────────────────────
-      score_network: 0, score_gnv: 0, is_connected: false,
-      buffer: 10,
-      // ── v24.2 : full state explicite à l'INSERT ──────────────────────────
-      // Ne pas dépendre des DEFAULTs SQL (risque de DEFAULTs erronés type
-      // reliability=1 ou local_stock='{}'::jsonb au lieu d'arrays).
-      mo: 0,
-      tut_step: 0,
-      owned: [0,0,0,0,0,0,0],
-      stock: 0,
-      charge: 0,
-      // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
-      stock_yield: 0,
-      charge_yield: 0,
-      // v25.0.9 — composition réelle par intrant
-      stock_composition:  [0,0,0,0,0,0,0],
-      charge_composition: [0,0,0,0,0,0,0],
-      epurateur: false,
-      compresseur: false,
-      digesteurs: 1,
-      gnv_stations: 0,
-      gnv_split: 20,
-      gnv_bm: 0,
-      tractor_gnv: false,
-      euros: 0,
-      auto_dump: false,
-      auto_dump_threshold: 0,                 // v25.0.8 — seuil déclenchement déverseur (0 = continu)
-      // v23 — flotte tracteurs
-      tractor_count: 1,
-      tractor_speed_boost: false,
-      pinned_zones: [],
-      // v24 — gisements locaux
-      local_stock:     [0,0,0,0,0,0,0],
-      zone_state:      ["ok","ok","ok","ok","ok","ok","ok"],
-      saturated_since: [null,null,null,null,null,null,null],
-      offline_until:   [null,null,null,null,null,null,null],
-      reliability:     100,
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  if (!res.ok) return { ok: false, error: "Erreur création compte" };
+  try {
+    const res = await fetch(PLAYERS_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || "http_" + res.status, status: res.status, detail: data };
+    return data;
+  } catch (e) {
+    return { ok: false, error: "network", detail: String(e) };
+  }
+};
+
+// Token de session local (renvoyé par /login et /register, utilisé par /save)
+const SESSION_TOKEN_KEY = "mt_session_token_v2";
+const getSessionToken = () => { try { return localStorage.getItem(SESSION_TOKEN_KEY) || null; } catch { return null; } };
+const setSessionToken = (t) => { try { if (t) localStorage.setItem(SESSION_TOKEN_KEY, t); else localStorage.removeItem(SESSION_TOKEN_KEY); } catch {} };
+
+// Crée un nouveau compte agent (inscription) — passe par l'Edge Function.
+const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
+  const res = await _callPlayersApi({ action: "register", maia, password_hash: passwordHash, username, region });
+  if (!res.ok) return { ok: false, error: res.error === "maia_taken" ? "Ce MAIA est déjà enregistré" : ("Erreur création compte : " + (res.error || "inconnu")) };
+  if (res.session_token) setSessionToken(res.session_token);
   return { ok: true };
 };
 
-// Upsert joueur — helper HTTP interne
-// v25.0.1 — fix 409 Conflict : on spécifie on_conflict=maia pour matcher la
-//           contrainte UNIQUE sur la colonne `maia`. Sans ça, PostgREST tente
-//           un INSERT et viole players_maia_key.
-const _supabaseFetch = (body) => {
-  if (!SUPABASE_KEY || SUPABASE_URL.includes("VOTRE_PROJECT_ID")) return Promise.resolve();
-  return fetch(SUPABASE_URL + "/rest/v1/players?on_conflict=maia", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
-      "Prefer": "resolution=merge-duplicates",
-    },
-    body: JSON.stringify(Object.assign({}, body, { updated_at: new Date().toISOString() })),
-  });
+// Upsert joueur — V25.13 : tout passe par l'Edge Function /save (validation serveur).
+//   score-only et full state fusionnés en un seul appel (l'Edge Function whitelist les colonnes).
+const _supabaseSave = (payload) => {
+  const token = getSessionToken();
+  if (!token) {
+    console.warn("[Save] Pas de session_token, save ignorée — il faut se reconnecter");
+    return Promise.resolve({ ok: false, error: "no_session" });
+  }
+  return _callPlayersApi({ action: "save", session_token: token, state: payload })
+    .then(r => {
+      if (!r.ok) {
+        console.warn("[Save] échec :", r.error, r.detail);
+        if (r.error === "invalid_token" || r.error === "session_expired") {
+          // Session morte : on purge → l'app détectera l'absence au prochain boot
+          setSessionToken(null);
+        }
+      }
+      return r;
+    });
 };
 
-// 1) Score-only — champs critiques classement, toujours envoyés en premier
-// v25.0.5 — euros ajouté car tie-breaker du tri composite leaderboard
-const supabaseUpsertScore = (payload) => {
-  const { id, maia, username, region, score_network, score_gnv, is_connected,
-          buffer, epurateur, compresseur, digesteurs, euros } = payload;
-  _supabaseFetch({ id, maia, username, region, score_network, score_gnv,
-                   is_connected, buffer, epurateur, compresseur, digesteurs, euros })
-    .then(r => { if (r && !r.ok) r.text().then(t => console.warn("[Supabase score]", r.status, t)); })
-    .catch(e => console.warn("[Supabase score network]", e));
+// Compat appelants existants : on accepte la même signature (payload obj),
+// on filtre les champs et on envoie via _supabaseSave.
+const _toSaveState = (payload) => {
+  // L'Edge Function accepte les noms snake_case (cohérence avec le schéma DB).
+  // Le code JSX appelait déjà supabaseUpsert avec snake_case → on garde tel quel.
+  const { id, maia, username, region, updated_at, last_saved, password_hash, ...state } = payload || {};
+  return state;
 };
 
-// 2) Full game state — best-effort (peut échouer si schéma incomplet)
-const supabaseUpsert = (payload) => {
-  _supabaseFetch(payload)
-    .then(r => { if (r && !r.ok) r.text().then(t => console.warn("[Supabase full]", r.status, t)); })
-    .catch(e => console.warn("[Supabase full network]", e));
-};
+// 1) Score-only — désormais identique au full state (l'Edge Function valide)
+const supabaseUpsertScore = (payload) => { _supabaseSave(_toSaveState(payload)); };
 
+// 2) Full game state — best-effort
+const supabaseUpsert = (payload) => { _supabaseSave(_toSaveState(payload)); };
+
+// Lecture des stats régionales agrégées
 // Lecture des stats régionales agrégées
 const fetchRegionalStats = () => {
   if (!SUPABASE_KEY || SUPABASE_URL.includes("VOTRE_PROJECT_ID")) return Promise.resolve(null);
@@ -1890,8 +1870,12 @@ function Game({ username, region, maia }) {
   const handleLogout = useCallback(() => {
     if (!window.confirm("Se déconnecter ?\n\nTa progression est sauvegardée — tu la retrouveras à la prochaine connexion.")) return;
     try { saveGame(); } catch {}
+    // v25.13 — invalide le token côté serveur + purge local
+    const tok = getSessionToken();
+    if (tok) { try { _callPlayersApi({ action: "logout", session_token: tok }); } catch {} }
     try { localStorage.removeItem('mt_login_v2'); } catch {}
-    // 600ms = laisse le temps au upsert Supabase de partir avant le reload
+    try { setSessionToken(null); } catch {}
+    // 600ms = laisse le temps au upsert + logout de partir avant le reload
     setTimeout(() => location.reload(), 600);
   }, [saveGame]);
 
