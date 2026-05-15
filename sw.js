@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-41';   // v25.13 — SÉCURITÉ étape 2 : Edge Function players-api (validation serveur scores + session_token)
+const CACHE_NAME = 'methaniseur-tycoon-v25-42';   // v25.14 — LEADERBOARDS MULTI-AXES (Performance + Maîtrise + Cumul saison/lifetime)
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [

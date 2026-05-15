@@ -1,6 +1,15 @@
 
-// Source de vérité — Méthaniseur Tycoon v25.13
+// Source de vérité — Méthaniseur Tycoon v25.14
 // Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.14 : LEADERBOARDS MULTI-AXES — Vague 1
+//         · 3 sous-onglets dans Mon classement : Performance / Maîtrise / Cumul
+//         · Performance = m³/jour moyen sur 7j glissants (via snapshots quotidiens)
+//         · Maîtrise    = yield CH₄/t du stock_composition actuel
+//         · Cumul       = Saison (depuis season_started_at) + Hall of Fame (lifetime)
+//         · Onglet "Ma région" et toggle National/Régional inchangés
+//         · Toutes les requêtes passent par l'Edge Function (nouvelle action "leaderboard")
+//         ⚠️ Performance nécessite ~7j de données pour produire les premières mesures
+//         ⚠️ Vague 2 prévue : filtres temporels (jour/semaine/mois), archives saisons, reset auto
 // v25.13 : SÉCURITÉ — Edge Function players-api (étape 2)
 //         · Toutes les écritures (register/login/save) passent par l'Edge Function
 //         · Validation serveur des scores (monotone + plafond 10⁹ + gain max plausible)
@@ -135,6 +144,14 @@ const _callPlayersApi = async (payload) => {
   } catch (e) {
     return { ok: false, error: "network", detail: String(e) };
   }
+};
+
+// v25.14 — Fetch leaderboard via Edge Function (4 modes : performance / mastery / cumulative_season / cumulative_lifetime)
+const fetchLeaderboardEdge = async (mode, region) => {
+  const payload = { action: "leaderboard", mode };
+  if (region) payload.region = region;
+  const r = await _callPlayersApi(payload);
+  return r.ok && Array.isArray(r.results) ? r.results : null;
 };
 
 // Token de session local (renvoyé par /login et /register, utilisé par /save)
@@ -1436,6 +1453,13 @@ function Game({ username, region, maia }) {
   const [tab,     setTab]     = useState("game");
   const [rankTab, setRankTab] = useState("mine"); // v25.0.6 — "mine" | "regions" (badges promu en onglet principal)
   const [myRankTab, setMyRankTab] = useState("national"); // "national" | "regional" (nested under "mine")
+  // v25.14 — Sous-onglets de classement multi-axes
+  const [myRankMode, setMyRankMode] = useState("cumulative"); // "performance" | "mastery" | "cumulative"
+  const [cumulativeView, setCumulativeView] = useState("season"); // "season" | "lifetime" (uniquement si mode=cumulative)
+  const [lbPerf, setLbPerf] = useState([]);
+  const [lbMastery, setLbMastery] = useState([]);
+  const [lbSeason, setLbSeason] = useState([]);
+  const [lbModeLoading, setLbModeLoading] = useState(false);
   const [mo,      setMo]      = useState(saved?.mo      ?? 0);
   const [bm,      setBm]      = useState(() => {
     const base = saved?.bm ?? 0;
@@ -1775,6 +1799,18 @@ function Game({ username, region, maia }) {
 
   const rtStatus = useSupabaseRealtime(handleRealtimeChange, tab === "ranking");
 
+  // v25.14 — Fetch des leaderboards multi-modes (perf / mastery / season) via Edge Function
+  const loadLeaderboardByMode = useCallback(async (mode, regionFilter) => {
+    setLbModeLoading(true);
+    const rows = await fetchLeaderboardEdge(mode, regionFilter);
+    if (Array.isArray(rows)) {
+      if (mode === "performance")        setLbPerf(rows);
+      else if (mode === "mastery")       setLbMastery(rows);
+      else if (mode === "cumulative_season") setLbSeason(rows);
+    }
+    setLbModeLoading(false);
+  }, []);
+
   // Initial fetch when tab opens
   useEffect(() => {
     if (tab !== "ranking") return;
@@ -1782,6 +1818,16 @@ function Game({ username, region, maia }) {
     loadRegional();
     loadRegionalLb();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // v25.14 — Refetch quand l'utilisateur change de mode ou de scope dans "Mon classement"
+  useEffect(() => {
+    if (tab !== "ranking" || rankTab !== "mine") return;
+    const regionFilter = myRankTab === "regional" ? region : null;
+    if (myRankMode === "performance")  loadLeaderboardByMode("performance", regionFilter);
+    if (myRankMode === "mastery")      loadLeaderboardByMode("mastery", regionFilter);
+    if (myRankMode === "cumulative" && cumulativeView === "season") loadLeaderboardByMode("cumulative_season", regionFilter);
+    // cumulative+lifetime = utilise le fetch REST existant (loadLeaderboard) — pas de refetch ici
+  }, [tab, rankTab, myRankTab, myRankMode, cumulativeView, region, loadLeaderboardByMode]);
 
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
@@ -3637,6 +3683,9 @@ function Game({ username, region, maia }) {
         <RankingTab
           rankTab={rankTab} setRankTab={setRankTab}
           myRankTab={myRankTab} setMyRankTab={setMyRankTab}
+          myRankMode={myRankMode} setMyRankMode={setMyRankMode}
+          cumulativeView={cumulativeView} setCumulativeView={setCumulativeView}
+          lbPerf={lbPerf} lbMastery={lbMastery} lbSeason={lbSeason} lbModeLoading={lbModeLoading}
           leaderboard={leaderboard} lbLoading={lbLoading}
           lbLastUpdate={lbLastUpdate} lbPrevRanks={lbPrevRanks}
           onRefreshLb={loadLeaderboard}
@@ -7937,6 +7986,8 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
 // ─── RANKING TAB — Phase 2 : national + régional ─────────────────────────────
 function RankingTab({
   rankTab, setRankTab, myRankTab, setMyRankTab,
+  myRankMode, setMyRankMode, cumulativeView, setCumulativeView,
+  lbPerf, lbMastery, lbSeason, lbModeLoading,
   leaderboard, lbLoading, lbLastUpdate, lbPrevRanks,
   onRefreshLb, regionalStats, regionalLoading, onRefreshRegional,
   regionalLb, regionalLbLoading, onRefreshRegionalLb,
@@ -8051,6 +8102,42 @@ function RankingTab({
         ))}
       </div>
 
+      {/* ══ v25.14 — SUB-TABS MULTI-AXES (Performance / Maîtrise / Cumul) ══ */}
+      {rankTab === "mine" && (
+        <div style={{display:"flex",padding:"10px 14px 0",gap:"6px"}}>
+          {[
+            ["performance","📊 Performance"],
+            ["mastery","⚙️ Maîtrise"],
+            ["cumulative","🏆 Cumul"],
+          ].map(([id,lbl]) => (
+            <button key={id} onClick={() => setMyRankMode(id)} style={{
+              flex:1,padding:"8px 6px",borderRadius:"10px",
+              background:myRankMode===id?"rgba(74,158,219,.2)":"rgba(255,255,255,.03)",
+              border:`1px solid ${myRankMode===id?"rgba(74,158,219,.45)":"rgba(255,255,255,.06)"}`,
+              color:myRankMode===id?"#4A9EDB":"rgba(255,255,255,.5)",
+              fontSize:"10px",fontWeight:myRankMode===id?700:500,
+              cursor:"pointer",transition:"all .3s"
+            }}>{lbl}</button>
+          ))}
+        </div>
+      )}
+
+      {/* ══ Sous-sous-toggle Saison / Hall of Fame (uniquement en mode Cumul) ══ */}
+      {rankTab === "mine" && myRankMode === "cumulative" && (
+        <div style={{display:"flex",padding:"6px 14px 0",gap:"6px"}}>
+          {[["season","Cette saison"],["lifetime","🏛️ Hall of Fame"]].map(([id,lbl]) => (
+            <button key={id} onClick={() => setCumulativeView(id)} style={{
+              flex:1,padding:"5px 8px",borderRadius:"8px",
+              background:cumulativeView===id?"rgba(245,190,80,.12)":"rgba(255,255,255,.02)",
+              border:`1px solid ${cumulativeView===id?"rgba(245,190,80,.35)":"rgba(255,255,255,.05)"}`,
+              color:cumulativeView===id?"#F5BE50":"rgba(255,255,255,.4)",
+              fontSize:"9px",fontWeight:cumulativeView===id?700:500,
+              cursor:"pointer",transition:"all .3s"
+            }}>{lbl}</button>
+          ))}
+        </div>
+      )}
+
       {/* ══ SOUS-SOUS-ONGLETS DE MON CLASSEMENT ══ */}
       {rankTab === "mine" && (
         <div style={{display:"flex",padding:"10px 14px 0",gap:"6px"}}>
@@ -8067,8 +8154,142 @@ function RankingTab({
         </div>
       )}
 
-      {/* ══ MON CLASSEMENT · NATIONAL ══ */}
-      {rankTab === "mine" && myRankTab === "national" && (
+      {/* ══ v25.14 — VUE PERFORMANCE (m³ injectés par jour, moyenne 7j) ══ */}
+      {rankTab === "mine" && myRankMode === "performance" && (
+        <div style={{flex:1,padding:"12px 14px 30px"}}>
+          <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginBottom:"10px",lineHeight:1.5}}>
+            Classement par <b style={{color:"#6DB5EC"}}>production moyenne sur 7 jours glissants</b>.
+            Récompense les joueurs actifs récemment, indépendamment de l'ancienneté du compte.
+          </div>
+          {lbModeLoading ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px"}}>⏳ Chargement…</div>
+          ) : lbPerf.length === 0 ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px",lineHeight:1.5}}>
+              Aucune donnée pour l'instant.<br/>
+              <span style={{fontSize:"9px"}}>Le classement Performance nécessite au moins 24h de jeu pour produire les premières mesures.</span>
+            </div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
+              {lbPerf.slice(0, 50).map((entry, i) => {
+                const isMe = entry.username === username;
+                const perDay = (entry.perf_network_per_day || 0) + (entry.perf_gnv_per_day || 0) * 1.2;
+                return (
+                  <div key={entry.maia || i} style={{
+                    display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px",borderRadius:"10px",
+                    background:isMe?"rgba(74,158,219,.12)":"rgba(255,255,255,.025)",
+                    border:`1px solid ${isMe?"rgba(74,158,219,.4)":"rgba(255,255,255,.05)"}`
+                  }}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"#F5BE50":"rgba(255,255,255,.5)"}}>
+                      {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"#F5BE50":"#EDF4FF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"#6DB5EC"}}>MOI</span>}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:"13px",fontWeight:900,color:"#4A9EDB"}}>{fmt(perDay)}</div>
+                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³/jour</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ v25.14 — VUE MAÎTRISE (yield CH₄/t du stock actuel) ══ */}
+      {rankTab === "mine" && myRankMode === "mastery" && (
+        <div style={{flex:1,padding:"12px 14px 30px"}}>
+          <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginBottom:"10px",lineHeight:1.5}}>
+            Classement par <b style={{color:"#4ADB94"}}>rendement m³ CH₄/t</b> du mix d'intrants actuel.
+            Indépendant de la taille de l'installation : un petit joueur avec une bonne recette peut dominer.
+          </div>
+          {lbModeLoading ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px"}}>⏳ Chargement…</div>
+          ) : lbMastery.length === 0 ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px"}}>Aucune donnée.</div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
+              {lbMastery.slice(0, 50).map((entry, i) => {
+                const isMe = entry.username === username;
+                const yieldVal = Number(entry.current_yield || 0);
+                return (
+                  <div key={entry.maia || i} style={{
+                    display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px",borderRadius:"10px",
+                    background:isMe?"rgba(74,200,120,.12)":"rgba(255,255,255,.025)",
+                    border:`1px solid ${isMe?"rgba(74,200,120,.4)":"rgba(255,255,255,.05)"}`
+                  }}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"#F5BE50":"rgba(255,255,255,.5)"}}>
+                      {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"#4ADB94":"#EDF4FF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"#6DB5EC"}}>MOI</span>}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:"13px",fontWeight:900,color:"#4ADB94"}}>{yieldVal.toFixed(1)}</div>
+                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³ CH₄/t</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ v25.14 — VUE CUMUL SAISON (production depuis season_started_at) ══ */}
+      {rankTab === "mine" && myRankMode === "cumulative" && cumulativeView === "season" && (
+        <div style={{flex:1,padding:"12px 14px 30px"}}>
+          <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginBottom:"10px",lineHeight:1.5}}>
+            Classement par <b style={{color:"#F5BE50"}}>m³ produits depuis le début de la saison</b>.
+            Tous les joueurs partent à 0 au début de la saison — équitable pour les nouveaux arrivants.
+          </div>
+          {lbModeLoading ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px"}}>⏳ Chargement…</div>
+          ) : lbSeason.length === 0 ? (
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(255,255,255,.4)",fontSize:"11px"}}>Aucune donnée.</div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
+              {lbSeason.slice(0, 50).map((entry, i) => {
+                const isMe = entry.username === username;
+                const seasonScore = Number(entry.season_score || 0);
+                return (
+                  <div key={entry.maia || i} style={{
+                    display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px",borderRadius:"10px",
+                    background:isMe?"rgba(245,190,80,.12)":"rgba(255,255,255,.025)",
+                    border:`1px solid ${isMe?"rgba(245,190,80,.4)":"rgba(255,255,255,.05)"}`
+                  }}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"#F5BE50":"rgba(255,255,255,.5)"}}>
+                      {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"#F5BE50":"#EDF4FF",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"#6DB5EC"}}>MOI</span>}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:"13px",fontWeight:900,color:"#F5BE50"}}>{fmt(seasonScore)}</div>
+                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³ saison</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* La vue Cumul Lifetime (Hall of Fame) garde le rendu existant ci-dessous (NATIONAL/RÉGIONAL) */}
+
+      {/* ══ MON CLASSEMENT · NATIONAL · CUMUL LIFETIME (Hall of Fame) ══ */}
+      {rankTab === "mine" && myRankMode === "cumulative" && cumulativeView === "lifetime" && myRankTab === "national" && (
         <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
 
           {/* Podium top 3 */}
@@ -8276,7 +8497,7 @@ function RankingTab({
       )}
 
       {/* ══ MON CLASSEMENT · RÉGIONAL ══ */}
-      {rankTab === "mine" && myRankTab === "regional" && (
+      {rankTab === "mine" && myRankMode === "cumulative" && cumulativeView === "lifetime" && myRankTab === "regional" && (
         <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
             <div style={{fontSize:"12px",fontWeight:700,color:"rgba(255,255,255,.5)",letterSpacing:".06em",textTransform:"uppercase"}}>
