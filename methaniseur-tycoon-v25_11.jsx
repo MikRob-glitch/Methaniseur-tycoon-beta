@@ -1,6 +1,15 @@
 
-// Source de vérité — Méthaniseur Tycoon v25.14
+// Source de vérité — Méthaniseur Tycoon v25.15
 // Workflow : modifier ce fichier → ./build.sh → push index.html
+// v25.15 : SYSTEME C/N — REFONTE DES INTRANTS (vague 2)
+//         · 7 intrants recalibres (yields 30 a 280, range x9 au lieu de x25)
+//         · Ratio C/N par intrant (de 7 lisier a 35 CIVE)
+//         · Yield CH4 module par le mix C/N (sweet spot 25, largeur 10)
+//         · Mono-intrant peste (-30%) sauf si C/N proche du sweet
+//         · Mix equilibre = bonus jusqu'a +30%
+//         · Jauge C/N visible a gauche du bac d'intrants
+//         · Saves existantes : 100% compatibles (ids/noms inchanges)
+//         ⚠️ Apres deploy, le yield m3/t de tous les joueurs sera recalcule (cn applique)
 // v25.14 : LEADERBOARDS MULTI-AXES — Vague 1
 //         · 3 sous-onglets dans Mon classement : Performance / Maîtrise / Cumul
 //         · Performance = m³/jour moyen sur 7j glissants (via snapshots quotidiens)
@@ -497,56 +506,56 @@ const UPGRADES = [
     id:0, name:"Lisier bovin",        icon:"🐄",
     desc:"Effluents d'élevage bovin",
     baseCost:5,     baseFill:0.10,   bagCap:9,         unlocksAt:null,
-    realYield:20,
-    realYieldLabel:"~20 m³ CH₄ / tonne",
+    realYield:30,    cn:7,
+    realYieldLabel:"~30 m³ CH₄ / tonne  ·  C/N≈7 (azoté)",
     pedagoTip:"L'intrant le plus répandu en France. Faible rendement unitaire, mais disponible en très grand volume dans les exploitations agricoles. C'est la porte d'entrée de la méthanisation agricole.",
   },
   {
     id:1, name:"Déchets verts",       icon:"🌿",
     desc:"Tontes & résidus végétaux",
     baseCost:30,    baseFill:0.15,   bagCap:13.5,      unlocksAt:null,
-    realYield:75,
-    realYieldLabel:"~75 m³ CH₄ / tonne",
+    realYield:80,    cn:25,
+    realYieldLabel:"~80 m³ CH₄ / tonne  ·  C/N≈25 (équilibré)",
     pedagoTip:"Tontes de pelouse, tailles de haies, résidus végétaux de collectivités. Rendement 3,75× supérieur au lisier. Gisement local et stable, souvent sous-valorisé.",
   },
   {
     id:2, name:"Biodéchets restau",   icon:"🍽️",
     desc:"Restes alimentaires triés à la source",
     baseCost:150,   baseFill:0.30,   bagCap:27,        unlocksAt:"epurateur",
-    realYield:100,
-    realYieldLabel:"~100 m³ CH₄ / tonne",
+    realYield:130,   cn:18,
+    realYieldLabel:"~130 m³ CH₄ / tonne  ·  C/N≈18",
     pedagoTip:"Haute teneur en sucres et lipides = excellent rendement. La loi du 1er janvier 2024 impose le tri à la source des biodéchets pour tous les professionnels. Un gisement en plein essor !",
   },
   {
     id:3, name:"Boues de STEP",       icon:"🏭",
     desc:"Boues d'épuration urbaines optimisées en méthanisation",
     baseCost:800,   baseFill:0.50,   bagCap:45,        unlocksAt:"epurateur",
-    realYield:120,
-    realYieldLabel:"~120 m³ CH₄ / tonne",
+    realYield:100,   cn:12,
+    realYieldLabel:"~100 m³ CH₄ / tonne  ·  C/N≈12 (azoté)",
     pedagoTip:"Coproduit de l'assainissement urbain, optimisé en parc dédié (digestion thermophile, hygiénisation). 6× le rendement du lisier. Volumes considérables en zones urbaines.",
   },
   {
     id:4, name:"Déchets industriels", icon:"⚙️",
     desc:"Coproduits agro-industriels à haute énergie",
     baseCost:4000,  baseFill:0.70,   bagCap:63,        unlocksAt:"compresseur",
-    realYield:300,
-    realYieldLabel:"~300 m³ CH₄ / tonne",
+    realYield:200,   cn:30,
+    realYieldLabel:"~200 m³ CH₄ / tonne  ·  C/N≈30",
     pedagoTip:"Mélasses, graisses, eaux de process d'abattoirs ou de laiteries. Rendement 15× supérieur au lisier. Les graisses pures peuvent dépasser 800 m³/tonne — le \"kérosène\" de la méthanisation.",
   },
   {
     id:5, name:"Cultures CIVE",       icon:"🌾",
     desc:"Cultures intermédiaires à vocation énergétique",
     baseCost:25000, baseFill:0.90,   bagCap:81,        unlocksAt:"injected",   // v25.1 : 5000→2500
-    realYield:400,
-    realYieldLabel:"~400 m³ CH₄ / tonne",
+    realYield:220,   cn:35,
+    realYieldLabel:"~220 m³ CH₄ / tonne  ·  C/N≈35 (carboné)",
     pedagoTip:"Sorgho, ray-grass, moutarde : semées entre deux cultures alimentaires, elles captent le CO₂ atmosphérique. 20× le rendement du lisier en biométhane 100 % renouvelable.",
   },
   {
     id:6, name:"Parc biogaz+",        icon:"💨",
     desc:"Co-digestion multi-sources optimisée",
     baseCost:200000,baseFill:1.00,   bagCap:90,        unlocksAt:"injected",   // v25.1 : 40000→20000
-    realYield:500,
-    realYieldLabel:"~500 m³ CH₄ / tonne",
+    realYield:280,   cn:25,
+    realYieldLabel:"~280 m³ CH₄ / tonne  ·  C/N≈25 (équilibré)",
     pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 10 % de gaz vert en 2030.",
   },
 ];
@@ -555,8 +564,36 @@ const UPGRADES = [
 //   = baseFill × qty × bonus_étoile (sans bonus GNV — appliqué globalement par ailleurs)
 const fillFor = (i, qty) => UPGRADES[i].baseFill * qty * getIntrantBonus(qty);
 
+// v25.14 — Helpers C/N (Carbone/Azote)
+//   Le ratio C/N pondere par la masse de chaque intrant determine la qualite
+//   du mix en methanisation reelle. Sweet spot industriel = 25.
+//   Plus on s'eloigne, plus le yield CH4 chute (cf. inhibition methanogenese).
+const CN_SWEET = 25;
+const CN_WIDTH = 10;            // largeur de la zone "favorable" autour du sweet
+const CN_MULT_MIN = 0.7;        // multiplicateur quand C/N tres eloigne (mono mauvais intrant)
+const CN_MULT_MAX = 1.3;        // multiplicateur quand C/N optimal
+const cnFromComposition = (composition) => {
+  if (!Array.isArray(composition)) return null;
+  let totalMass = 0, weightedCn = 0;
+  for (let i = 0; i < 7; i++) {
+    const m = composition[i] || 0;
+    const c = UPGRADES[i]?.cn;
+    if (typeof c !== 'number') continue;
+    totalMass += m;
+    weightedCn += m * c;
+  }
+  return totalMass > 0 ? weightedCn / totalMass : null;
+};
+const cnYieldMultiplier = (composition) => {
+  const cn = cnFromComposition(composition);
+  if (cn === null) return 1.0;
+  const ratioScore = Math.max(0, 1 - Math.abs(cn - CN_SWEET) / CN_WIDTH);
+  return CN_MULT_MIN + (CN_MULT_MAX - CN_MULT_MIN) * ratioScore;
+};
+
 // v25.0.9 — Helper : yield moyen pondéré (m³ CH₄/t) à partir d'une composition par intrant
 //   composition = [t_lisier, t_verts, t_restau, t_step, t_indus, t_cive, t_biogazplus]
+//   v25.14 : applique le bonus C/N (×0.7 a ×1.3 selon ratio_pond).
 //   Retourne 0 si masse totale nulle (réservoir vide).
 const yieldFromComposition = (composition) => {
   if (!Array.isArray(composition)) return 0;
@@ -568,7 +605,8 @@ const yieldFromComposition = (composition) => {
       totalGas  += m * UPGRADES[i].realYield;
     }
   }
-  return totalMass > 0 ? totalGas / totalMass : 0;
+  // v25.14 : applique le bonus C/N (0.7 a 1.3 selon ratio sweet spot 25)
+  return totalMass > 0 ? (totalGas / totalMass) * cnYieldMultiplier(composition) : 0;
 };
 // v25.0.9 — Helper : masse totale d'une composition (somme des intrants)
 const massFromComposition = (composition) => {
@@ -1066,6 +1104,203 @@ function computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump })
   });
 
   return [...progression, ...diversity, ...mastery];
+}
+
+// ─── v25.15 — JAUGE C/N ──────────────────────────────────────────────────────
+// Affiche le ratio Carbone/Azote du stock actuel + multiplicateur yield resultant.
+// Position : a gauche du bac d'intrants dans la digesteur scene.
+function CNGauge({ composition }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const cn = cnFromComposition(composition);
+  const mult = cnYieldMultiplier(composition);
+  // Si stock vide, affiche jauge inactive
+  const isEmpty = cn === null;
+  // Pour la position du curseur : mapper [CN_SWEET-CN_WIDTH*2, CN_SWEET+CN_WIDTH*2] sur [0, 100]
+  const minCn = CN_SWEET - CN_WIDTH * 2;  // 5
+  const maxCn = CN_SWEET + CN_WIDTH * 2;  // 45
+  const cursorPct = isEmpty ? 50 : Math.max(0, Math.min(100, ((cn - minCn) / (maxCn - minCn)) * 100));
+  // Zones colorees : sweet zone [15, 35] = (15-5)/(45-5)=25% a (35-5)/(45-5)=75%
+  const sweetTop = 100 - 75;
+  const sweetHeight = 75 - 25;
+  const bonusPct = Math.round((mult - 1) * 100);
+  const bonusColor = mult >= 1.15 ? '#4ADB94' : mult >= 0.95 ? '#F5BE50' : '#E05858';
+  return (
+    <>
+    <div onClick={() => setHelpOpen(true)} title="Comprendre le ratio C/N" style={{
+      width: '34px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+      position: 'absolute', left: '-38px', top: '24px', zIndex: 5, cursor: 'pointer',
+      transition: 'transform .15s ease'
+    }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+       onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+      <div style={{fontSize: '8px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.05em'}}>C/N</div>
+      <div style={{
+        width: '24px', height: '112px', position: 'relative',
+        background: 'linear-gradient(180deg, rgba(224,88,88,.25), rgba(74,158,219,.08), rgba(224,88,88,.25))',
+        border: '1px solid rgba(74,158,219,.3)', borderRadius: '6px',
+        overflow: 'hidden'
+      }}>
+        {/* Sweet zone (verte) */}
+        <div style={{
+          position: 'absolute', top: `${sweetTop}%`, left: 0, right: 0, height: `${sweetHeight}%`,
+          background: 'linear-gradient(180deg, rgba(74,219,148,.20), rgba(74,219,148,.35), rgba(74,219,148,.20))',
+          borderTop: '1px dashed rgba(74,219,148,.4)', borderBottom: '1px dashed rgba(74,219,148,.4)'
+        }}/>
+        {/* Marker sweet spot (25) */}
+        <div style={{
+          position: 'absolute', top: '50%', left: 0, right: 0, height: '1px',
+          background: 'rgba(74,219,148,.8)', boxShadow: '0 0 4px rgba(74,219,148,.6)'
+        }}/>
+        {/* Curseur position actuelle */}
+        {!isEmpty && (
+          <div style={{
+            position: 'absolute', top: `${100 - cursorPct}%`, left: '-2px', right: '-2px',
+            transform: 'translateY(-50%)',
+            height: '4px', background: bonusColor, borderRadius: '2px',
+            boxShadow: `0 0 8px ${bonusColor}`, transition: 'top .5s ease'
+          }}/>
+        )}
+        {/* Labels haut/bas */}
+        <div style={{position:'absolute',top:'2px',left:0,right:0,textAlign:'center',fontSize:'7px',color:'rgba(255,255,255,.4)'}}>45</div>
+        <div style={{position:'absolute',bottom:'2px',left:0,right:0,textAlign:'center',fontSize:'7px',color:'rgba(255,255,255,.4)'}}>5</div>
+        <div style={{position:'absolute',top:'48%',left:0,right:0,textAlign:'center',fontSize:'7px',fontWeight:700,color:'rgba(74,219,148,.85)'}}>25</div>
+      </div>
+      {/* Valeur courante */}
+      <div style={{textAlign:'center',lineHeight:1.2}}>
+        <div style={{fontSize:'11px', fontWeight:800, color: isEmpty ? 'rgba(255,255,255,.3)' : bonusColor}}>
+          {isEmpty ? '—' : cn.toFixed(1)}
+        </div>
+        <div style={{fontSize:'8px', fontWeight:700, color: isEmpty ? 'rgba(255,255,255,.25)' : bonusColor}}>
+          {isEmpty ? '' : (bonusPct >= 0 ? '+' : '') + bonusPct + '%'}
+        </div>
+      </div>
+    </div>
+    {helpOpen && ReactDOM.createPortal(
+      <>
+      <style>{`
+        @keyframes slideUpFade {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+      <div onClick={() => setHelpOpen(false)} style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(8,14,24,.82)', zIndex: 1000,
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px',
+        animation: 'fadeIn .25s ease'
+      }}>
+        <div onClick={e => e.stopPropagation()} style={{
+          maxWidth: '360px', width: '100%', maxHeight: '86vh',
+          display: 'flex', flexDirection: 'column',
+          background: 'linear-gradient(180deg, #15263B 0%, #0B1623 100%)',
+          border: '1px solid rgba(74,158,219,.4)', borderRadius: '16px',
+          color: '#EDF4FF',
+          boxShadow: '0 24px 70px rgba(0,0,0,.75), 0 0 40px rgba(74,158,219,.12)',
+          position: 'relative',
+          animation: 'slideUpFade .3s cubic-bezier(.16,1,.3,1)'
+        }}>
+          {/* ── Header sticky (toujours visible) ── */}
+          <div style={{padding: '18px 18px 14px', borderBottom: '1px solid rgba(74,158,219,.15)', position: 'relative', flexShrink: 0}}>
+            <button onClick={() => setHelpOpen(false)} style={{
+              position: 'absolute', top: '12px', right: '12px',
+              width: '30px', height: '30px', borderRadius: '50%',
+              background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)',
+              color: 'rgba(255,255,255,.75)', cursor: 'pointer', fontSize: '17px', lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background .2s'
+            }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,.16)'}
+               onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,.08)'}
+               aria-label="Fermer">×</button>
+            <div style={{display:'flex',alignItems:'center',gap:'10px', paddingRight:'36px'}}>
+              <div style={{
+                width:'36px', height:'36px', flexShrink: 0,
+                borderRadius:'50%',
+                background: 'linear-gradient(135deg, rgba(74,158,219,.25), rgba(74,219,148,.18))',
+                border: '1px solid rgba(74,158,219,.35)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:'18px', boxShadow:'0 0 16px rgba(74,158,219,.25)'
+              }}>⚗️</div>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontSize:'15px',fontWeight:800,color:'#6DB5EC',lineHeight:1.2,letterSpacing:'-.2px'}}>Ratio C/N</div>
+                <div style={{fontSize:'10px',color:'rgba(255,255,255,.5)',marginTop:'2px'}}>La recette du méthaniseur idéal</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Body scrollable ── */}
+          <div style={{flex: 1, overflowY: 'auto', padding: '12px 16px', minHeight: 0}}>
+            <div style={{fontSize:'11px',lineHeight:1.5,color:'rgba(237,244,255,.82)',marginBottom:'10px'}}>
+              Les bactéries qui produisent le méthane ont besoin d'un
+              <b style={{color:'#4ADB94'}}> équilibre carbone/azote</b>.
+            </div>
+
+            <div style={{background:'rgba(74,219,148,.08)',border:'1px solid rgba(74,219,148,.3)',borderRadius:'8px',padding:'8px 10px',marginBottom:'10px'}}>
+              <div style={{fontSize:'10px',fontWeight:700,color:'#4ADB94',marginBottom:'2px'}}>🎯 Sweet spot : C/N ≈ 25 → +30% yield</div>
+              <div style={{fontSize:'10px',color:'rgba(237,244,255,.7)',lineHeight:1.4}}>
+                Valeur cible des sites biométhane industriels.
+              </div>
+            </div>
+
+            <div style={{fontSize:'10px',fontWeight:700,color:'rgba(255,255,255,.65)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'.04em'}}>
+              Les 7 intrants
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:'2px',marginBottom:'10px'}}>
+              {UPGRADES.map((u, i) => {
+                const c = u.cn;
+                const dist = Math.abs(c - 25);
+                const col = dist <= 5 ? '#4ADB94' : dist <= 10 ? '#F5BE50' : '#E07820';
+                return (
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:'6px',padding:'3px 6px',background:'rgba(255,255,255,.02)',borderRadius:'5px',fontSize:'10px'}}>
+                    <span style={{fontSize:'12px'}}>{u.icon}</span>
+                    <span style={{flex:1,color:'rgba(255,255,255,.7)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.name}</span>
+                    <span style={{color:col,fontWeight:700}}>{c}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{fontSize:'10px',lineHeight:1.45,color:'rgba(255,255,255,.55)',padding:'8px 10px',background:'rgba(245,190,80,.06)',border:'1px solid rgba(245,190,80,.18)',borderRadius:'7px'}}>
+              <b style={{color:'#F5BE50'}}>💡</b> <b>Azotés</b> (lisier, boues, restau) C/N bas ;
+              <b> carbonés</b> (CIVE, verts, indus) C/N haut. Mixer les deux familles → C/N ≈ 25.
+              <br/>
+              <b style={{color:'#F5BE50'}}>⚠️</b> Mono-intrant éloigné de 25 → <b>jusqu'à -30%</b>.
+            </div>
+
+            {/* v25.15 — Sources scientifiques (credibilite pedago GRDF) */}
+            <div style={{marginTop:'10px',padding:'8px 10px',background:'rgba(74,158,219,.05)',border:'1px solid rgba(74,158,219,.18)',borderRadius:'7px',fontSize:'9px',lineHeight:1.55,color:'rgba(255,255,255,.55)'}}>
+              <div style={{fontSize:'10px',fontWeight:700,color:'#6DB5EC',marginBottom:'4px'}}>📚 Pour aller plus loin</div>
+              <div><b style={{color:'rgba(237,244,255,.8)'}}>ADEME</b> — Guides méthanisation agricole · plage C/N 15-30 recommandée</div>
+              <div><b style={{color:'rgba(237,244,255,.8)'}}>GRDF Synergrid</b> — Guide technique exploitants biométhane</div>
+              <div style={{marginTop:'4px',fontSize:'9px',color:'rgba(255,255,255,.4)'}}>
+                Sources académiques : Yen &amp; Brune (2007), Wang et al. (2012),
+                Mata-Alvarez (2014), Deublein &amp; Steinhauser (2010)
+              </div>
+              <div style={{marginTop:'4px',fontSize:'9px',fontStyle:'italic',color:'rgba(255,255,255,.35)'}}>
+                Les valeurs C/N par intrant varient ±30% selon l'origine et la saison —
+                les chiffres ici sont des moyennes pédagogiques dans les fourchettes admises.
+              </div>
+            </div>
+          </div>
+
+          {/* ── Footer sticky (toujours visible) ── */}
+          <div style={{borderTop: '1px solid rgba(74,158,219,.15)', padding: '12px 18px', flexShrink: 0}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 10px',background:'rgba(74,158,219,.08)',border:'1px solid rgba(74,158,219,.25)',borderRadius:'8px'}}>
+              <div>
+                <div style={{fontSize:'9px',color:'rgba(255,255,255,.5)'}}>Ton mix</div>
+                <div style={{fontSize:'16px',fontWeight:800,color:bonusColor}}>{isEmpty ? '—' : cn.toFixed(1)}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:'9px',color:'rgba(255,255,255,.5)'}}>Bonus</div>
+                <div style={{fontSize:'16px',fontWeight:800,color:bonusColor}}>{isEmpty ? '—' : (bonusPct >= 0 ? '+' : '') + bonusPct + '%'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </>,
+    document.body)}
+    </>
+  );
 }
 
 // ─── MINI DIGESTEUR ICON ─────────────────────────────────────────────────────
@@ -7103,7 +7338,9 @@ function DigesteurScene({
                   Déverser sous le bac). */}
               <Anchor name="bac.bottom-left" side="bottom-left"
                 targetSelector="[data-anchor-point='bac-sprite']">
-              <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px"}}>
+              {/* v25.15 — jauge CNGauge en position absolute a gauche du bac sprite (anti-decalage pipes) */}
+              <div style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px", position:"relative"}}>
+              <CNGauge composition={stockComposition} />
                 <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
                 </div>
