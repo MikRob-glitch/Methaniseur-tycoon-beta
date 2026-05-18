@@ -2246,6 +2246,8 @@ function Game({ username, region, maia }) {
   useEffect(() => { stockRef.current       = stock;       }, [stock]);
   useEffect(() => { stockYieldRef.current  = stockYield;  }, [stockYield]);
   useEffect(() => { chargeYieldRef.current = chargeYield; }, [chargeYield]);
+  // v25.15.1 — Ref partage Game->DigesteurScene->TractorWorld+GnvVehicleWorld
+  const tractorAtGnvStationRef = useRef(false);
   // v25.6 — ref miroir fiabilité (lu dans tick digestion + applyCatchUp pour
   //         calculer le multiplicateur sans dépendance React qui recréerait l'interval)
   const reliabilityRef = useRef(100);
@@ -3583,6 +3585,7 @@ function Game({ username, region, maia }) {
 
           {/* Scene */}
           <DigesteurScene
+            tractorAtGnvStationRef={tractorAtGnvStationRef}
             digesteurs={digesteurs}
             sceneZoomAnim={sceneZoomAnim}
             bubbles={bubbles}
@@ -4872,10 +4875,17 @@ function buildMissionPath(zIdx, withGnv) {
   const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE } = WORLD;
   // Détour GNV : traverse la route unifiée de droite (R_EDGE) vers gauche (L_EDGE)
   // → passe devant les stations, puis remonte la bande gauche
-  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, GNV_C_X } = WORLD;
   const gnvStop = GNV_S[0];
+  // v25.15.1 — Détour GNV cohérent avec GnvVehicleWorld :
+  //   1. Entre en route haute par la droite (R_EDGE, BOT_TOP_Y)
+  //   2. Glisse vers la gauche jusqu'à la station (gnvStop) ← arrêt ravitaillement
+  //   3. Continue vers la gauche jusqu'au coude haut-gauche (GNV_C_X)
+  //   4. Descend verticalement au coude bas-gauche
+  //   5. Part vers la droite par la route basse (BOT_BOT_Y → R_EDGE)
+  //   6. Remonte en Vue 2 droite (R_EDGE, GNV_LANE) puis revient vers DUMP_X_RIGHT
   const gnvDetour = withGnv
-    ? `L ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y} L ${gnvStop} ${BOT_TOP_Y} L ${gnvStop} ${BOT_BOT_Y} L ${DUMP_X_RIGHT} ${BOT_BOT_Y} L ${DUMP_X_RIGHT} ${GNV_LANE}`
+    ? `L ${R_EDGE} ${GNV_LANE} L ${R_EDGE} ${BOT_TOP_Y} L ${gnvStop} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y} L ${R_EDGE} ${BOT_BOT_Y} L ${R_EDGE} ${GNV_LANE} L ${DUMP_X_RIGHT} ${GNV_LANE}`
     : '';
   return `
     M ${DUMP_X} ${DUMP_Y}
@@ -4908,14 +4918,17 @@ function computeZoneProgress(zIdx, withGnv) {
     [routeX,       z.y],
     [routeX,       GNV_LANE],
   ];
-  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const { BOT_TOP_Y, BOT_BOT_Y, GNV_S, GNV_C_X } = WORLD;
   const gnvStop = GNV_S[0];
+  // v25.15.1 — Nouveau detour : station → coude haut-gauche → coude bas-gauche → route basse droite → remontée Vue 2 droite
   const detourPts = withGnv ? [
     [R_EDGE,       GNV_LANE],
     [R_EDGE,       BOT_TOP_Y],
     [gnvStop,      BOT_TOP_Y],
-    [gnvStop,      BOT_BOT_Y],
-    [DUMP_X_RIGHT, BOT_BOT_Y],
+    [GNV_C_X,      BOT_TOP_Y],
+    [GNV_C_X,      BOT_BOT_Y],
+    [R_EDGE,       BOT_BOT_Y],
+    [R_EDGE,       GNV_LANE],
     [DUMP_X_RIGHT, GNV_LANE],
   ] : [];
   const endPts = [
@@ -4940,8 +4953,9 @@ function computeGnvStopProgress(zIdx) {
   const z = CITY_ZONES[zIdx];
   const zoneX  = WORLD.V1_V2 + z.x;
   const routeX = WORLD.V1_V2 + z.routeX;
-  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE, BOT_TOP_Y, BOT_BOT_Y, GNV_S } = WORLD;
+  const { DUMP_X, DUMP_X_RIGHT, LANE_TOP, DUMP_Y, GNV_LANE, R_EDGE, BOT_TOP_Y, BOT_BOT_Y, GNV_S, GNV_C_X } = WORLD;
   const gnvStop = GNV_S[0];
+  // v25.15.1 — pts mis a jour : station -> coude haut-gauche -> coude bas-gauche -> route basse droite -> remontee Vue 2
   const pts = [
     [DUMP_X,       DUMP_Y],       // 0
     [DUMP_X_RIGHT, DUMP_Y],       // 1
@@ -4953,13 +4967,14 @@ function computeGnvStopProgress(zIdx) {
     [routeX,       GNV_LANE],     // 7
     [R_EDGE,       GNV_LANE],     // 8
     [R_EDGE,       BOT_TOP_Y],    // 9
-    [gnvStop,      BOT_TOP_Y],    // 10 ← arrivée station GNV
-    [gnvStop,      BOT_BOT_Y],    // 11
-    [DUMP_X_RIGHT, BOT_BOT_Y],    // 12
-    [DUMP_X_RIGHT, GNV_LANE],     // 13
-    [DUMP_X_RIGHT, GNV_LANE],     // 14
-    [DUMP_X_RIGHT, DUMP_Y],       // 15
-    [DUMP_X,       DUMP_Y],       // 16
+    [gnvStop,      BOT_TOP_Y],    // 10 ← arrivée station GNV (gnvStopProgress)
+    [GNV_C_X,      BOT_TOP_Y],    // 11 coude haut-gauche
+    [GNV_C_X,      BOT_BOT_Y],    // 12 coude bas-gauche (descente verticale)
+    [R_EDGE,       BOT_BOT_Y],    // 13 route basse vers droite (Vue 2)
+    [R_EDGE,       GNV_LANE],     // 14 remontée Vue 2 droite
+    [DUMP_X_RIGHT, GNV_LANE],     // 15 retour vers DUMP
+    [DUMP_X_RIGHT, DUMP_Y],       // 16
+    [DUMP_X,       DUMP_Y],       // 17
   ];
   let totalL = 0, gnvL = 0;
   for (let i = 1; i < pts.length; i++) {
@@ -4971,7 +4986,7 @@ function computeGnvStopProgress(zIdx) {
   return totalL > 0 ? gnvL / totalL : 0.72;
 }
 
-function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTrailers, tractorGnvArr, gnvStations, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
+function TractorWorld({ tractorAtGnvStationRef, fillRate, owned, tractorCount, speedBoost, tractorTrailers, tractorGnvArr, gnvStations, pinnedZones, zoneState, localStock, setLocalStock, setStock, stockMaxRef, overlayRef, stockRef, stockYieldRef, setStockYield, setStockComposition }) {
   // Refs DOM pour écrire la position sans rerender (60fps stable)
   const pathRefs      = useRef([null, null, null]);
   const tractorRefs   = useRef([null, null, null]);
@@ -5206,6 +5221,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
             const progIfNoStop = t.zoneProgress + Math.min(1, elapsed / dur) * (1 - t.zoneProgress);
             if (!t.gnvStopStart && progIfNoStop >= t.gnvStopProgress) {
               t.gnvStopStart = now;
+              if (tractorAtGnvStationRef) tractorAtGnvStationRef.current = true;
             }
             if (t.gnvStopStart) {
               const paused = now - t.gnvStopStart;
@@ -5235,6 +5251,7 @@ function TractorWorld({ fillRate, owned, tractorCount, speedBoost, tractorTraile
               // Fin de l'arrêt : décaler phaseStart en avant pour neutraliser la pause
               t.gnvStopDone = true;
               t.phaseStart += GNV_STOP_DUR;
+              if (tractorAtGnvStationRef) tractorAtGnvStationRef.current = false;
             }
           }
 
@@ -5991,7 +6008,7 @@ function GnvCarSprite({ type, facing }) {
 // Route en C : arrivée (R→L route haute) → arrêt station → glisse jusqu'au coude
 // (GNV_S[0]) → descente verticale → départ (L→R route basse).
 // Inclut aussi le rendu des stations GNV et du pipe GRDF animé.
-function GnvVehicleWorld({ gnvStations, gnvSplit }) {
+function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
   const [vehicles, setVehicles] = useState([]);
   const timerRef = useRef(null);
   const hasActive = gnvStations > 0 && gnvSplit > 0;
@@ -6030,13 +6047,15 @@ function GnvVehicleWorld({ gnvStations, gnvSplit }) {
   const xMax    = R_EDGE;
   const cBendX  = GNV_C_X;  // coude C à gauche des stations
 
-  // Stations actuellement en ravitaillement
+  // Stations actuellement en ravitaillement (vehicules clients OU tracteurs flotte)
   const now = performance.now();
   const refuelingSet = new Set();
   vehicles.forEach(v => {
     const p = Math.min(1, (now - v.startAt) / v.dur);
     if (p > ARRIVE && p <= REFUEL) refuelingSet.add(v.stIdx);
   });
+  // v25.15.1 — Si un tracteur flotte est en ravitaillement, animer station 0
+  if (tractorAtGnvStationRef && tractorAtGnvStationRef.current) refuelingSet.add(0);
 
   return (
     <>
@@ -6269,7 +6288,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       <div style={{position:"absolute", top:"-350px", left:0, right:0, height:`${TRIP_OVERLAY_H}px`, pointerEvents:"none", zIndex:20}}>
         {gnvTrips.map(trip => {
           if (trip.phase === 'down') return (
-            <div key={trip.id} style={{position:"absolute", right:"4px",
+            <div key={trip.id} style={{position:"absolute", right:"4px", top:"-30px",
               animation:"gnvTripDown 4.2s linear forwards"}}>
               <MiniTractor isGnv={trip.isGnv} flipped={true} size={22}/>
             </div>
@@ -6281,7 +6300,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
             </div>
           );
           if (trip.phase === 'up') return (
-            <div key={trip.id} style={{position:"absolute", left:"4px",
+            <div key={trip.id} style={{position:"absolute", left:"4px", top:"374px",
               animation:"gnvTripUp 4.3s linear forwards"}}>
               <MiniTractor isGnv={trip.isGnv} flipped={false} size={22}/>
             </div>
@@ -7199,6 +7218,7 @@ function Pipe({ from, to, mode = "straight", color = "#4A9EDB", flowColor = "#27
 
 // ─── DIGESTEUR SCENE — viewport 2 vues swipeable + ville ─────────────────────
 function DigesteurScene({
+  tractorAtGnvStationRef,
   digesteurs, sceneZoomAnim, bubbles, chargePct, chargeMaxEff, isDigesting,
   bmPerHour, fillRate, owned, stock, stockMax, stockPct, stockColor,
   binRotate, binTransX, pouring, handlePour,
@@ -7863,6 +7883,7 @@ function DigesteurScene({
 
                   {/* ── TRACTEURS ── */}
                   <TractorWorld
+                    tractorAtGnvStationRef={tractorAtGnvStationRef}
                     fillRate={fillRate}
                     owned={owned}
                     tractorCount={tractorCount}
@@ -7908,7 +7929,7 @@ function DigesteurScene({
                   })()}
 
                   {/* ── VÉHICULES LAMBDA (circuit bas Vue 1+Vue 2) ── */}
-                  {injected && <GnvVehicleWorld gnvStations={gnvStations} gnvSplit={gnvSplit}/>}
+                  {injected && <GnvVehicleWorld gnvStations={gnvStations} gnvSplit={gnvSplit} tractorAtGnvStationRef={tractorAtGnvStationRef}/>}
                 </>
               );
             })()}
