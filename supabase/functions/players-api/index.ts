@@ -1,5 +1,8 @@
-// v25.15.2 — Edge Function players-api
-// HOTFIX : protection euros contre écrasement par save client non-synchronisé.
+// v25.15.3 — Edge Function players-api
+// FIX : leaderboard "performance" — fallback sur le snapshot le plus ancien
+//       + diviseur = jours réellement écoulés (clamp 1..7). Corrige le 0
+//       systématique pendant la 1ère semaine et pour tout nouveau joueur.
+// v25.15.2 : protection euros contre écrasement par save client non-synchronisé.
 //
 // v25.14   : leaderboards multi-axes (perf/mastery/cumulative_season/lifetime) + snapshots
 // v25.13.2 : clamp monotone tous champs durables (digesteurs, owned, switches, etc)
@@ -269,18 +272,40 @@ async function handleLeaderboard({ mode, region, limit }: any) {
     return j({ ok: true, mode, results: scored.slice(0, max) });
   }
   if (mode === "performance") {
-    const targetIso = new Date(Date.now() - PERF_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const nowMs     = Date.now();
+    const dayMs     = 24 * 60 * 60 * 1000;
+    const targetIso = new Date(nowMs - PERF_WINDOW_DAYS * dayMs).toISOString();
     let q = sb.from("players").select("maia, username, region, score_network, score_gnv, current_yield, is_connected, digesteurs, epurateur, compresseur, euros").limit(500);
     if (filterRegion) q = q.eq("region", filterRegion);
     const { data: players, error } = await q;
     if (error) return j({ error: "query_failed", detail: error.message }, 500);
     const results: any[] = [];
     for (const p of (players || [])) {
-      const { data: snap } = await sb.from("players_snapshots").select("score_network, score_gnv").eq("maia", p.maia).lte("snapshot_at", targetIso).order("snapshot_at", { ascending: false }).limit(1).maybeSingle();
-      const oldNet = Number(snap?.score_network ?? p.score_network ?? 0);
-      const oldGnv = Number(snap?.score_gnv     ?? p.score_gnv     ?? 0);
-      const perfNet = Math.max(0, (Number(p.score_network) || 0) - oldNet) / PERF_WINDOW_DAYS;
-      const perfGnv = Math.max(0, (Number(p.score_gnv)     || 0) - oldGnv) / PERF_WINDOW_DAYS;
+      // Baseline = snapshot le plus recent datant d'AU MOINS 7 jours.
+      let { data: snap } = await sb.from("players_snapshots")
+        .select("score_network, score_gnv, snapshot_at")
+        .eq("maia", p.maia).lte("snapshot_at", targetIso)
+        .order("snapshot_at", { ascending: false }).limit(1).maybeSingle();
+      // Fallback : aucun snapshot >=7j (1ere semaine, nouveau joueur) -> on prend
+      // le snapshot le PLUS ANCIEN dispo et on divise par les jours reels ecoules.
+      if (!snap) {
+        const { data: oldest } = await sb.from("players_snapshots")
+          .select("score_network, score_gnv, snapshot_at")
+          .eq("maia", p.maia)
+          .order("snapshot_at", { ascending: true }).limit(1).maybeSingle();
+        snap = oldest ?? null;
+      }
+      if (!snap) {
+        // Aucun historique -> progression non mesurable.
+        results.push({ ...p, perf_network_per_day: 0, perf_gnv_per_day: 0, perf_score: 0 });
+        continue;
+      }
+      const elapsedDays = (nowMs - new Date(snap.snapshot_at).getTime()) / dayMs;
+      const divisor     = Math.min(Math.max(elapsedDays, 1), PERF_WINDOW_DAYS);
+      const oldNet  = Number(snap.score_network ?? 0);
+      const oldGnv  = Number(snap.score_gnv     ?? 0);
+      const perfNet = Math.max(0, (Number(p.score_network) || 0) - oldNet) / divisor;
+      const perfGnv = Math.max(0, (Number(p.score_gnv)     || 0) - oldGnv) / divisor;
       results.push({ ...p, perf_network_per_day: perfNet, perf_gnv_per_day: perfGnv, perf_score: perfNet + perfGnv * GNV_BONUS });
     }
     results.sort((a, b) => b.perf_score - a.perf_score);
