@@ -5936,37 +5936,173 @@ function MiniTractor({ isGnv, flipped, size }) {
   );
 }
 
-// ─── GNV CAR SPRITE — véhicule SVG cohérent avec les tracteurs ───────────────
-// Corps navy, vitres steel-blue, jantes anthracite. Badge GNV vert.
-// viewBox 0 0 42 22. facing='left'=sens R→L (par défaut), 'right'=sens L→R (flip).
+// ─── GNV VEHICLE SPRITES — 4 types distincts, cohérents avec le tracteur ─────
+// Palette commune : corps sombre (navy/vert/rouge selon type), vitres steel-blue,
+// jantes anthracite, badge GNV vert. facing='left' = R→L, 'right' = L→R (flip).
+//
+// Types :
+//   'car'   — berline, viewBox 0 0 48 22
+//   'van'   — fourgon, viewBox 0 0 48 22 (plus haut)
+//   'bus'   — bus,     viewBox 0 0 64 22
+//   'truck' — camion,  viewBox 0 0 60 22
+
+function GnvCarSpriteInner({ type }) {
+  if (type === 'van') {
+    return (
+      <g>
+        {/* Carrosserie fourgon — haute et carrée */}
+        <rect x="1" y="3" width="46" height="16" rx="2.5" fill="#1a2d1e" stroke="#2d6e3e" strokeWidth="1"/>
+        <rect x="2" y="4" width="44" height="4" rx="1.5" fill="rgba(255,255,255,.04)"/>
+        {/* Cabine avant + pare-brise */}
+        <rect x="1" y="3" width="14" height="16" rx="2.5" fill="#152519" stroke="#2d6e3e" strokeWidth=".8"/>
+        <rect x="3" y="5" width="9" height="9" rx="1.5" fill="rgba(74,158,219,.4)" stroke="rgba(74,158,219,.25)" strokeWidth=".5"/>
+        {/* Reflet pare-brise */}
+        <polygon points="4,6 8,6 4,11" fill="rgba(255,255,255,.09)"/>
+        {/* Vitre latérale caisse */}
+        <rect x="17" y="6" width="8" height="7" rx="1" fill="rgba(74,158,219,.25)" stroke="rgba(74,158,219,.15)" strokeWidth=".5"/>
+        <rect x="27" y="6" width="8" height="7" rx="1" fill="rgba(74,158,219,.25)" stroke="rgba(74,158,219,.15)" strokeWidth=".5"/>
+        {/* Séparateur porte arrière */}
+        <line x1="37" y1="4" x2="37" y2="19" stroke="#2d6e3e" strokeWidth=".8" opacity=".6"/>
+        {/* Badge GNV */}
+        <rect x="2" y="14" width="10" height="5" rx="1.5" fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+        <text x="7" y="18" textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
+        {/* Phare avant */}
+        <rect x="1" y="8" width="2.5" height="4" rx="1" fill="#FFD966" opacity=".9"/>
+        {/* Feu arrière */}
+        <rect x="44.5" y="8" width="2.5" height="4" rx="1" fill="#FF4444" opacity=".7"/>
+        {/* Roues */}
+        <circle cx="12" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/>
+        <circle cx="12" cy="21" r="2" fill="#0a0f0a"/>
+        <circle cx="36" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/>
+        <circle cx="36" cy="21" r="2" fill="#0a0f0a"/>
+      </g>
+    );
+  }
+  if (type === 'bus') {
+    return (
+      <g>
+        {/* Caisse longue */}
+        <rect x="1" y="4" width="62" height="14" rx="2.5" fill="#0d1a2e" stroke="#2268A8" strokeWidth="1"/>
+        <rect x="2" y="5" width="60" height="3" rx="1" fill="rgba(255,255,255,.04)"/>
+        {/* Pare-brise + fenêtre cabine */}
+        <rect x="3" y="6" width="9" height="9" rx="1.5" fill="rgba(74,158,219,.45)" stroke="rgba(74,158,219,.25)" strokeWidth=".5"/>
+        <polygon points="4,7 8,7 4,12" fill="rgba(255,255,255,.1)"/>
+        {/* Fenêtres passagers */}
+        {[14,22,30,38,46,54].map(x => (
+          <rect key={x} x={x} y="6" width="6" height="6" rx="1" fill="rgba(74,158,219,.3)" stroke="rgba(74,158,219,.2)" strokeWidth=".4"/>
+        ))}
+        {/* Bande de carrosserie */}
+        <rect x="1" y="12" width="62" height="2" fill="rgba(74,158,219,.2)"/>
+        {/* Porte centrale */}
+        <line x1="34" y1="5" x2="34" y2="18" stroke="#2268A8" strokeWidth=".7" opacity=".5"/>
+        {/* Badge GNV */}
+        <rect x="2" y="13" width="10" height="4.5" rx="1.5" fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+        <text x="7" y="16.8" textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
+        {/* Phares */}
+        <rect x="1" y="7.5" width="2" height="3" rx=".8" fill="#FFD966" opacity=".9"/>
+        <rect x="61" y="7.5" width="2" height="3" rx=".8" fill="#FF4444" opacity=".7"/>
+        {/* 4 roues (bus articulé) */}
+        <circle cx="12" cy="21" r="4" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="12" cy="21" r="1.8" fill="#0a0f0a"/>
+        <circle cx="22" cy="21" r="4" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="22" cy="21" r="1.8" fill="#0a0f0a"/>
+        <circle cx="42" cy="21" r="4" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="42" cy="21" r="1.8" fill="#0a0f0a"/>
+        <circle cx="52" cy="21" r="4" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="52" cy="21" r="1.8" fill="#0a0f0a"/>
+      </g>
+    );
+  }
+  if (type === 'truck') {
+    return (
+      <g>
+        {/* Remorque */}
+        <rect x="20" y="5" width="38" height="13" rx="2" fill="#2a1a1a" stroke="#6B1010" strokeWidth="1"/>
+        <rect x="21" y="6" width="36" height="3" rx="1" fill="rgba(255,255,255,.04)"/>
+        {[29,37,45].map(lx => (<line key={lx} x1={lx} y1="5" x2={lx} y2="18" stroke="#6B1010" strokeWidth=".7" opacity=".5"/>))}
+        {/* Attelage */}
+        <rect x="17" y="11" width="5" height="2.5" rx="1" fill="#374151"/>
+        {/* Cabine */}
+        <rect x="1" y="4" width="18" height="14" rx="3" fill="#1a0808" stroke="#882222" strokeWidth="1"/>
+        {/* Pare-brise */}
+        <rect x="3" y="6" width="10" height="9" rx="2" fill="rgba(74,158,219,.45)" stroke="rgba(74,158,219,.25)" strokeWidth=".5"/>
+        <polygon points="4,7 9,7 4,13" fill="rgba(255,255,255,.1)"/>
+        {/* Pot d'échappement */}
+        <rect x="14" y="1" width="3" height="6" rx="1.5" fill="#374151"/>
+        <ellipse cx="15.5" cy="1" rx="1.8" ry="1" fill="#1f2937"/>
+        {/* Badge GNV */}
+        <rect x="2" y="13" width="10" height="4.5" rx="1.5" fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+        <text x="7" y="16.8" textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
+        {/* Phare */}
+        <rect x="1" y="8" width="2" height="3" rx=".8" fill="#FFD966" opacity=".9"/>
+        {/* Feu arrière remorque */}
+        <rect x="57" y="8" width="2" height="3" rx=".8" fill="#FF4444" opacity=".7"/>
+        {/* Roues cabine */}
+        <circle cx="9"  cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="9"  cy="21" r="2" fill="#0a0f0a"/>
+        {/* Roues remorque */}
+        <circle cx="30" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="30" cy="21" r="2" fill="#0a0f0a"/>
+        <circle cx="48" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="48" cy="21" r="2" fill="#0a0f0a"/>
+      </g>
+    );
+  }
+  // default: 'car' — berline
+  return (
+    <g>
+      {/* Caisse basse */}
+      <rect x="1" y="8" width="46" height="11" rx="2.5" fill="#0B1623" stroke="#2268A8" strokeWidth="1"/>
+      {/* Toît — profil berline avec lunette avant/arrière */}
+      <path d="M8,8 Q11,2 17,2 L31,2 Q37,2 40,8 Z" fill="#0B1623" stroke="#2268A8" strokeWidth=".8"/>
+      {/* Pare-brise avant */}
+      <path d="M9,8 Q12,3 17,3 L22,3 L22,8 Z" fill="rgba(74,158,219,.45)" stroke="rgba(74,158,219,.25)" strokeWidth=".4"/>
+      <polygon points="10,8 14,8 10,4.5" fill="rgba(255,255,255,.1)"/>
+      {/* Vitre latérale */}
+      <rect x="22" y="3" width="9" height="5" rx=".8" fill="rgba(74,158,219,.35)" stroke="rgba(74,158,219,.2)" strokeWidth=".4"/>
+      {/* Lunette arrière */}
+      <path d="M31,3 L36,3 Q40,3 40,8 L31,8 Z" fill="rgba(74,158,219,.4)" stroke="rgba(74,158,219,.2)" strokeWidth=".4"/>
+      {/* Badge GNV */}
+      <rect x="2" y="13" width="10" height="5" rx="1.5" fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
+      <text x="7" y="17" textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
+      {/* Phare avant */}
+      <rect x="1" y="10" width="2.5" height="3.5" rx=".8" fill="#FFD966" opacity=".9"/>
+      {/* Feu arrière */}
+      <rect x="44.5" y="10" width="2.5" height="3.5" rx=".8" fill="#FF4444" opacity=".7"/>
+      {/* Roues */}
+      <circle cx="11" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/>
+      <circle cx="11" cy="21" r="2"   fill="#0a0f0a"/>
+      {[0,60,120,180,240,300].map(a => { const r=Math.PI/180*a; return (<line key={a} x1={11+Math.cos(r)*2} y1={21+Math.sin(r)*2} x2={11+Math.cos(r)*4.5} y2={21+Math.sin(r)*4.5} stroke="#2268A8" strokeWidth=".8"/>); })}
+      <circle cx="37" cy="21" r="4.5" fill="#111827" stroke="#374151" strokeWidth="1.2"/>
+      <circle cx="37" cy="21" r="2"   fill="#0a0f0a"/>
+      {[0,60,120,180,240,300].map(a => { const r=Math.PI/180*a; return (<line key={a} x1={37+Math.cos(r)*2} y1={21+Math.sin(r)*2} x2={37+Math.cos(r)*4.5} y2={21+Math.sin(r)*4.5} stroke="#2268A8" strokeWidth=".8"/>); })}
+    </g>
+  );
+}
+
+// Dimensions par type (viewBox width)
+const GNV_VW = { car:48, van:48, bus:64, truck:60 };
+
+// Sprite grand format — utilisé dans GnvVehicleWorld (SVG principal)
 function GnvCarSprite({ type, facing }) {
-  const isVan = type === 'van';
-  const bodyH = isVan ? 16 : 12;
-  const bodyY = isVan ? 3 : 6;
-  const flip = facing === 'right' ? 'scale(-1,1) translate(-42,0)' : '';
+  const t = type || 'car';
+  const vw = GNV_VW[t] || 48;
+  const flip = facing === 'right' ? `scale(-1,1) translate(-${vw},0)` : '';
   return (
     <g transform={flip}>
-      {/* Corps */}
-      <rect x="1" y={bodyY} width="40" height={bodyH} rx="3"
-        fill="#0B1623" stroke="#2268A8" strokeWidth="1"/>
-      {/* Habitacle */}
-      <rect x="6" y={bodyY+1} width="11" height={bodyH-4} rx="1.5"
-        fill="rgba(74,158,219,.35)" stroke="rgba(74,158,219,.2)" strokeWidth=".5"/>
-      <rect x="20" y={bodyY+1} width="9" height={bodyH-4} rx="1.5"
-        fill="rgba(74,158,219,.35)" stroke="rgba(74,158,219,.2)" strokeWidth=".5"/>
-      {/* Badge GNV */}
-      <rect x="1" y={bodyY+2} width="8" height="5" rx="1.5"
-        fill="rgba(34,168,106,.9)" stroke="#27a85a" strokeWidth=".5"/>
-      <text x="5" y={bodyY+6} textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
-      {/* Roue avant */}
-      <circle cx="9" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
-      <circle cx="9" cy="20" r="1.5" fill="#0a0f0a"/>
-      {/* Roue arrière */}
-      <circle cx="33" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
-      <circle cx="33" cy="20" r="1.5" fill="#0a0f0a"/>
-      {/* Phare avant */}
-      <rect x="1" y={bodyY+3} width="2" height="3" rx="1" fill="#E8A020" opacity=".8"/>
+      <GnvCarSpriteInner type={t}/>
     </g>
+  );
+}
+
+// ─── MINI GNV VEHICLE — petit format pour les routes HTML de GnvNetworkView ───
+// Même sprite que GnvCarSprite, rendu dans un <svg> dimensionné.
+function MiniGnvVehicle({ type, facing, size }) {
+  const t = type || 'car';
+  const vw = GNV_VW[t] || 48;
+  const h  = size || 22;
+  const w  = Math.round(h * vw / 22);
+  const flip = facing === 'right' ? `translate(${vw},0) scale(-1,1)` : '';
+  return (
+    <svg viewBox={`0 0 ${vw} 22`} width={w} height={h}
+      style={{display:"block", overflow:"visible", flexShrink:0}}>
+      <g transform={flip}>
+        <GnvCarSpriteInner type={t}/>
+      </g>
+    </svg>
   );
 }
 
@@ -5985,8 +6121,9 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
     clearInterval(timerRef.current);
     if (!hasActive) { setVehicles([]); return; }
     const ms = Math.max(2200, 8000 - gnvSplit * 40 - gnvStations * 600);
+    const GNV_TYPES = ['car', 'van', 'bus', 'truck'];
     timerRef.current = setInterval(() => {
-      const type = Math.random() < 0.4 ? 'van' : 'car';
+      const type = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const stIdx = Math.floor(Math.random() * gnvStations);
       const id = Date.now() + (uid2++);
       const dur = 10000 + Math.random() * 2000;
@@ -6108,8 +6245,9 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
         }
 
         const isRefueling = p > ARRIVE && p <= REFUEL;
+        const vw = GNV_VW[v.type] || 48;
         return (
-          <g key={v.id} transform={`translate(${x - 21} ${y - 11})`} opacity={opacity}>
+          <g key={v.id} transform={`translate(${x - vw/2} ${y - 11})`} opacity={opacity}>
             <GnvCarSprite type={v.type} facing={facing}/>
             {isRefueling && (
               <text x="21" y="-6" textAnchor="middle" fontSize="10" fill="#4ADB94"
@@ -6186,17 +6324,18 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   }, []);
 
   // ── Spawn : route stations (R→L) ──
+  const GNV_NET_TYPES = ['car', 'van', 'bus', 'truck'];
   useEffect(() => {
     clearInterval(stTimerRef.current);
     if (!hasActive) { setStRoadVeh([]); return; }
     const ms = Math.max(1800, 7000 - gnvSplit * 35 - gnvStations * 700);
     stTimerRef.current = setInterval(() => {
       const stIdx = Math.floor(Math.random() * gnvStations);
-      const isTractor = Math.random() < 0.45; // tracteurs des gisements passent régulièrement
+      const isTractor = Math.random() < 0.45;
       const tractorIsGnv = isTractor && gnvConverted > 0 && Math.random() < 0.6;
-      const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const vtype = GNV_NET_TYPES[Math.floor(Math.random() * GNV_NET_TYPES.length)];
       const id = uid++;
-      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor, tractorIsGnv }]);
+      setStRoadVeh(prev => [...prev.slice(-5), { id, vtype, stIdx, isTractor, tractorIsGnv }]);
       setTimeout(() => setStRoadVeh(prev => prev.filter(x => x.id !== id)), 5300);
     }, ms);
     return () => clearInterval(stTimerRef.current);
@@ -6208,9 +6347,9 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     if (!hasActive) { setRetRoadVeh([]); return; }
     const ms = Math.max(2500, 9000 - gnvSplit * 40 - gnvStations * 800);
     retTimerRef.current = setInterval(() => {
-      const icon = GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const vtype = GNV_NET_TYPES[Math.floor(Math.random() * GNV_NET_TYPES.length)];
       const id = uid++;
-      setRetRoadVeh(prev => [...prev.slice(-4), { id, icon }]);
+      setRetRoadVeh(prev => [...prev.slice(-4), { id, vtype }]);
       setTimeout(() => setRetRoadVeh(prev => prev.filter(x => x.id !== id)), 6500);
     }, ms);
     return () => clearInterval(retTimerRef.current);
@@ -6238,12 +6377,11 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   }, [tractorCount, gnvStations]);
 
   // ── Hauteurs (total = 250px) ──
-  // Header 24 + StRoad 30 + Stations 52 + Pipe 18 + RetRoad 30 + Buildings 40 + spacer + Footer 26
-  // Circuit tracteurs : rectangle formé par bandes verticales + lignes horizontales haut/bas station road
-  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 54px (bas de la station road = 24+30)
-  const ROAD_TOP = 24; // px depuis le haut de GnvNetworkView = bas du header
-  const ROAD_BOT = 54; // px depuis le haut = bas de la station road (24 + 30)
-  const CORNER_R = 12; // rayon des virages aux coins du circuit
+  // Header 24 + StRoad 34 + Stations 52 + Pipe 18 + RetRoad 34 + Buildings 40 + spacer + Footer 26 ≈ 250px
+  // ROAD_TOP = 24px (bas du header), ROAD_BOT = 58px (bas de la station road = 24+34)
+  const ROAD_TOP = 24; // px depuis le haut = bas du header
+  const ROAD_BOT = 58; // px depuis le haut = bas de la station road (24 + 34)
+  const CORNER_R = 12; // rayon des virages
 
   return (
     <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"visible", background:"rgba(7,14,25,.55)"}}>
@@ -6279,51 +6417,64 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
           Bandes verticales (gauche/droite, height:100%) + lignes horizontales (haut/bas station road)
           → ferment visuellement la boucle. Fond unifié #141e2e = même asphalte que la station road. */}
 
-      {/* ─ Bande DROITE : asphalte pur — les tracteurs sont sur les routes horizontales ─ */}
-      <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2,
-        background:"#141e2e", borderLeft:"2px solid rgba(240,80,180,.45)"}}>
+      {/* ─ Bande DROITE : route verticale asphalte ─ */}
+      <div style={{position:"absolute", right:0, top:0, width:"34px", height:"100%", zIndex:2,
+        background:"#28303d",
+        borderLeft:"2px solid rgba(220,220,220,.55)",
+        boxShadow:"inset -2px 0 6px rgba(0,0,0,.35)"}}>
+        {/* Ligne de rive intérieure blanche */}
+        <div style={{position:"absolute", top:0, right:0, width:"2px", height:"100%",
+          background:"rgba(220,220,220,.15)"}}/>
+        {/* Tirets jaunes centraux — standard français */}
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(255,210,0,.65) 0,rgba(255,210,0,.65) 8px,transparent 8px,transparent 18px)"}}/>
       </div>
 
-      {/* ─ Bande GAUCHE : asphalte pur ─ */}
-      <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2,
-        background:"#141e2e", borderRight:"2px solid rgba(240,80,180,.45)"}}>
+      {/* ─ Bande GAUCHE : route verticale asphalte ─ */}
+      <div style={{position:"absolute", left:0, top:0, width:"34px", height:"100%", zIndex:2,
+        background:"#28303d",
+        borderRight:"2px solid rgba(220,220,220,.55)",
+        boxShadow:"inset 2px 0 6px rgba(0,0,0,.35)"}}>
+        {/* Ligne de rive intérieure blanche */}
+        <div style={{position:"absolute", top:0, left:0, width:"2px", height:"100%",
+          background:"rgba(220,220,220,.15)"}}/>
+        {/* Tirets jaunes centraux */}
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(255,210,0,.65) 0,rgba(255,210,0,.65) 8px,transparent 8px,transparent 18px)"}}/>
       </div>
 
       {/* ─ Lignes horizontales — ferment le rectangle du circuit ─ */}
-      {/* Haut : relie bande gauche → bande droite au niveau du haut de la station road */}
-      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_TOP}px`, height:"2px",
-        background:"rgba(240,80,180,.42)", zIndex:6, pointerEvents:"none"}}/>
-      {/* Bas : relie bande gauche → bande droite au niveau du bas de la station road */}
-      <div style={{position:"absolute", left:"30px", right:"30px", top:`${ROAD_BOT}px`, height:"2px",
-        background:"rgba(240,80,180,.28)", zIndex:6, pointerEvents:"none"}}/>
+      {/* Haut */}
+      <div style={{position:"absolute", left:"34px", right:"34px", top:`${ROAD_TOP}px`, height:"2px",
+        background:"rgba(220,220,220,.5)", zIndex:6, pointerEvents:"none"}}/>
+      {/* Bas */}
+      <div style={{position:"absolute", left:"34px", right:"34px", top:`${ROAD_BOT}px`, height:"2px",
+        background:"rgba(220,220,220,.35)", zIndex:6, pointerEvents:"none"}}/>
 
-      {/* ─ Coins de virage aux 4 intersections ─ */}
+      {/* ─ Coins de virage — quart de cercle asphalte aux 4 intersections ─ */}
       {/* Haut-droit */}
-      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+      <div style={{position:"absolute", right:`${34-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
         width:`${CORNER_R}px`, height:`${CORNER_R}px`,
-        borderTop:"2px solid rgba(240,80,180,.42)", borderRight:"2px solid rgba(240,80,180,.45)",
-        borderTopRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+        borderTop:"2px solid rgba(220,220,220,.5)", borderRight:"2px solid rgba(220,220,220,.55)",
+        borderTopRightRadius:`${CORNER_R}px`, background:"transparent", zIndex:6, pointerEvents:"none"}}/>
       {/* Bas-droit */}
-      <div style={{position:"absolute", right:`${30-2}px`, top:`${ROAD_BOT}px`,
+      <div style={{position:"absolute", right:`${34-2}px`, top:`${ROAD_BOT}px`,
         width:`${CORNER_R}px`, height:`${CORNER_R}px`,
-        borderBottom:"2px solid rgba(240,80,180,.28)", borderRight:"2px solid rgba(240,80,180,.45)",
-        borderBottomRightRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+        borderBottom:"2px solid rgba(220,220,220,.35)", borderRight:"2px solid rgba(220,220,220,.55)",
+        borderBottomRightRadius:`${CORNER_R}px`, background:"transparent", zIndex:6, pointerEvents:"none"}}/>
       {/* Haut-gauche */}
-      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
+      <div style={{position:"absolute", left:`${34-2}px`, top:`${ROAD_TOP-CORNER_R}px`,
         width:`${CORNER_R}px`, height:`${CORNER_R}px`,
-        borderTop:"2px solid rgba(240,80,180,.42)", borderLeft:"2px solid rgba(240,80,180,.45)",
-        borderTopLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+        borderTop:"2px solid rgba(220,220,220,.5)", borderLeft:"2px solid rgba(220,220,220,.55)",
+        borderTopLeftRadius:`${CORNER_R}px`, background:"transparent", zIndex:6, pointerEvents:"none"}}/>
       {/* Bas-gauche */}
-      <div style={{position:"absolute", left:`${30-2}px`, top:`${ROAD_BOT}px`,
+      <div style={{position:"absolute", left:`${34-2}px`, top:`${ROAD_BOT}px`,
         width:`${CORNER_R}px`, height:`${CORNER_R}px`,
-        borderBottom:"2px solid rgba(240,80,180,.28)", borderLeft:"2px solid rgba(240,80,180,.45)",
-        borderBottomLeftRadius:`${CORNER_R}px`, zIndex:6, pointerEvents:"none"}}/>
+        borderBottom:"2px solid rgba(220,220,220,.35)", borderLeft:"2px solid rgba(220,220,220,.55)",
+        borderBottomLeftRadius:`${CORNER_R}px`, background:"transparent", zIndex:6, pointerEvents:"none"}}/>
+
 
       {/* ── Header KPIs ── */}
       <div style={{flexShrink:0, height:"24px", display:"flex", alignItems:"center", gap:"6px",
@@ -6349,23 +6500,30 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
 
       {/* ── Station road R→L ──
           Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche. */}
-      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
-        background:"#141e2e",
-        borderTop:"2px solid rgba(240,80,180,.45)",
-        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
-        {/* Marquage central rose — identique aux bandes verticales */}
+      <div style={{flexShrink:0, height:"34px", position:"relative", overflow:"hidden",
+        background:"#28303d",
+        borderTop:"2px solid rgba(220,220,220,.5)",
+        borderBottom:"2px solid rgba(220,220,220,.35)",
+        boxShadow:"0 2px 8px rgba(0,0,0,.4)"}}>
+        {/* Ligne de rive gauche blanche */}
+        <div style={{position:"absolute", top:0, left:0, width:"3px", height:"100%",
+          background:"rgba(220,220,220,.3)"}}/>
+        {/* Ligne de rive droite blanche */}
+        <div style={{position:"absolute", top:0, right:0, width:"3px", height:"100%",
+          background:"rgba(220,220,220,.3)"}}/>
+        {/* Tirets jaunes centraux — standard français */}
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"2px",
-          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
-        {/* Véhicules R→L — tracteurs = vrai SVG MiniTractor, autres = emoji */}
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(255,210,0,.7) 0,rgba(255,210,0,.7) 10px,transparent 10px,transparent 22px)"}}/>
+        {/* Véhicules R→L — tracteurs = vrai SVG MiniTractor, autres = SVG */}
         {stRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"4px",
+            position:"absolute", top:"5px",
             animation:`gnvSt${v.stIdx}RL 5s linear 1 forwards`,
           }}>
             {v.isTractor
               ? <MiniTractor isGnv={v.tractorIsGnv} flipped={true} size={22}/>
-              : <span style={{fontSize:"16px", lineHeight:"20px"}}>{v.icon}</span>
+              : <MiniGnvVehicle type={v.vtype} facing="left" size={22}/>
             }
           </div>
         ))}
@@ -6430,22 +6588,28 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       </div>
 
       {/* ── Route de retour L→R — véhicules clients devant les bâtiments ── */}
-      <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
-        background:"#141e2e",
-        borderTop:"2px solid rgba(240,80,180,.45)",
-        borderBottom:"2px solid rgba(240,80,180,.28)"}}>
-        {/* Marquage central rose */}
+      <div style={{flexShrink:0, height:"34px", position:"relative", overflow:"hidden",
+        background:"#28303d",
+        borderTop:"2px solid rgba(220,220,220,.5)",
+        borderBottom:"2px solid rgba(220,220,220,.35)",
+        boxShadow:"0 2px 8px rgba(0,0,0,.4)"}}>
+        {/* Ligne de rive gauche blanche */}
+        <div style={{position:"absolute", top:0, left:0, width:"3px", height:"100%",
+          background:"rgba(220,220,220,.3)"}}/>
+        {/* Ligne de rive droite blanche */}
+        <div style={{position:"absolute", top:0, right:0, width:"3px", height:"100%",
+          background:"rgba(220,220,220,.3)"}}/>
+        {/* Tirets jaunes centraux */}
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"2px",
-          backgroundImage:"repeating-linear-gradient(90deg,rgba(240,80,180,.32) 0,rgba(240,80,180,.32) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(255,210,0,.7) 0,rgba(255,210,0,.7) 10px,transparent 10px,transparent 22px)"}}/>
         {/* Véhicules L→R (retour) — face droite */}
         {retRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"5px", fontSize:"13px", lineHeight:"16px",
+            position:"absolute", top:"5px",
             animation:"gnvRetLR 6.5s linear 1 forwards",
-            transform:"scaleX(-1)",
           }}>
-            {v.icon}
+            <MiniGnvVehicle type={v.vtype} facing="right" size={22}/>
           </div>
         ))}
       </div>
@@ -7743,7 +7907,7 @@ function DigesteurScene({
               return (
                 <>
                   {/* ── Couche 1 : ASPHALTE ── */}
-                  <g stroke="#141e2e" strokeWidth="12" fill="none" strokeLinecap="square">
+                  <g stroke="#2a3040" strokeWidth="12" fill="none" strokeLinecap="square">
                     {/* Route TOP haut Vue 1 : transit bac */}
                     <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
@@ -7769,8 +7933,8 @@ function DigesteurScene({
                     <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
                     <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
                   </g>
-                  {/* ── Couche 2 : BORDS roses ── */}
-                  <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
+                  {/* ── Couche 2 : BORDS blancs (ligne de rive) ── */}
+                  <g stroke="rgba(220,220,220,.55)" strokeWidth="2" fill="none" strokeLinecap="square">
                     {/* Bords gisement loop — outer continus, inner segmentés aux T-junctions */}
                     <path d={`M ${V1_V2} ${LANE_TOP-5} L ${W} ${LANE_TOP-5}`}/>
                     <path d={`M ${V1_V2} ${LANE_TOP+5} L ${L_EDGE-5} ${LANE_TOP+5}`}/>
@@ -7813,8 +7977,8 @@ function DigesteurScene({
                     <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
-                  {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
-                  <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
+                  {/* ── Couche 3 : MARQUAGE tirets jaunes (axe central, standard français) ── */}
+                  <g stroke="rgba(255,210,0,.6)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
                     <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${DUMP_Y} L ${DUMP_X} ${DUMP_Y}`}/>
