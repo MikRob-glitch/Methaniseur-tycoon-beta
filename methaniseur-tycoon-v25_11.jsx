@@ -6245,13 +6245,18 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
           y = BOT_BOT_Y; facing = 'right';
         }
 
-        const isRefueling = p > ARRIVE && p <= REFUEL;
+        const isRefueling  = p > ARRIVE && p <= REFUEL;
+        const isDescending = p > SLIDE  && p <= DESCEND;
         const vw = GNV_VW[v.type] || 48;
+        // Pendant la descente verticale : rotation 90° autour du centre du sprite
+        const rotTransform = isDescending ? `rotate(90,${vw/2},11)` : '';
         return (
           <g key={v.id} transform={`translate(${x - vw/2} ${y - 11})`} opacity={opacity}>
-            <GnvCarSprite type={v.type} facing={facing}/>
+            <g transform={rotTransform}>
+              <GnvCarSprite type={v.type} facing={facing}/>
+            </g>
             {isRefueling && (
-              <text x="21" y="-6" textAnchor="middle" fontSize="10" fill="#4ADB94"
+              <text x={vw/2} y="-6" textAnchor="middle" fontSize="10" fill="#4ADB94"
                 style={{animation:"bufferPulse 0.7s ease infinite"}}>⛽</text>
             )}
           </g>
