@@ -6097,8 +6097,8 @@ function MiniGnvVehicle({ type, facing, size }) {
   const w  = Math.round(h * vw / 22);
   const flip = facing === 'right' ? `translate(${vw},0) scale(-1,1)` : '';
   return (
-    <svg viewBox={`0 0 ${vw} 22`} width={w} height={h}
-      style={{display:"block", overflow:"visible", flexShrink:0}}>
+    <svg viewBox={`0 0 ${vw} 26`} width={w} height={h}
+      style={{display:"block", overflow:"hidden", flexShrink:0}}>
       <g transform={flip}>
         <GnvCarSpriteInner type={t}/>
       </g>
@@ -6121,7 +6121,8 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
     clearInterval(timerRef.current);
     if (!hasActive) { setVehicles([]); return; }
     const ms = Math.max(2200, 8000 - gnvSplit * 40 - gnvStations * 600);
-    const GNV_TYPES = ['car', 'van', 'bus', 'truck'];
+    // bus/truck trop larges pour le segment vertical du C-path → car/van uniquement
+    const GNV_TYPES = ['car', 'van'];
     timerRef.current = setInterval(() => {
       const type = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const stIdx = Math.floor(Math.random() * gnvStations);
