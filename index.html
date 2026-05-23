@@ -8117,8 +8117,8 @@ function DigesteurScene({
                     <path d={`M ${GNV_C_X} ${BOT_BOT_Y} L ${V1_V2} ${BOT_BOT_Y}`}/>
                     <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
                   </g>
-                  {/* ── Couche 2 : BORDS roses ── */}
-                  <g stroke="rgba(240,80,180,.45)" strokeWidth="2" fill="none" strokeLinecap="square">
+                  {/* ── Couche 2 : BORDS blancs (ligne de rive) ── */}
+                  <g stroke="rgba(220,220,220,.55)" strokeWidth="2" fill="none" strokeLinecap="square">
                     {/* Bords gisement loop — outer continus, inner segmentés aux T-junctions */}
                     <path d={`M ${V1_V2} ${LANE_TOP-5} L ${W} ${LANE_TOP-5}`}/>
                     <path d={`M ${V1_V2} ${LANE_TOP+5} L ${L_EDGE-5} ${LANE_TOP+5}`}/>
@@ -8161,8 +8161,8 @@ function DigesteurScene({
                     <path d={`M ${V1_V2} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_TOP_Y+5} L ${GNV_C_X+5} ${BOT_BOT_Y-5}`}/>
                     <path d={`M ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
-                  {/* ── Couche 3 : MARQUAGE pointillé rose ── */}
-                  <g stroke="rgba(240,80,180,.38)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
+                  {/* ── Couche 3 : MARQUAGE tirets jaunes (axe central, standard français) ── */}
+                  <g stroke="rgba(255,210,0,.6)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
                     <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${DUMP_Y} L ${DUMP_X} ${DUMP_Y}`}/>
