@@ -957,7 +957,7 @@ const TUTORIAL_STEPS = [
     body: 'Chaque grand palier déclenche une cinématique. Retrouve ensuite tout dans cet onglet : 📜 Certificats officiels (GO, CPB, Qualimétha), 🏆 Milestones de production (foyers alimentés…) et des badges de progression. Explore !',
     target: '[data-tut="rewards-certs"]',
     forceTab: 'rewards',
-    trigger: gs => !gs.seenTutos.has('rewards-hint') && gs.injected && gs.seenTutos.has('gnv-intro'),
+    trigger: gs => !gs.seenTutos.has('rewards-hint') && gs.injected,
   },
   {
     id: 'rewards-milestones',
@@ -2067,8 +2067,8 @@ function Game({ username, region, maia }) {
       // Joueurs déjà injectés → pré-marquer gnv-intro + rewards-hint + tractor-fleet
       // pour ne pas bloquer l'accès aux améliorations GNV/tracteurs au chargement
       initial.add('gnv-intro');
-      initial.add('rewards-hint');
-      initial.add('rewards-milestones');
+      // rewards-hint et rewards-milestones intentionnellement NON pré-marqués
+      // pour que les joueurs existants voient le tuto récompenses (nouveauté)
       initial.add('tractor-fleet');
     }
     return initial;
