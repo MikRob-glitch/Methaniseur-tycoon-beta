@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-44';   // v25.15.1 — Fix bug visuel tracteurs GNV : sortie de station road fluide vers route gauche
+const CACHE_NAME = 'methaniseur-tycoon-v25-45';   // v25.16 — Fix page blanche P1 (shell_header tronqué)
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
