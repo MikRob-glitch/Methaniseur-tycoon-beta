@@ -2042,10 +2042,12 @@ function Game({ username, region, maia }) {
       const raw = localStorage.getItem('mt_seen_tutos_v1');
       if (raw) {
         const s = new Set(JSON.parse(raw));
-        // Migration : ces steps ont été pré-marqués par erreur — les retirer
-        // pour que les joueurs existants voient le tuto récompenses
-        ['rewards-hint','rewards-milestones','tractor-fleet'].forEach(id => s.delete(id));
-        localStorage.setItem('mt_seen_tutos_v1', JSON.stringify([...s]));
+        // Migration one-time : retire les steps pré-marqués par erreur
+        if (!localStorage.getItem('mt_tutos_migrated_rewards')) {
+          ['rewards-hint','rewards-milestones','tractor-fleet'].forEach(id => s.delete(id));
+          localStorage.setItem('mt_seen_tutos_v1', JSON.stringify([...s]));
+          localStorage.setItem('mt_tutos_migrated_rewards', '1');
+        }
         return s;
       }
     } catch {}
