@@ -953,17 +953,26 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'rewards-hint',
-    title: '🎖️ Tes récompenses t\'attendent !',
-    body: 'Chaque palier atteint déclenche une cinématique de récompense. Retrouve toutes tes distinctions — Garanties d\'Origine, labels, certifications — dans l\'onglet 🎖️ Récomp. en bas. Ne les rate pas !',
-    target: '[data-tut="tab-rewards"]',
+    title: '🎖️ L\'onglet Récompenses',
+    body: 'Chaque grand palier déclenche une cinématique. Retrouve ensuite tout dans cet onglet : 📜 Certificats officiels (GO, CPB, Qualimétha), 🏆 Milestones de production (foyers alimentés…) et des badges de progression. Explore !',
+    target: '[data-tut="rewards-certs"]',
+    forceTab: 'rewards',
     trigger: gs => !gs.seenTutos.has('rewards-hint') && gs.injected && gs.seenTutos.has('gnv-intro'),
+  },
+  {
+    id: 'rewards-milestones',
+    title: '🏆 Milestones & badges',
+    body: 'Les milestones mesurent ton impact réel : foyers alimentés en gaz vert, MWh injectés, couverture régionale. Les badges gamifiés récompensent ta progression : diversité d\'intrants, étoiles de quantité, automatisation. Tout s\'accumule au fil du jeu.',
+    target: '[data-tut="rewards-milestones"]',
+    forceTab: 'rewards',
+    trigger: gs => !gs.seenTutos.has('rewards-milestones') && gs.injected && gs.seenTutos.has('rewards-hint'),
   },
   {
     id: 'tractor-fleet',
     title: '🚜 Développe ta flotte de tracteurs !',
     body: 'Tes tracteurs collectent les intrants. Achètes-en de nouveaux, ajoute des remorques, ou convertis-les au GNV pour +15 % de remplissage chacun. Plus de tracteurs = plus de biomasse collectée !',
     target: '[data-tut="tractor-fleet"]',
-    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('rewards-hint'),
+    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('rewards-milestones'),
   },
 ];
 
@@ -2059,6 +2068,7 @@ function Game({ username, region, maia }) {
       // pour ne pas bloquer l'accès aux améliorations GNV/tracteurs au chargement
       initial.add('gnv-intro');
       initial.add('rewards-hint');
+      initial.add('rewards-milestones');
       initial.add('tractor-fleet');
     }
     return initial;
@@ -9465,7 +9475,7 @@ function RankingTab({
             })}
           </div>
 
-          {/* Badges gamifiés */}
+      {/* Badges gamifiés */}
           {(() => {
             const allBadges = computeBadges({ owned, digesteurs, gnvStations, tractorGnv, autoDump });
             const byCat = {
@@ -9557,6 +9567,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
     <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
 
       {/* Certificats réalistes */}
+      <div data-tut="rewards-certs">
       <div style={{fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
       <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
         {[
@@ -9589,7 +9600,10 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
         ))}
       </div>
 
+      </div>{/* /rewards-certs */}
+
       {/* Milestones de production */}
+      <div data-tut="rewards-milestones">
       <div style={{fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
       <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"20px"}}>
         {[
@@ -9630,6 +9644,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
           );
         })}
       </div>
+      </div>{/* /rewards-milestones */}
 
       {/* Badges gamifiés */}
       {(() => {
