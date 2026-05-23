@@ -847,49 +847,68 @@ const TUTORIAL_STEPS = [
   {
     id: 'buy-lisier',
     title: '🐄 Achète ton premier intrant !',
-    body: 'Le Lisier bovin est l\'intrant de base. Il coûte 5 m³ de biométhane — tu en as déjà 10 m³ pour démarrer. Clique "Acheter" pour lancer la collecte !',
+    body: 'Le Lisier bovin est l\'intrant de base. Il coûte 5 m³ de biométhane — tu en as déjà 10 m³ pour démarrer. Clique sur le bouton bleu avec le coût en m³ pour lancer la collecte !',
     target: '[data-tut="shop-item-0"]',
     trigger: gs => !gs.seenTutos.has('buy-lisier') && gs.tab === 'upgrades' && gs.seenTutos.has('tab-achats'),
   },
   {
     id: 'bac-intrants',
-    title: '🗑️ Le Bac d\'intrants se remplit !',
-    body: 'Les tracteurs collectent les matières organiques et les déposent ici. Plus tu as d\'intrants achetés, plus le bac se remplit vite.',
+    title: '🗑️ Le BAC d\'intrants',
+    body: 'Les tracteurs déposent les matières ici. Le BAC affiche son remplissage et son rendement (m³/t). Appuie sur l\'icône ℹ️ (en haut à droite du bac) pour voir la composition détaillée de ton mix — chaque combinaison d\'intrants a un rendement différent.',
     target: '[data-tut="bac-zone"]',
+    forceTab: 'game',
     trigger: gs => !gs.seenTutos.has('bac-intrants') && gs.stock > 0 && gs.seenTutos.has('buy-lisier'),
   },
   {
     id: 'pour-button',
     title: '⬇️ Déverse dans le digesteur !',
-    body: 'Le bac a des intrants. Clique sur "⬇️ Déverser" pour les envoyer dans le digesteur. La digestion anaérobie commence et produit du biogaz !',
+    body: 'Le bac a des intrants. Clique sur "⬇️ Déverser" pour les envoyer dans le digesteur. La digestion anaérobie démarre et produit du biogaz — qui s\'accumule dans la cuve tampon.',
     target: '[data-tut="pour-button"]',
+    forceTab: 'game',
     trigger: gs => !gs.seenTutos.has('pour-button') && gs.stock >= 3 && gs.seenTutos.has('bac-intrants'),
   },
   {
     id: 'cn-ratio',
-    title: '⚗️ Le ratio C/N — équilibre tes intrants !',
-    body: 'Cette jauge montre l\'équilibre Carbone/Azote de ton mix. Le sweet spot est autour de 25. Mélange différents intrants (lisier + fumier + CIVE…) pour maximiser ta production de biométhane !',
+    title: '⚗️ Le ratio C/N — ton levier de rendement',
+    body: 'Cette jauge mesure l\'équilibre Carbone/Azote de ton mix. Le sweet spot est autour de 25. Achète différents intrants (lisier + fumier + CIVE…) pour t\'en approcher — chaque point gagné augmente ta production de biométhane.',
     target: '[data-tut="cn-gauge"]',
-    trigger: gs => !gs.seenTutos.has('cn-ratio') && gs.ownedCount >= 2 && gs.seenTutos.has('pour-button'),
+    forceTab: 'game',
+    trigger: gs => !gs.seenTutos.has('cn-ratio') && gs.charge > 0 && gs.seenTutos.has('pour-button'),
+  },
+  {
+    id: 'currency-intro',
+    title: '💧 La monnaie de la phase 1 : le m³',
+    body: 'Avant le raccordement, tout se paie en m³ de biométhane accumulés dans ta cuve tampon : intrants, équipements, tout. Après le raccordement, GRDF rachète chaque m³ injecté au prix du marché — ta monnaie bascule définitivement vers l\'euro.',
+    target: '[data-tut="buffer-zone"]',
+    forceTab: 'game',
+    trigger: gs => !gs.seenTutos.has('currency-intro') && gs.charge > 0 && gs.seenTutos.has('cn-ratio'),
+  },
+  {
+    id: 'chain-goal',
+    title: '🎯 Objectif : te raccorder au réseau GRDF',
+    body: 'Tu dois débloquer 3 équipements dans l\'ordre. Chacun débloque aussi de nouveaux intrants plus productifs : 🧪 Épurateur (10 000 m³) → 🔩 Compresseur (40 000 m³) → 🏗️ Raccordement GRDF (80 000 m³). C\'est la fin de la phase 1.',
+    target: '[data-tut="chain-steps"]',
+    forceTab: 'game',
+    trigger: gs => !gs.seenTutos.has('chain-goal') && gs.charge > 0 && gs.seenTutos.has('currency-intro'),
   },
   {
     id: 'epurateur-intro',
-    title: '🧪 L\'Épurateur est disponible !',
-    body: 'Tu as accumulé assez de biométhane ! L\'Épurateur est la 1ère étape de la chaîne d\'injection réseau. Il purifie le biogaz et débloque de nouveaux intrants comme les biodéchets et les boues de STEP.',
+    title: '🧪 Étape 1/3 — L\'Épurateur est disponible !',
+    body: 'Tu as accumulé 10 000 m³ ! L\'Épurateur purifie le biogaz (élimine H₂S, CO₂ et humidité) et débloque les biodéchets + boues de STEP. Premier verrou de la chaîne — fonce !',
     target: '[data-tut="epurateur-btn"]',
     trigger: gs => !gs.seenTutos.has('epurateur-intro') && gs.canUnlockEpurateur,
   },
   {
     id: 'compresseur-intro',
-    title: '🔩 Le Compresseur est accessible !',
-    body: 'Excellent ! Le Compresseur comprime le biogaz purifié pour l\'injection dans le réseau sous pression. Il débloque aussi les déchets industriels, plus productifs.',
+    title: '🔩 Étape 2/3 — Le Compresseur est accessible !',
+    body: 'Tu as accumulé 40 000 m³ ! Le Compresseur met le biogaz sous pression réseau (jusqu\'à 67 bar) et débloque les déchets industriels, les plus productifs du jeu.',
     target: '[data-tut="compresseur-btn"]',
     trigger: gs => !gs.seenTutos.has('compresseur-intro') && gs.canUnlockCompresseur,
   },
   {
     id: 'raccordement',
-    title: '🏗️ Raccrode-toi au réseau GRDF !',
-    body: 'C\'est LE moment ! En cliquant ici, tu injectes ton biométhane dans le réseau GRDF, tu rejoins le classement national et tu reçois une prime de raccordement de 5 000 €.',
+    title: '🏗️ Étape 3/3 — Raccorde-toi au réseau GRDF !',
+    body: 'C\'est LE moment ! Tu reçois une prime de 5 000 €. À partir de maintenant, GRDF rachète chaque m³ injecté au prix du marché — ta monnaie bascule vers l\'euro. Tu rejoins aussi le classement national !',
     target: '[data-tut="raccordement-btn"]',
     trigger: gs => !gs.seenTutos.has('raccordement') && gs.canConnect,
   },
@@ -901,11 +920,18 @@ const TUTORIAL_STEPS = [
     trigger: gs => !gs.seenTutos.has('gnv-intro') && gs.injected && gs.seenTutos.has('raccordement'),
   },
   {
+    id: 'rewards-hint',
+    title: '🎖️ Tes récompenses t\'attendent !',
+    body: 'Chaque palier atteint déclenche une cinématique de récompense. Retrouve toutes tes distinctions — Garanties d\'Origine, labels, certifications — dans l\'onglet 🎖️ Récomp. en bas. Ne les rate pas !',
+    target: '[data-tut="tab-rewards"]',
+    trigger: gs => !gs.seenTutos.has('rewards-hint') && gs.injected && gs.seenTutos.has('gnv-intro'),
+  },
+  {
     id: 'tractor-fleet',
     title: '🚜 Développe ta flotte de tracteurs !',
     body: 'Tes tracteurs collectent les intrants. Achètes-en de nouveaux, ajoute des remorques, ou convertis-les au GNV pour +15 % de remplissage chacun. Plus de tracteurs = plus de biomasse collectée !',
     target: '[data-tut="tractor-fleet"]',
-    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('gnv-intro'),
+    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('rewards-hint'),
   },
 ];
 
@@ -1958,14 +1984,20 @@ function Game({ username, region, maia }) {
       // Étapes de démarrage déjà faites
       ['welcome','tab-achats','buy-lisier','bac-intrants','pour-button'].forEach(id => initial.add(id));
     }
-    if ((saved?.owned ?? []).filter(q => q > 0).length >= 2) initial.add('cn-ratio');
+    // cn-ratio + nouveaux steps pédago : pré-marquer si le digesteur a déjà tourné
+    if ((saved?.charge ?? 0) > 0 || (saved?.bm ?? 0) > 0 || (saved?.buffer ?? 0) > 0) {
+      initial.add('cn-ratio');
+      initial.add('currency-intro');
+      initial.add('chain-goal');
+    }
     if (saved?.epurateurOk)  initial.add('epurateur-intro');
     if (saved?.compresseurOk) initial.add('compresseur-intro');
     if (saved?.injected) {
       initial.add('raccordement');
-      // Joueurs déjà injectés → pré-marquer gnv-intro + tractor-fleet
+      // Joueurs déjà injectés → pré-marquer gnv-intro + rewards-hint + tractor-fleet
       // pour ne pas bloquer l'accès aux améliorations GNV/tracteurs au chargement
       initial.add('gnv-intro');
+      initial.add('rewards-hint');
       initial.add('tractor-fleet');
     }
     return initial;
@@ -3001,6 +3033,7 @@ function Game({ username, region, maia }) {
   ];
   useEffect(() => {
     if (!injected || !cloudSynced) return;
+    if (activeTuto) return; // ne pas interrompre un tuto actif — re-détecté à sa fermeture
     for (const r of REWARD_DEFS) {
       if (seenRewards.includes(r.id)) continue;
       if (!r.check()) continue;
@@ -3014,7 +3047,7 @@ function Game({ username, region, maia }) {
       setTimeout(() => showCinematic(r.id, {}), 400);
       break; // un seul à la fois
     }
-  }, [injected, totalScore, digesteurs, cloudSynced, seenRewards]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [injected, totalScore, digesteurs, cloudSynced, seenRewards, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Moteur de déclenchement du tutoriel spotlight ─────────────────────────
   useEffect(() => {
@@ -3023,6 +3056,7 @@ function Game({ username, region, maia }) {
       seenTutos,
       tab,
       stock,
+      charge,
       bm,
       buffer,
       owned,
@@ -3036,8 +3070,11 @@ function Game({ username, region, maia }) {
       ownedCount: owned.filter(q => q > 0).length,
     };
     const next = TUTORIAL_STEPS.find(s => s.trigger(gs));
-    if (next) setActiveTuto(next);
-  }, [seenTutos, tab, stock, bm, buffer, owned, injected, epurateurOk, compresseurOk, gnvStations, canUnlockEpurateur, canUnlockCompresseur, canConnect, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (next) {
+      if (next.forceTab) setTab(next.forceTab); // ramener sur le bon onglet avant d'afficher le spotlight
+      setActiveTuto(next);
+    }
+  }, [seenTutos, tab, stock, charge, bm, buffer, owned, injected, epurateurOk, compresseurOk, gnvStations, canUnlockEpurateur, canUnlockCompresseur, canConnect, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
   // ─────────────────────────────────────────────────────────────────────────
 
   // Mise à jour position locale dans le lb sans fetch réseau
@@ -3806,7 +3843,7 @@ function Game({ username, region, maia }) {
         {[["game",<><MiniDigesterIcon size={13}/> Digesteur</>],["upgrades","⬆️ Achats"],["ranking","🏆 Classement"],["rewards","🎖️ Récomp."]].map(([id,lbl])=>{
           const highlight=id==="upgrades"&&canBuySomething&&tab!=="upgrades";
           return (
-            <button key={id} {...(id==="upgrades"?{"data-tut":"tab-upgrades"}:{})} onClick={()=>{ setTab(id); if(id==="upgrades"&&tutStep===0) setTutStep(1); }} style={{
+            <button key={id} {...(id==="upgrades"?{"data-tut":"tab-upgrades"}:{})} {...(id==="rewards"?{"data-tut":"tab-rewards"}:{})} onClick={()=>{ setTab(id); if(id==="upgrades"&&tutStep===0) setTutStep(1); }} style={{
               flex:1,padding:"11px 2px",border:"none",
               background:highlight?"rgba(74,158,219,.14)":"transparent",
               color:tab===id?"#4A9EDB":highlight?"#6DB5EC":"rgba(255,255,255,.35)",
@@ -3939,7 +3976,7 @@ function Game({ username, region, maia }) {
 
           {/* Progression raccordement */}
           {!injected&&(
-            <div style={{marginTop:"14px",padding:"14px 16px",borderRadius:"16px",background:"rgba(11,22,35,.55)",border:`1px solid ${canConnect?"rgba(232,160,32,.45)":"rgba(74,158,219,.14)"}`}}>
+            <div data-tut="buffer-zone" style={{marginTop:"14px",padding:"14px 16px",borderRadius:"16px",background:"rgba(11,22,35,.55)",border:`1px solid ${canConnect?"rgba(232,160,32,.45)":"rgba(74,158,219,.14)"}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
                 <div>
                   <div style={{fontSize:"12px",fontWeight:700,color:canConnect?"#F5BE50":"rgba(255,255,255,.72)"}}>{canConnect?"🔓 Raccordement possible !":"🎯 Objectif raccordement"}</div>
@@ -3974,7 +4011,7 @@ function Game({ username, region, maia }) {
               (épurateur/compresseur/raccordement) restent ci-dessous SI !injected, car ce sont
               des éléments d'action utilisateur (boutons, progress bars), pas du décor. */}
           {!injected && (
-          <div style={{marginTop:"14px",borderRadius:"18px",overflow:"hidden",border:"1px solid rgba(74,158,219,.14)",background:"rgba(11,22,35,.55)"}}>
+          <div data-tut="chain-steps" style={{marginTop:"14px",borderRadius:"18px",overflow:"hidden",border:"1px solid rgba(74,158,219,.14)",background:"rgba(11,22,35,.55)"}}>
             <div style={{padding:"12px 16px 8px",borderBottom:"1px solid rgba(74,158,219,.09)"}}>
               <div style={{fontSize:"12px",fontWeight:700,color:"rgba(255,255,255,.82)"}}>📋 Étapes vers le raccordement</div>
               <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>Seuil : {fmt(INJECTION_THRESHOLD)}</div>
@@ -9611,53 +9648,4 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: "12px", fontWeight: 800, color: "#EDF4FF" }}>{u.name}</div>
                       <div style={{ fontSize: "9px", color: "rgba(255,255,255,.4)" }}>{qty} acheté{qty > 1 ? "s" : ""}</div>
-                    </div>
-                    <div style={{ display: "flex", gap: "1px" }}>
-                      {[0,1,2,3,4].map(si => (
-                        <span key={si} style={{
-                          fontSize: "12px",
-                          color: si < starsEarned ? "#F5BE50" : "rgba(255,255,255,.15)",
-                          filter: si < starsEarned ? "drop-shadow(0 0 4px rgba(245,190,80,.7))" : "none"
-                        }}>★</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "3px" }}>
-                    {intrantBadges.map(b => (
-                      <div key={b.id} style={{
-                        padding: "4px 2px", borderRadius: "6px", textAlign: "center",
-                        background: b.done ? `${c}25` : "rgba(255,255,255,.03)",
-                        border: `1px solid ${b.done ? c+"55" : "rgba(255,255,255,.06)"}`,
-                        opacity: b.done ? 1 : 0.5,
-                      }}>
-                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "#F5BE50" : "rgba(255,255,255,.3)" }}>
-                          {"★".repeat(b.starLevel)}
-                        </div>
-                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(255,255,255,.3)", fontWeight: 600, marginTop: "1px" }}>
-                          +{Math.round((STAR_BONUSES[b.starLevel-1]-1)*100)}%
-                        </div>
-                        <div style={{ fontSize: "7px", color: "rgba(255,255,255,.35)", marginTop: "1px" }}>
-                          {STAR_THRESHOLDS[b.starLevel-1]}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        );
-      })()}
-
-      {/* Info pédago */}
-      <div style={{
-        marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
-        background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
-        fontSize:"10px",color:"rgba(255,255,255,.45)",lineHeight:1.6
-      }}>
-        💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
-        de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
-      </div>
-    </div>
-  );
-}
+         
