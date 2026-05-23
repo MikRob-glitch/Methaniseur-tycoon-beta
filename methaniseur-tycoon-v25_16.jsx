@@ -9648,4 +9648,53 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: "12px", fontWeight: 800, color: "#EDF4FF" }}>{u.name}</div>
                       <div style={{ fontSize: "9px", color: "rgba(255,255,255,.4)" }}>{qty} acheté{qty > 1 ? "s" : ""}</div>
-         
+                    </div>
+                    <div style={{ display: "flex", gap: "1px" }}>
+                      {[0,1,2,3,4].map(si => (
+                        <span key={si} style={{
+                          fontSize: "12px",
+                          color: si < starsEarned ? "#F5BE50" : "rgba(255,255,255,.15)",
+                          filter: si < starsEarned ? "drop-shadow(0 0 4px rgba(245,190,80,.7))" : "none"
+                        }}>★</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "3px" }}>
+                    {intrantBadges.map(b => (
+                      <div key={b.id} style={{
+                        padding: "4px 2px", borderRadius: "6px", textAlign: "center",
+                        background: b.done ? `${c}25` : "rgba(255,255,255,.03)",
+                        border: `1px solid ${b.done ? c+"55" : "rgba(255,255,255,.06)"}`,
+                        opacity: b.done ? 1 : 0.5,
+                      }}>
+                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "#F5BE50" : "rgba(255,255,255,.3)" }}>
+                          {"★".repeat(b.starLevel)}
+                        </div>
+                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(255,255,255,.3)", fontWeight: 600, marginTop: "1px" }}>
+                          +{Math.round((STAR_BONUSES[b.starLevel-1]-1)*100)}%
+                        </div>
+                        <div style={{ fontSize: "7px", color: "rgba(255,255,255,.35)", marginTop: "1px" }}>
+                          {STAR_THRESHOLDS[b.starLevel-1]}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        );
+      })()}
+
+      {/* Info pédago */}
+      <div style={{
+        marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
+        background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
+        fontSize:"10px",color:"rgba(255,255,255,.45)",lineHeight:1.6
+      }}>
+        💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
+        de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
+      </div>
+    </div>
+  );
+}
