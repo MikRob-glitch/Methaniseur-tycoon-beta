@@ -28,3 +28,34 @@
       --c-blue:        #4A9EDB;
       --c-blue-light:  #6DB5EC;
       --c-blue-dark:   #2A7DBB;
+      --c-teal:        #3AACCC;
+      --c-green:       #4ADB94;
+      --c-green-dark:  #27a85a;
+      --c-orange:      #E8A020;
+      --c-yellow:      #F5BE50;
+      --c-red:         #E05858;
+      --c-purple:      #5544CC;
+      --c-text:        #EDF4FF;
+      --c-bg:          #0B1623;
+      /* ── Valeurs RGB pour rgba() ── */
+      --c-blue-rgb:    74,158,219;
+      --c-green-rgb:   74,219,148;
+      --c-yellow-rgb:  245,190,80;
+      --c-red-rgb:     224,88,88;
+      --c-purple-rgb:  85,68,204;
+      --c-orange-rgb:  232,160,32;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0B1623;background:var(--c-bg);color:#e8f4fd;font-family:'Inter',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    #root{min-height:100dvh;background:#0B1623;background:var(--c-bg)}
+    @keyframes tutPulse{0%,100%{opacity:.9;stroke-width:2}50%{opacity:.4;stroke-width:3.5}}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+  </script>
+  <script type="text/babel" data-presets="react">

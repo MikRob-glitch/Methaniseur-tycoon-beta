@@ -1370,7 +1370,7 @@ function App() {
 }
 
 // ─── BADGES : source unique ──────────────────────────────────────────────────
-const MAITRISE_COLORS = ["#8B6F47","#22a86a","var(--c-orange)","var(--c-purple)","#BB6600","var(--c-yellow)","var(--c-blue)"];
+const MAITRISE_COLORS = ["#8B6F47","#22a86a","#E8A020","#5544CC","#BB6600","#F5BE50","#4A9EDB"];
 const DIVERSITY_META = [
   { icon:"🌱", name:"Premiers pas",        color:"var(--c-blue-light)" },
   { icon:"🍃", name:"Polyvalent",          color:"#22a86a" },
@@ -3433,6 +3433,7 @@ function Game({ username, region, maia }) {
       <style>{`
         * { -webkit-font-smoothing: antialiased; }
         button { -webkit-tap-highlight-color: transparent; }
+        @keyframes tutPulse{0%,100%{opacity:.9;stroke-width:2}50%{opacity:.4;stroke-width:3.5}}
         @keyframes digestPulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.04);filter:brightness(1.15)}}
         @keyframes userMenuIn{0%{opacity:0;transform:translateY(-4px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
         .scanline::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(var(--c-blue-rgb),.018) 2px,rgba(var(--c-blue-rgb),.018) 4px);pointer-events:none;border-radius:inherit;}
@@ -9074,7 +9075,7 @@ function RankingTab({
                   {/* Rang */}
                   <div style={{
                     width:"28px",height:"28px",borderRadius:"50%",flexShrink:0,
-                    background:rank<=3?`${["var(--c-yellow)","#C0C0C0","#CD7F32"][rank-1]}20`:"rgba(255,255,255,.06)",
+                    background:rank<=3?`${["#F5BE5020","rgba(192,192,192,.12)","rgba(205,127,50,.12)"][rank-1]}`:"rgba(255,255,255,.06)",
                     border:`1.5px solid ${rank<=3?["var(--c-yellow)","#C0C0C0","#CD7F32"][rank-1]+"60":"rgba(255,255,255,.1)"}`,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:"11px",fontWeight:900,
