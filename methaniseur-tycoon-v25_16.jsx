@@ -1,38 +1,3 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#0B1623"/>
-  <title>Méthaniseur Tycoon – GRDF</title>
-  <link rel="manifest" href="manifest.json"/>
-  <!-- Favicons & icônes PWA -->
-  <link rel="icon" type="image/svg+xml" href="icon.svg"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
-  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
-  <!-- iOS Safari (ignore le manifest, exige apple-touch-icon en PNG) -->
-  <link rel="apple-touch-icon" href="icon-180.png"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Méthaniseur"/>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0B1623;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-    #root{min-height:100dvh}
-    @keyframes tutPulse{0%,100%{opacity:.9;stroke-width:2}50%{opacity:.4;stroke-width:3.5}}
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script>
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').catch(()=>{});
-    }
-  </script>
-  <script type="text/babel" data-presets="react">
 
 // Source de vérité — Méthaniseur Tycoon v25.15
 // Workflow : modifier ce fichier → ./build.sh → push index.html
@@ -1998,7 +1963,8 @@ function Game({ username, region, maia }) {
     if (saved?.compresseurOk) initial.add('compresseur-intro');
     if (saved?.injected) {
       initial.add('raccordement');
-      // gnv-intro et tractor-fleet laissés hors du set → se déclenchent au prochain chargement
+      // Afficher gnv-intro et tractor-fleet seulement si pas encore vus
+      // (laissés hors du set pour qu'ils se déclenchent au prochain chargement)
     }
     return initial;
   });
@@ -9683,8 +9649,4 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
 
       {/* Info pédago */}
       <div style={{
-        marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
-        background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
-        fontSize:"10px",color:"rgba(255,255,255,.45)",lineHeight:1.6
-      }}>
-        �
+        marginT
