@@ -9649,4 +9649,13 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
 
       {/* Info pédago */}
       <div style={{
-        marginT
+        marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
+        background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
+        fontSize:"10px",color:"rgba(255,255,255,.45)",lineHeight:1.6
+      }}>
+        💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
+        de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
+      </div>
+    </div>
+  );
+}
