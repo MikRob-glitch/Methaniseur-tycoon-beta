@@ -2040,7 +2040,14 @@ function Game({ username, region, maia }) {
   const [seenTutos, setSeenTutos] = useState(() => {
     try {
       const raw = localStorage.getItem('mt_seen_tutos_v1');
-      if (raw) return new Set(JSON.parse(raw));
+      if (raw) {
+        const s = new Set(JSON.parse(raw));
+        // Migration : ces steps ont été pré-marqués par erreur — les retirer
+        // pour que les joueurs existants voient le tuto récompenses
+        ['rewards-hint','rewards-milestones','tractor-fleet'].forEach(id => s.delete(id));
+        localStorage.setItem('mt_seen_tutos_v1', JSON.stringify([...s]));
+        return s;
+      }
     } catch {}
     // Joueurs existants : pré-marquer les étapes déjà dépassées selon l'état de la save
     const initial = new Set();
