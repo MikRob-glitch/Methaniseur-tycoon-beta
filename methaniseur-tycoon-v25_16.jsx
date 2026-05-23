@@ -1482,16 +1482,16 @@ function CNGauge({ composition }) {
           }}/>
         )}
         {/* Labels haut/bas */}
-        <div style={{position:'absolute',top:'2px',left:0,right:0,textAlign:'center',fontSize:'7px',color:'rgba(255,255,255,.4)'}}>45</div>
-        <div style={{position:'absolute',bottom:'2px',left:0,right:0,textAlign:'center',fontSize:'7px',color:'rgba(255,255,255,.4)'}}>5</div>
-        <div style={{position:'absolute',top:'48%',left:0,right:0,textAlign:'center',fontSize:'7px',fontWeight:700,color:'rgba(var(--c-green-rgb),.85)'}}>25</div>
+        <div style={{position:'absolute',top:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(255,255,255,.4)'}}>45</div>
+        <div style={{position:'absolute',bottom:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(255,255,255,.4)'}}>5</div>
+        <div style={{position:'absolute',top:'48%',left:0,right:0,textAlign:'center',fontSize:'9px',fontWeight:700,color:'rgba(var(--c-green-rgb),.85)'}}>25</div>
       </div>
       {/* Valeur courante */}
       <div style={{textAlign:'center',lineHeight:1.2}}>
         <div style={{fontSize:'11px', fontWeight:800, color: isEmpty ? 'rgba(255,255,255,.3)' : bonusColor}}>
           {isEmpty ? '—' : cn.toFixed(1)}
         </div>
-        <div style={{fontSize:'8px', fontWeight:700, color: isEmpty ? 'rgba(255,255,255,.25)' : bonusColor}}>
+        <div style={{fontSize:'10px', fontWeight:700, color: isEmpty ? 'rgba(255,255,255,.25)' : bonusColor}}>
           {isEmpty ? '' : (bonusPct >= 0 ? '+' : '') + bonusPct + '%'}
         </div>
       </div>
@@ -1773,7 +1773,7 @@ function BadgeUnlockOverlay({ badge, onClose }) {
           boxShadow:`0 0 50px ${badge.color}35, 0 24px 60px rgba(0,0,0,.55)`,
         }}>
           <div style={{ fontSize:"10px", fontWeight:800, letterSpacing:".14em", color:`${badge.color}dd`, textTransform:"uppercase", marginBottom:"4px" }}>🎖️ Badge débloqué</div>
-          <div style={{ fontSize:"8px", fontWeight:700, letterSpacing:".18em", color:"rgba(255,255,255,.35)", textTransform:"uppercase", marginBottom:"14px" }}>{catLabel}</div>
+          <div style={{ fontSize:"10px", fontWeight:700, letterSpacing:".18em", color:"rgba(255,255,255,.35)", textTransform:"uppercase", marginBottom:"14px" }}>{catLabel}</div>
           <div style={{ fontSize:"72px", filter:`drop-shadow(0 0 18px ${badge.color}90)`, marginBottom:"14px", lineHeight:1 }}>{badge.icon}</div>
           <div style={{ fontSize:"18px", fontWeight:900, color:badge.color, marginBottom:"5px", letterSpacing:"-.3px" }}>{badge.name}</div>
           <div style={{ fontSize:"11px", color:"rgba(255,255,255,.55)", marginBottom:"6px" }}>{badge.desc}</div>
@@ -3825,7 +3825,7 @@ function Game({ username, region, maia }) {
               aria-label="Menu utilisateur"
             >
               <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}><MiniDigesterIcon size={14}/> {username} · {region}</span>
-              <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)", transition:"transform .2s", transform: showUserMenu ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>
+              <span style={{fontSize:"10px", color:"rgba(255,255,255,.4)", transition:"transform .2s", transform: showUserMenu ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>
             </button>
             <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"1px"}}>
               {injected?"🔌 Raccordé réseau GRDF":`🫙 Cuve : ${fmt(buffer)} / ${fmt(INJECTION_THRESHOLD)}`}
@@ -3903,7 +3903,7 @@ function Game({ username, region, maia }) {
                 <div style={{fontSize:"20px",fontWeight:800,color:"var(--c-blue)",letterSpacing:"-.5px"}}>{fmt(totalScore)}</div>
                 <div style={{display:"flex",alignItems:"center",gap:"6px",justifyContent:"flex-end",marginTop:"3px"}}>
                   <span style={{fontSize:"10px",color:"var(--c-orange)",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"4px"}}><BankIcon size={12}/> {fmtEuro(euros)}</span>
-                  <span style={{fontSize:"8px",color:"rgba(255,255,255,.25)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
+                  <span style={{fontSize:"10px",color:"rgba(255,255,255,.25)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
                 </div>
               </>
             ) : (
@@ -4110,7 +4110,7 @@ function Game({ username, region, maia }) {
                       animation:ready&&!done?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"8px",fontWeight:900,color:done?"#a78bfa":"rgba(255,255,255,.35)",background:done?"rgba(var(--c-purple-rgb),.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 1</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:done?"#a78bfa":"rgba(255,255,255,.35)",background:done?"rgba(var(--c-purple-rgb),.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 1</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:done?"#a78bfa":"rgba(255,255,255,.7)"}}>🧪 Épurateur</span>
                         {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
                       </div>
@@ -4146,7 +4146,7 @@ function Game({ username, region, maia }) {
                       animation:ready&&!done?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"8px",fontWeight:900,color:done?"var(--c-orange)":"rgba(255,255,255,.35)",background:done?"rgba(204,119,0,.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 2</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:done?"var(--c-orange)":"rgba(255,255,255,.35)",background:done?"rgba(204,119,0,.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 2</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:done?"var(--c-orange)":"rgba(255,255,255,.7)"}}>🔩 Compresseur</span>
                         {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
                       </div>
@@ -4184,7 +4184,7 @@ function Game({ username, region, maia }) {
                       animation:ready?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"8px",fontWeight:900,color:"rgba(255,255,255,.35)",background:ready?"rgba(42,125,187,.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 3</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:"rgba(255,255,255,.35)",background:ready?"rgba(42,125,187,.3)":"rgba(255,255,255,.08)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 3</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:ready?"var(--c-yellow)":"rgba(255,255,255,.7)"}}>🏗️ Raccordement GRDF</span>
                       </div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
@@ -5999,7 +5999,7 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
                 background:i<gnvStations?"rgba(74,200,120,.18)":"rgba(255,255,255,.04)",
                 border:`1px solid ${i<gnvStations?"rgba(74,200,120,.4)":"rgba(255,255,255,.08)"}`}}>
                 <div style={{fontSize:"16px"}}>{i<gnvStations?"⛽":"🔒"}</div>
-                <div style={{fontSize:"8px",color:i<gnvStations?"var(--c-green)":"rgba(255,255,255,.3)",marginTop:"2px",fontWeight:600}}>
+                <div style={{fontSize:"10px",color:i<gnvStations?"var(--c-green)":"rgba(255,255,255,.3)",marginTop:"2px",fontWeight:600}}>
                   Station {i+1}
                 </div>
               </div>
@@ -6125,7 +6125,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                   {owned && (
                     <div style={{
                       position:"absolute",bottom:-4,right:-4,
-                      fontSize:"8px",fontWeight:900,padding:"1px 4px",borderRadius:"5px",
+                      fontSize:"10px",fontWeight:900,padding:"1px 4px",borderRadius:"5px",
                       background:hasGnv?"#22a86a":"#CC2222",
                       color:"white",border:"1px solid rgba(255,255,255,.2)",
                     }}>{hasGnv?"GNV":"DIE"}</div>
@@ -6141,8 +6141,8 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                   <div style={{fontSize:"10px",color:"rgba(255,255,255,.45)",marginTop:"1px"}}>{desc}</div>
                   {owned && (
                     <div style={{display:"flex",gap:"4px",marginTop:"4px",flexWrap:"wrap"}}>
-                      {hasTrailer && <span style={{fontSize:"8px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🔧 Remorque</span>}
-                      {hasGnv     && <span style={{fontSize:"8px",background:"rgba(34,168,106,.2)",color:"var(--c-green)",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🌿 GNV</span>}
+                      {hasTrailer && <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🔧 Remorque</span>}
+                      {hasGnv     && <span style={{fontSize:"10px",background:"rgba(34,168,106,.2)",color:"var(--c-green)",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🌿 GNV</span>}
                     </div>
                   )}
                 </div>
@@ -6311,7 +6311,7 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
       <div style={{position:"absolute",left:"50%",transform:"translateX(-50%)",
         top:"6px",textAlign:"center",zIndex:10}}>
         <div style={{fontSize:"22px",filter:"drop-shadow(0 0 8px rgba(74,200,120,.7))"}}>⛽</div>
-        <div style={{fontSize:"7px",color:"var(--c-green)",fontWeight:700,marginTop:"1px"}}>GNV</div>
+        <div style={{fontSize:"9px",color:"var(--c-green)",fontWeight:700,marginTop:"1px"}}>GNV</div>
       </div>
 
       {/* Véhicules */}
@@ -6333,7 +6333,7 @@ function GnvVehicleSystem({ gnvStations, gnvSplit }) {
             {isMid && (
               <div style={{
                 position:"absolute", top:"-14px", left:"50%",
-                transform:"translateX(-50%)", fontSize:"8px",
+                transform:"translateX(-50%)", fontSize:"10px",
                 color:"var(--c-green)", fontWeight:800, whiteSpace:"nowrap",
                 animation:"bufferPulse 0.8s ease infinite",
               }}>⛽ plein !</div>
@@ -6762,16 +6762,16 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         <div style={{width:"2px", height:"13px",
           background:"linear-gradient(180deg,rgba(var(--c-blue-rgb),.9),rgba(var(--c-blue-rgb),.1))",
           borderRadius:"2px", boxShadow:"0 0 6px rgba(var(--c-blue-rgb),.5)"}}/>
-        <span style={{fontSize:"7px", color:"rgba(var(--c-blue-rgb),.7)", textTransform:"uppercase",
+        <span style={{fontSize:"9px", color:"rgba(var(--c-blue-rgb),.7)", textTransform:"uppercase",
           letterSpacing:".07em", fontWeight:700}}>Distribution réseau aval GRDF</span>
         <div style={{marginLeft:"auto", display:"flex", gap:"4px"}}>
           <div style={{background:"rgba(var(--c-blue-rgb),.1)", border:"1px solid rgba(var(--c-blue-rgb),.2)",
-            borderRadius:"4px", padding:"1px 5px", fontSize:"7px", color:"var(--c-blue)", fontWeight:700}}>
+            borderRadius:"4px", padding:"1px 5px", fontSize:"9px", color:"var(--c-blue)", fontWeight:700}}>
             🔌 {fmt(netPerHour)}/h
           </div>
           {gnvStations > 0 && (
             <div style={{background:"rgba(var(--c-green-rgb),.1)", border:"1px solid rgba(var(--c-green-rgb),.2)",
-              borderRadius:"4px", padding:"1px 5px", fontSize:"7px", color:"var(--c-green)", fontWeight:700}}>
+              borderRadius:"4px", padding:"1px 5px", fontSize:"9px", color:"var(--c-green)", fontWeight:700}}>
               ⛽ {fmt(gnvPerHour)}/h
             </div>
           )}
@@ -6826,7 +6826,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
               }}>
                 <div style={{fontSize:"14px", filter: active ? "none" : "grayscale(1)",
                   opacity: active ? 1 : 0.28}}>⛽</div>
-                <div style={{fontSize:"6px", fontWeight:700,
+                <div style={{fontSize:"9px", fontWeight:700,
                   color: active ? "var(--c-green)" : "rgba(255,255,255,.18)"}}>
                   {active ? `S${i+1}` : "🔒"}
                 </div>
@@ -6845,7 +6845,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       <div style={{flexShrink:0, height:"18px", position:"relative"}}>
         <div style={{position:"absolute", left:0, top:0, bottom:0, display:"flex",
           alignItems:"center", paddingLeft:"10px", zIndex:5}}>
-          <div style={{fontSize:"6px", color:"rgba(var(--c-blue-rgb),.55)", fontWeight:700, letterSpacing:".03em"}}>← Inj.</div>
+          <div style={{fontSize:"9px", color:"rgba(var(--c-blue-rgb),.55)", fontWeight:700, letterSpacing:".03em"}}>← Inj.</div>
         </div>
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"5px",
@@ -6894,7 +6894,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
               <div style={{width:`${bw}px`, height:`${bh}px`,
                 background:"rgba(var(--c-blue-rgb),.07)", border:"1px solid rgba(var(--c-blue-rgb),.12)",
                 borderRadius:"0 0 2px 2px"}}/>
-              <div style={{fontSize:"7px", lineHeight:1, marginTop:"1px"}}>{ic}</div>
+              <div style={{fontSize:"9px", lineHeight:1, marginTop:"1px"}}>{ic}</div>
             </div>
           );
         })}
@@ -6907,17 +6907,17 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       <div style={{flexShrink:0, height:"26px", display:"flex", gap:"8px", alignItems:"center",
         justifyContent:"center", padding:"0 12px",
         background:"rgba(7,14,25,.7)", borderTop:"1px solid rgba(255,255,255,.05)"}}>
-        <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
+        <span style={{fontSize:"10px", color:"rgba(255,255,255,.4)"}}>
           ⛽ GNV : <strong style={{color:"var(--c-green)"}}>{fmt(gnvBm)}</strong> m³
         </span>
-        <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
-        <span style={{fontSize:"8px", color:"rgba(255,255,255,.4)"}}>
+        <span style={{fontSize:"10px", color:"rgba(255,255,255,.15)"}}>·</span>
+        <span style={{fontSize:"10px", color:"rgba(255,255,255,.4)"}}>
           Stations : <strong style={{color: gnvStations > 0 ? "var(--c-green)" : "rgba(255,255,255,.3)"}}>{gnvStations}/3</strong>
         </span>
         {gnvConverted > 0 && (
           <>
-            <span style={{fontSize:"8px", color:"rgba(255,255,255,.15)"}}>·</span>
-            <span style={{fontSize:"8px", color:"rgba(240,80,180,.85)"}}>🚜 ×{gnvConverted} GNV</span>
+            <span style={{fontSize:"10px", color:"rgba(255,255,255,.15)"}}>·</span>
+            <span style={{fontSize:"10px", color:"rgba(240,80,180,.85)"}}>🚜 ×{gnvConverted} GNV</span>
           </>
         )}
       </div>
@@ -6986,7 +6986,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
                   Digesteur {n}
                 </div>
                 <div style={{
-                  fontSize:"8px", marginTop:"2px",
+                  fontSize:"10px", marginTop:"2px",
                   color: active ? "rgba(var(--c-blue-rgb),.7)" : "rgba(255,255,255,.2)"
                 }}>
                   {active ? (isCurrent && digesteurs < 3 ? "🟢 actif" : "✅ actif") : cost ? fmtEuro(cost) : ""}
@@ -7023,7 +7023,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
             <div key={s.label} style={{flex:1, textAlign:"center"}}>
               <div style={{fontSize:"14px"}}>{s.icon}</div>
               <div style={{fontSize:"12px", fontWeight:800, color:"var(--c-blue-light)", marginTop:"2px"}}>{s.val}</div>
-              <div style={{fontSize:"8px", color:"rgba(255,255,255,.4)", marginTop:"1px"}}>{s.label}</div>
+              <div style={{fontSize:"10px", color:"rgba(255,255,255,.4)", marginTop:"1px"}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -7836,8 +7836,8 @@ function DigesteurScene({
                       textShadow:"0 1px 6px rgba(0,0,0,.9)"
                     }}>
                       <div style={{fontSize:"14px", fontWeight:800}}>{Math.round(stockPct*100)}%</div>
-                      <div style={{fontSize:"8px", opacity:.7, marginTop:"1px"}}>{fmtT(stock)}</div>
-                      <div style={{fontSize:"7px", opacity:.4}}>/ {fmtT(stockMax)}</div>
+                      <div style={{fontSize:"10px", opacity:.7, marginTop:"1px"}}>{fmtT(stock)}</div>
+                      <div style={{fontSize:"9px", opacity:.4}}>/ {fmtT(stockMax)}</div>
                     </div>
                     {/* v25.0.9 — Mini icône info en haut à droite */}
                     {stock > 0 && (
@@ -7923,15 +7923,15 @@ function DigesteurScene({
                         <div style={{padding:"8px 12px", background:"rgba(var(--c-yellow-rgb),.05)", borderBottom:"1px solid rgba(var(--c-yellow-rgb),.1)", flexShrink:0}}>
                           <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"6px", textAlign:"center"}}>
                             <div>
-                              <div style={{fontSize:"8px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Masse</div>
+                              <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Masse</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-blue-light)"}}>{fmtT(totalMass)}</div>
                             </div>
                             <div>
-                              <div style={{fontSize:"8px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Rendement</div>
+                              <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Rendement</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-yellow)"}}>{Math.round(yieldMoy)} m³/t</div>
                             </div>
                             <div>
-                              <div style={{fontSize:"8px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
+                              <div style={{fontSize:"10px", color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-green)"}}>{fmt(totalGas)}</div>
                             </div>
                           </div>
@@ -7970,7 +7970,7 @@ function DigesteurScene({
                                 borderRadius:"2px", transition:"width .5s"
                               }}/>
                             </div>
-                            <div style={{display:"flex", justifyContent:"space-between", fontSize:"8px", color:"rgba(255,255,255,.45)"}}>
+                            <div style={{display:"flex", justifyContent:"space-between", fontSize:"10px", color:"rgba(255,255,255,.45)"}}>
                               <span>{fmtT(it.mass)} · {it.upg.realYield} m³/t</span>
                               <span style={{color:"var(--c-green)", fontWeight:600}}>+{fmt(it.contribGas)}</span>
                             </div>
@@ -8042,7 +8042,7 @@ function DigesteurScene({
                     border:`1px solid ${isDigesting?"rgba(var(--c-blue-rgb),.32)":"rgba(255,255,255,.10)"}`,
                     borderRadius:"9px", padding:"5px 8px", textAlign:"center", transition:"all .5s"
                   }}>
-                    <div style={{fontSize:"8px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>Production totale</div>
+                    <div style={{fontSize:"10px", color:"rgba(255,255,255,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>Production totale</div>
                     <div style={{
                       fontSize:"13px", fontWeight:800,
                       color: isDigesting?"var(--c-blue-light)":"rgba(255,255,255,.3)",
@@ -8051,12 +8051,12 @@ function DigesteurScene({
                     }}>
                       {isDigesting ? fmt(bmPerHour) : "—"}
                     </div>
-                    <div style={{fontSize:"8px", color:"rgba(255,255,255,.35)"}}>par heure</div>
+                    <div style={{fontSize:"10px", color:"rgba(255,255,255,.35)"}}>par heure</div>
                   </div>
                   <div style={{padding:"0 2px"}}>
                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:"2px"}}>
-                      <span style={{fontSize:"7px", color:"rgba(255,255,255,.35)"}}>Charge ({digesteurs} digesteur{digesteurs>1?"s":""})</span>
-                      <span style={{fontSize:"7px", color:"var(--c-blue-light)", fontWeight:700}}>{Math.round(chargePct*100)}%</span>
+                      <span style={{fontSize:"9px", color:"rgba(255,255,255,.35)"}}>Charge ({digesteurs} digesteur{digesteurs>1?"s":""})</span>
+                      <span style={{fontSize:"9px", color:"var(--c-blue-light)", fontWeight:700}}>{Math.round(chargePct*100)}%</span>
                     </div>
                     <div style={{height:"4px", borderRadius:"2px", background:"rgba(var(--c-blue-rgb),.12)", overflow:"hidden"}}>
                       <div style={{
@@ -8664,7 +8664,7 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
       </div>
 
       {total > 1 && (
-        <div style={{fontSize:"8px",color:"rgba(var(--c-blue-rgb),.65)",fontWeight:700,marginTop:"3px"}}>
+        <div style={{fontSize:"10px",color:"rgba(var(--c-blue-rgb),.65)",fontWeight:700,marginTop:"3px"}}>
           #{index+1}
         </div>
       )}
@@ -8873,13 +8873,13 @@ function RankingTab({
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-yellow)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"var(--c-blue-light)"}}>MOI</span>}
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
                       <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-blue)"}}>{fmt(perDay)}</div>
-                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³/jour</div>
+                      <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)"}}>m³/jour</div>
                     </div>
                   </div>
                 );
@@ -8916,13 +8916,13 @@ function RankingTab({
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-green)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"var(--c-blue-light)"}}>MOI</span>}
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
                       <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-green)"}}>{yieldVal.toFixed(1)}</div>
-                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³ CH₄/t</div>
+                      <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)"}}>m³ CH₄/t</div>
                     </div>
                   </div>
                 );
@@ -8959,13 +8959,13 @@ function RankingTab({
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-yellow)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"8px",color:"var(--c-blue-light)"}}>MOI</span>}
+                        {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
                       <div style={{fontSize:"9px",color:"rgba(255,255,255,.4)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-yellow)"}}>{fmt(seasonScore)}</div>
-                      <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)"}}>m³ saison</div>
+                      <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)"}}>m³ saison</div>
                     </div>
                   </div>
                 );
@@ -9009,7 +9009,7 @@ function RankingTab({
                     }}>{entry.name}</div>
                     {rg && (
                       <div style={{
-                        fontSize:"8px",padding:"1px 6px",borderRadius:"8px",marginBottom:"4px",
+                        fontSize:"10px",padding:"1px 6px",borderRadius:"8px",marginBottom:"4px",
                         background:`${rg.color}25`,color:rg.light,border:`1px solid ${rg.color}40`,
                         whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"
                       }}>{entry.region}</div>
@@ -9033,8 +9033,8 @@ function RankingTab({
                       </div>
                       {(entry.scoreNet > 0 || entry.scoreGnv > 0) && (
                         <div style={{display:"flex",gap:"3px",marginTop:"3px",zIndex:1}}>
-                          {entry.scoreNet > 0 && <span style={{fontSize:"7px",color:"rgba(var(--c-blue-rgb),.7)"}}>🔌{fmt(entry.scoreNet)}</span>}
-                          {entry.scoreGnv > 0 && <span style={{fontSize:"7px",color:"rgba(74,200,120,.7)"}}>⛽{fmt(entry.scoreGnv)}</span>}
+                          {entry.scoreNet > 0 && <span style={{fontSize:"9px",color:"rgba(var(--c-blue-rgb),.7)"}}>🔌{fmt(entry.scoreNet)}</span>}
+                          {entry.scoreGnv > 0 && <span style={{fontSize:"9px",color:"rgba(74,200,120,.7)"}}>⛽{fmt(entry.scoreGnv)}</span>}
                         </div>
                       )}
                     </div>
@@ -9092,13 +9092,13 @@ function RankingTab({
                         color:isMe?"var(--c-text)":"rgba(255,255,255,.75)",
                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"
                       }}>{entry.name}</span>
-                      {isMe && <span style={{fontSize:"8px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"6px",fontWeight:700,flexShrink:0}}>MOI</span>}
+                      {isMe && <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"6px",fontWeight:700,flexShrink:0}}>MOI</span>}
                       {delta > 0 && <span style={{fontSize:"10px",color:"#22c55e",fontWeight:800,flexShrink:0}}>▲{delta}</span>}
                       {delta < 0 && <span style={{fontSize:"10px",color:"#ef4444",fontWeight:800,flexShrink:0}}>▼{Math.abs(delta)}</span>}
                     </div>
                     {rg && (
                       <div style={{
-                        display:"inline-block",fontSize:"8px",padding:"1px 6px",borderRadius:"6px",marginTop:"2px",
+                        display:"inline-block",fontSize:"10px",padding:"1px 6px",borderRadius:"6px",marginTop:"2px",
                         background:`${rg.color}18`,color:`${rg.light}cc`,
                         border:`1px solid ${rg.color}30`
                       }}>{entry.region}</div>
@@ -9117,8 +9117,8 @@ function RankingTab({
                         <div style={{height:"100%",flex:1,background:"var(--c-green)",borderRadius:"0 2px 2px 0"}}/>
                       </div>
                       <div style={{display:"flex",gap:"4px",justifyContent:"flex-end",marginTop:"2px"}}>
-                        <span style={{fontSize:"7px",color:"rgba(var(--c-blue-rgb),.6)"}}>🔌{fmt(entry.scoreNet || 0)}</span>
-                        <span style={{fontSize:"7px",color:"rgba(74,200,120,.6)"}}>⛽{fmt(entry.scoreGnv || 0)}</span>
+                        <span style={{fontSize:"9px",color:"rgba(var(--c-blue-rgb),.6)"}}>🔌{fmt(entry.scoreNet || 0)}</span>
+                        <span style={{fontSize:"9px",color:"rgba(74,200,120,.6)"}}>⛽{fmt(entry.scoreGnv || 0)}</span>
                       </div>
                     </>) : (<>
                       {/* v25.0.5 — Progression steps : étapes débloquées avant injection */}
@@ -9286,7 +9286,7 @@ function RankingTab({
                             fontSize:"14px",fontWeight:800,
                             color:rg?.light||"var(--c-text)"
                           }}>{rs.region}</span>
-                          {isMyR && <span style={{fontSize:"8px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"6px",fontWeight:700}}>MA RÉGION</span>}
+                          {isMyR && <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"6px",fontWeight:700}}>MA RÉGION</span>}
                         </div>
                         <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginBottom:"8px"}}>
                           {rg?.label || rs.region}
@@ -9298,7 +9298,7 @@ function RankingTab({
                             <div style={{fontSize:"18px",fontWeight:900,color:rg?.light||"var(--c-blue-light)"}}>
                               {rs.sites}
                             </div>
-                            <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)",marginTop:"1px"}}>
+                            <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginTop:"1px"}}>
                               site{rs.sites>1?"s":""} raccordé{rs.sites>1?"s":""}
                             </div>
                           </div>
@@ -9307,7 +9307,7 @@ function RankingTab({
                             <div style={{fontSize:"18px",fontWeight:900,color:"var(--c-text)"}}>
                               {fmt(rs.volume)}
                             </div>
-                            <div style={{fontSize:"8px",color:"rgba(255,255,255,.4)",marginTop:"1px"}}>
+                            <div style={{fontSize:"10px",color:"rgba(255,255,255,.4)",marginTop:"1px"}}>
                               volume total injecté
                             </div>
                           </div>
@@ -9343,7 +9343,7 @@ function RankingTab({
                       if (regionPlayers.length === 0) return null;
                       return (
                         <div style={{marginTop:"10px",paddingTop:"8px",borderTop:"1px solid rgba(255,255,255,.06)",position:"relative",zIndex:1}}>
-                          <div style={{fontSize:"8px",color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"6px"}}>Joueurs · {regionPlayers.length}</div>
+                          <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"6px"}}>Joueurs · {regionPlayers.length}</div>
                           <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
                             {regionPlayers.map((p, pi) => {
                               const isMe = p.name === username;
@@ -9356,14 +9356,14 @@ function RankingTab({
                                 }}>
                                   <span style={{fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.35)",width:"16px",textAlign:"center"}}>{pi+1}</span>
                                   <span style={{fontSize:"11px",fontWeight:isMe?800:500,color:isMe?"var(--c-text)":"rgba(255,255,255,.65)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
-                                  {isMe && <span style={{fontSize:"7px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 4px",borderRadius:"4px",fontWeight:700,flexShrink:0}}>MOI</span>}
+                                  {isMe && <span style={{fontSize:"9px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 4px",borderRadius:"4px",fontWeight:700,flexShrink:0}}>MOI</span>}
                                   {p.connected ? (
                                     <span style={{fontSize:"10px",fontWeight:700,color:rg?.light||"var(--c-blue-light)",flexShrink:0}}>{fmt(p.score)}</span>
                                   ) : (
                                     /* v25.0.5 — barre supprimée (calcul cassé : buffer/500 alors que seuil=5000)
                                                  + cohérence avec le classement individuel */
                                     <span style={{
-                                      fontSize:"8px",fontWeight:600,color:"var(--c-orange)",letterSpacing:".02em",
+                                      fontSize:"10px",fontWeight:600,color:"var(--c-orange)",letterSpacing:".02em",
                                       padding:"2px 6px",borderRadius:"6px",
                                       background:"rgba(255,160,32,.12)",border:"1px solid rgba(255,160,32,.3)",
                                       flexShrink:0,whiteSpace:"nowrap"
@@ -9505,13 +9505,13 @@ function RankingTab({
                 <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(255,255,255,.35)"}}>{b.name}</div>
                 <div style={{fontSize:"9px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>{b.desc}</div>
                 {b.done ? (
-                  <div style={{fontSize:"8px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
+                  <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
                 ) : b.pct != null ? (
                   <div style={{marginTop:"6px"}}>
                     <div style={{height:"3px",borderRadius:"2px",background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:"2px",width:`${b.pct}%`,background:`linear-gradient(90deg,${b.color}55,${b.color})`,transition:"width .5s"}}/>
                     </div>
-                    {b.detail && <div style={{fontSize:"8px",color:"rgba(255,255,255,.35)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
+                    {b.detail && <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
                   </div>
                 ) : null}
                 {/* Mini-tampon statique en coin pour badges débloqués */}
@@ -9676,13 +9676,13 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
             <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(255,255,255,.35)"}}>{b.name}</div>
             <div style={{fontSize:"9px",color:"rgba(255,255,255,.35)",marginTop:"2px"}}>{b.desc}</div>
             {b.done ? (
-              <div style={{fontSize:"8px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
+              <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
             ) : b.pct != null ? (
               <div style={{marginTop:"6px"}}>
                 <div style={{height:"3px",borderRadius:"2px",background:"rgba(255,255,255,.06)",overflow:"hidden"}}>
                   <div style={{height:"100%",borderRadius:"2px",width:`${b.pct}%`,background:`linear-gradient(90deg,${b.color}55,${b.color})`,transition:"width .5s"}}/>
                 </div>
-                {b.detail && <div style={{fontSize:"8px",color:"rgba(255,255,255,.35)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
+                {b.detail && <div style={{fontSize:"10px",color:"rgba(255,255,255,.35)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
               </div>
             ) : null}
             {b.done && (
