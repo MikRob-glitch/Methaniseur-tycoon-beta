@@ -1963,8 +1963,10 @@ function Game({ username, region, maia }) {
     if (saved?.compresseurOk) initial.add('compresseur-intro');
     if (saved?.injected) {
       initial.add('raccordement');
-      // Afficher gnv-intro et tractor-fleet seulement si pas encore vus
-      // (laissés hors du set pour qu'ils se déclenchent au prochain chargement)
+      // Joueurs déjà injectés → pré-marquer gnv-intro + tractor-fleet
+      // pour ne pas bloquer l'accès aux améliorations GNV/tracteurs au chargement
+      initial.add('gnv-intro');
+      initial.add('tractor-fleet');
     }
     return initial;
   });
