@@ -19,16 +19,18 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0B1623;color:#e8f4fd;font-family:'Segoe UI',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-    #root{min-height:100dvh}
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script>
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').catch(()=>{});
-    }
-  </script>
-  <script type="text/babel" data-presets="react">
+    :root {
+      /* ── Couleurs principales ── */
+      --c-blue:        #4A9EDB;
+      --c-blue-light:  #6DB5EC;
+      --c-blue-dark:   #2A7DBB;
+      --c-teal:        #3AACCC;
+      --c-green:       #4ADB94;
+      --c-green-dark:  #27a85a;
+      --c-orange:      #E8A020;
+      --c-yellow:      #F5BE50;
+      --c-red:         #E05858;
+      --c-purple:      #5544CC;
+      --c-text:        #EDF4FF;
+      --c-bg:          #0B1623;
+      /* ── Va
