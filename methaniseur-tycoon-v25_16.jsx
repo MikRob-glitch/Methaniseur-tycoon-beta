@@ -1452,8 +1452,7 @@ function CNGauge({ composition }) {
       width: '34px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
       position: 'absolute', left: '-38px', top: '24px', zIndex: 5, cursor: 'pointer',
       transition: 'transform .15s ease'
-    }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
-       onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+    }} className="hov-scale">
       <div style={{fontSize: '8px', color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.05em'}}>C/N</div>
       <div style={{
         width: '24px', height: '112px', position: 'relative',
@@ -1530,9 +1529,7 @@ function CNGauge({ composition }) {
               color: 'rgba(255,255,255,.75)', cursor: 'pointer', fontSize: '17px', lineHeight: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background .2s'
-            }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,.16)'}
-               onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,.08)'}
-               aria-label="Fermer">×</button>
+            }} className="hov-close" aria-label="Fermer">×</button>
             <div style={{display:'flex',alignItems:'center',gap:'10px', paddingRight:'36px'}}>
               <div style={{
                 width:'36px', height:'36px', flexShrink: 0,
@@ -3437,6 +3434,10 @@ function Game({ username, region, maia }) {
         @keyframes digestPulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.04);filter:brightness(1.15)}}
         @keyframes userMenuIn{0%{opacity:0;transform:translateY(-4px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
         .scanline::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(var(--c-blue-rgb),.018) 2px,rgba(var(--c-blue-rgb),.018) 4px);pointer-events:none;border-radius:inherit;}
+        .hov-scale:hover{transform:scale(1.06)}
+        .hov-close:hover{background:rgba(255,255,255,.16)!important}
+        .hov-danger:hover{background:rgba(var(--c-red-rgb),.12)!important}
+        .hov-primary:hover{background:rgba(var(--c-blue-rgb),.1)!important}
         .neon{text-shadow:0 0 10px currentColor,0 0 30px currentColor;}
         @keyframes fallWaste{0%{transform:translateY(-30px) rotate(0deg) scale(1.1);opacity:1}70%{opacity:.9}100%{transform:translateY(105px) rotate(400deg) scale(0.1);opacity:0}}
         @keyframes bubbleUpBig{0%{transform:translateY(0) scale(1);opacity:.75}100%{transform:translateY(-90px) scale(.1);opacity:0}}
@@ -3872,8 +3873,7 @@ function Game({ username, region, maia }) {
                     fontFamily:"inherit",
                     transition:"background .15s",
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(var(--c-red-rgb),.12)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  className="hov-danger"
                 >
                   <span style={{fontSize:"15px"}}>🚪</span>
                   <span>Se déconnecter</span>
@@ -3888,8 +3888,7 @@ function Game({ username, region, maia }) {
                     borderTop:"1px solid rgba(255,255,255,.06)", fontFamily:"inherit",
                     transition:"background .15s",
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(var(--c-blue-rgb),.1)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  className="hov-primary"
                 >
                   <span style={{fontSize:"15px"}}>🎓</span>
                   <span>Rejouer le tutoriel</span>
