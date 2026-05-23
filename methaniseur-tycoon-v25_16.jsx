@@ -857,7 +857,35 @@ const TUTORIAL_STEPS = [
     body: 'Les tracteurs déposent les matières ici. Le BAC affiche son remplissage et son rendement (m³/t). Appuie sur l\'icône ℹ️ (en haut à droite du bac) pour voir la composition détaillée de ton mix — chaque combinaison d\'intrants a un rendement différent.',
     target: '[data-tut="bac-zone"]',
     forceTab: 'game',
+    forceView: 1,
     trigger: gs => !gs.seenTutos.has('bac-intrants') && gs.stock > 0 && gs.seenTutos.has('buy-lisier'),
+  },
+  {
+    id: 'gisements-intro',
+    title: '🗺️ Tes gisements locaux',
+    body: 'Swipe ➡️ pour voir la carte de tes sources. Chaque bâtiment est un gisement local où tes tracteurs collectent en boucle. Plus tu achètes de quantités, plus le flux est élevé.',
+    target: '[data-tut="city-map"]',
+    forceTab: 'game',
+    forceView: 2,
+    trigger: gs => !gs.seenTutos.has('gisements-intro') && gs.seenTutos.has('bac-intrants') && gs.ownedCount >= 1,
+  },
+  {
+    id: 'zone-fill-pin',
+    title: '📊 Jauge de gisement & priorité',
+    body: 'La barre verticale à droite de chaque bâtiment = le stock local du gisement. Quand elle pulse en rouge, il sature : les tracteurs ne peuvent plus charger, déverse vite ! Le 📌 épingle une zone — tes tracteurs s\'y rendent en priorité.',
+    target: null,
+    forceTab: 'game',
+    forceView: 2,
+    trigger: gs => !gs.seenTutos.has('zone-fill-pin') && gs.seenTutos.has('gisements-intro'),
+  },
+  {
+    id: 'zone-panne',
+    title: '⚠️ Pannes & fiabilité',
+    body: 'Un gisement saturé trop longtemps tombe en ⚠️ PANNE. Tu dois payer pour le relancer. Chaque panne fait baisser ta fiabilité (%) — visible en haut. En dessous de 95 %, ton rendement chute. Déverse régulièrement pour l\'éviter !',
+    target: null,
+    forceTab: 'game',
+    forceView: 2,
+    trigger: gs => !gs.seenTutos.has('zone-panne') && gs.seenTutos.has('zone-fill-pin'),
   },
   {
     id: 'pour-button',
@@ -865,7 +893,8 @@ const TUTORIAL_STEPS = [
     body: 'Le bac a des intrants. Clique sur "⬇️ Déverser" pour les envoyer dans le digesteur. La digestion anaérobie démarre et produit du biogaz — qui s\'accumule dans la cuve tampon.',
     target: '[data-tut="pour-button"]',
     forceTab: 'game',
-    trigger: gs => !gs.seenTutos.has('pour-button') && gs.stock >= 3 && gs.seenTutos.has('bac-intrants'),
+    forceView: 1,
+    trigger: gs => !gs.seenTutos.has('pour-button') && gs.stock >= 3 && gs.seenTutos.has('zone-panne'),
   },
   {
     id: 'cn-ratio',
@@ -873,6 +902,7 @@ const TUTORIAL_STEPS = [
     body: 'Cette jauge mesure l\'équilibre Carbone/Azote de ton mix. Le sweet spot est autour de 25. Achète différents intrants (lisier + fumier + CIVE…) pour t\'en approcher — chaque point gagné augmente ta production de biométhane.',
     target: '[data-tut="cn-gauge"]',
     forceTab: 'game',
+    forceView: 1,
     trigger: gs => !gs.seenTutos.has('cn-ratio') && gs.charge > 0 && gs.seenTutos.has('pour-button'),
   },
   {
@@ -881,6 +911,7 @@ const TUTORIAL_STEPS = [
     body: 'Avant le raccordement, tout se paie en m³ de biométhane accumulés dans ta cuve tampon : intrants, équipements, tout. Après le raccordement, GRDF rachète chaque m³ injecté au prix du marché — ta monnaie bascule définitivement vers l\'euro.',
     target: '[data-tut="buffer-zone"]',
     forceTab: 'game',
+    forceView: 1,
     trigger: gs => !gs.seenTutos.has('currency-intro') && gs.charge > 0 && gs.seenTutos.has('cn-ratio'),
   },
   {
@@ -889,6 +920,7 @@ const TUTORIAL_STEPS = [
     body: 'Tu dois débloquer 3 équipements dans l\'ordre. Chacun débloque aussi de nouveaux intrants plus productifs : 🧪 Épurateur (10 000 m³) → 🔩 Compresseur (40 000 m³) → 🏗️ Raccordement GRDF (80 000 m³). C\'est la fin de la phase 1.',
     target: '[data-tut="chain-steps"]',
     forceTab: 'game',
+    forceView: 1,
     trigger: gs => !gs.seenTutos.has('chain-goal') && gs.charge > 0 && gs.seenTutos.has('currency-intro'),
   },
   {
@@ -2007,6 +2039,12 @@ function Game({ username, region, maia }) {
       // Étapes de démarrage déjà faites
       ['welcome','tab-achats','buy-lisier','bac-intrants','pour-button'].forEach(id => initial.add(id));
     }
+    // steps gisements + digesteur : pré-marquer si le joueur a déjà des intrants
+    if ((saved?.owned ?? []).some(q => q > 0)) {
+      initial.add('gisements-intro');
+      initial.add('zone-fill-pin');
+      initial.add('zone-panne');
+    }
     // cn-ratio + nouveaux steps pédago : pré-marquer si le digesteur a déjà tourné
     if ((saved?.charge ?? 0) > 0 || (saved?.bm ?? 0) > 0 || (saved?.buffer ?? 0) > 0) {
       initial.add('cn-ratio');
@@ -3095,6 +3133,7 @@ function Game({ username, region, maia }) {
     const next = TUTORIAL_STEPS.find(s => s.trigger(gs));
     if (next) {
       if (next.forceTab) setTab(next.forceTab); // ramener sur le bon onglet avant d'afficher le spotlight
+      if (next.forceView !== undefined) setCityView(next.forceView); // ramener sur la bonne vue (digesteur=1 / gisements=2)
       setActiveTuto(next);
     }
   }, [seenTutos, tab, stock, charge, bm, buffer, owned, injected, epurateurOk, compresseurOk, gnvStations, canUnlockEpurateur, canUnlockCompresseur, canConnect, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -8036,7 +8075,7 @@ function DigesteurScene({
           </div>
 
           {/* ════════ VUE 2 : GISEMENTS + RÉSEAU AVAL ════════ */}
-          <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
+          <div data-tut="city-map" style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column"}}>
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* Les bandes latérales sont désormais dans le SVG monde (chemins x=400 et x=800) */}
