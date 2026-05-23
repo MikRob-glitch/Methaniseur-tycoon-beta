@@ -942,7 +942,9 @@ function TutorialOverlay({ step, onNext, onSkip }) {
 
   useEffect(() => {
     if (!step) return;
-    const update = () => {
+
+    // updateRect : recalcule la position de l'élément cible (appelé au scroll ET au resize)
+    const updateRect = () => {
       setWh({ w: window.innerWidth, h: window.innerHeight });
       if (!step.target) { setRect(null); return; }
       const el = document.querySelector(step.target);
@@ -950,15 +952,31 @@ function TutorialOverlay({ step, onNext, onSkip }) {
         const r = el.getBoundingClientRect();
         const pad = 10;
         setRect({ x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 });
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         setRect(null);
       }
     };
-    // petit délai pour laisser le DOM se stabiliser après transition d'onglet
-    const t = setTimeout(update, 350);
-    window.addEventListener('resize', update);
-    return () => { clearTimeout(t); window.removeEventListener('resize', update); };
+
+    // Scroll initial vers la cible (une seule fois à l'activation du step)
+    const initialShow = () => {
+      updateRect();
+      if (step.target) {
+        const el = document.querySelector(step.target);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    const t = setTimeout(initialShow, 350);
+    window.addEventListener('resize', updateRect);
+    // Suivre le scroll pour garder le spotlight aligné sur la cible
+    window.addEventListener('scroll', updateRect, { passive: true });
+    document.addEventListener('scroll', updateRect, { passive: true });
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect);
+      document.removeEventListener('scroll', updateRect);
+    };
   }, [step]);
 
   if (!step) return null;
@@ -975,17 +993,22 @@ function TutorialOverlay({ step, onNext, onSkip }) {
     const spaceBelow = H - (rect.y + rect.h);
     const spaceAbove = rect.y;
     const left = Math.max(16, Math.min(rect.x, W - TW - 16));
+    const TOOLTIP_H = 220; // hauteur estimée du tooltip (padding + titre + body + boutons)
 
-    if (spaceBelow >= 170) {
-      tooltipStyle = { position: 'fixed', top: rect.y + rect.h + 14, left };
+    if (spaceBelow >= TOOLTIP_H) {
+      // Sous la cible — clamp pour ne pas dépasser le bas de l'écran
+      const top = Math.min(rect.y + rect.h + 14, H - TOOLTIP_H - 8);
+      tooltipStyle = { position: 'fixed', top, left };
       arrowStyle = {
         position: 'absolute', top: -8, left: 24,
         width: 0, height: 0,
         borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
         borderBottom: '8px solid rgba(74,158,219,.5)',
       };
-    } else if (spaceAbove >= 170) {
-      tooltipStyle = { position: 'fixed', bottom: H - rect.y + 14, left };
+    } else if (spaceAbove >= TOOLTIP_H) {
+      // Au-dessus de la cible
+      const bottom = Math.min(H - rect.y + 14, H - 8);
+      tooltipStyle = { position: 'fixed', bottom, left };
       arrowStyle = {
         position: 'absolute', bottom: -8, left: 24,
         width: 0, height: 0,
@@ -993,8 +1016,8 @@ function TutorialOverlay({ step, onNext, onSkip }) {
         borderTop: '8px solid rgba(74,158,219,.5)',
       };
     } else {
-      // fallback centré
-      tooltipStyle = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
+      // Pas assez de place ni en haut ni en bas → ancré en bas de l'écran
+      tooltipStyle = { position: 'fixed', bottom: 12, left: Math.max(16, (W - TW) / 2) };
     }
   } else {
     tooltipStyle = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
