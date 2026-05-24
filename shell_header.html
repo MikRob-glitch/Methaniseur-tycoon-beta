@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <meta name="theme-color" content="#0B1623"/>
+  <meta name="theme-color" content="#005EB8"/>
   <title>Méthaniseur Tycoon – GRDF</title>
   <link rel="manifest" href="manifest.json"/>
   <!-- Favicons & icônes PWA -->
@@ -13,7 +13,7 @@
   <!-- iOS Safari (ignore le manifest, exige apple-touch-icon en PNG) -->
   <link rel="apple-touch-icon" href="icon-180.png"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="Méthaniseur"/>
   <!-- Typographie : Inter (300/400/600/700/800) -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -24,31 +24,46 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     :root {
-      /* ── Couleurs principales ── */
-      --c-blue:        #4A9EDB;
-      --c-blue-light:  #6DB5EC;
-      --c-blue-dark:   #2A7DBB;
-      --c-teal:        #3AACCC;
-      --c-green:       #4ADB94;
-      --c-green-dark:  #27a85a;
+      /* ── Palette GRDF Duel (bleu #005EB8 + vert #00A850) ── */
+      --c-blue:        #005EB8;
+      --c-blue-light:  #3D8EE0;
+      --c-blue-dark:   #004A9A;
+      --c-teal:        #0096C7;
+      --c-green:       #00A850;
+      --c-green-dark:  #007A3A;
       --c-orange:      #E8A020;
       --c-yellow:      #F5BE50;
-      --c-red:         #E05858;
+      --c-red:         #CC2222;
       --c-purple:      #5544CC;
-      --c-text:        #EDF4FF;
-      --c-bg:          #0B1623;
+      --c-text:        #1A2E4A;
+      --c-bg:          #FFFFFF;
+      /* ── Surfaces ── */
+      --c-surface:     #F4F7FB;
+      --c-surface-alt: #E8F0FB;
+      --c-surface-grn: #E8F5EE;
+      --c-text-muted:  #8FA3B8;
+      --c-border:      rgba(0,80,160,0.12);
       /* ── Valeurs RGB pour rgba() ── */
-      --c-blue-rgb:    74,158,219;
-      --c-green-rgb:   74,219,148;
+      --c-blue-rgb:    0,94,184;
+      --c-green-rgb:   0,168,80;
       --c-yellow-rgb:  245,190,80;
-      --c-red-rgb:     224,88,88;
+      --c-red-rgb:     204,34,34;
       --c-purple-rgb:  85,68,204;
       --c-orange-rgb:  232,160,32;
     }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0B1623;background:var(--c-bg);color:#e8f4fd;font-family:'Inter',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-    #root{min-height:100dvh;background:#0B1623;background:var(--c-bg)}
+    body{background:#FFFFFF;background:var(--c-bg);color:#1A2E4A;color:var(--c-text);font-family:'Inter',system-ui,sans-serif;min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    #root{min-height:100dvh;background:#FFFFFF;background:var(--c-bg)}
     @keyframes tutPulse{0%,100%{opacity:.9;stroke-width:2}50%{opacity:.4;stroke-width:3.5}}
+    /* ── Hover classes (P3) ── */
+    .hov-scale{transition:transform .15s,box-shadow .15s}
+    .hov-scale:hover{transform:scale(1.04);box-shadow:0 4px 16px rgba(var(--c-blue-rgb),.25)}
+    .hov-close{transition:background .15s,color .15s}
+    .hov-close:hover{background:rgba(var(--c-red-rgb),.12);color:var(--c-red)}
+    .hov-danger{transition:background .15s,box-shadow .15s}
+    .hov-danger:hover{background:rgba(var(--c-red-rgb),.18);box-shadow:0 0 0 2px rgba(var(--c-red-rgb),.35)}
+    .hov-primary{transition:background .15s,box-shadow .15s}
+    .hov-primary:hover{background:rgba(var(--c-blue-rgb),.14);box-shadow:0 0 0 2px rgba(var(--c-blue-rgb),.3)}
   </style>
 </head>
 <body>
