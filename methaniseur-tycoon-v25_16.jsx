@@ -7247,12 +7247,14 @@ function ZoneBuilding({ label, locked, active, icon }) {
     case "FERME": // 🐄
       return (
         <>
-          <rect {...baseRect} fill="#D8EEDC" stroke="#4a7a4a" strokeWidth="1.2"/>
-          {/* Grange */}
-          <rect x="-20" y="-12" width="16" height="14" fill="#8b2e2e"/>
-          <polygon points="-20,-12 -12,-19 -4,-12" fill="#6b1e1e"/>
-          {/* Pré vert */}
-          <rect x="-2" y="-4" width="22" height="18" fill="#2d4a2d"/>
+          <rect {...baseRect} fill="#EBF7EE" stroke="#00A850" strokeWidth="1.4"/>
+          {/* Grange rouge brique claire */}
+          <rect x="-20" y="-12" width="16" height="14" fill="#D4604A"/>
+          <polygon points="-20,-12 -12,-19 -4,-12" fill="#B84A35"/>
+          {/* Pré vert clair */}
+          <rect x="-2" y="-4" width="22" height="18" fill="#C8EDD4"/>
+          {/* Sol vert */}
+          <rect x="-2" y="8" width="22" height="6" fill="#A8DDB8"/>
           {/* Vache emoji animée */}
           <text x="10" y="9" textAnchor="middle" fontSize="10" style={anim}>🐄</text>
         </>
@@ -7260,79 +7262,109 @@ function ZoneBuilding({ label, locked, active, icon }) {
     case "VERT": // 🌿
       return (
         <>
-          <rect {...baseRect} fill="#1a3a1a" stroke="#6a9a4a" strokeWidth="1.2"/>
-          {/* 3 arbres qui frissonnent */}
+          <rect {...baseRect} fill="#EBF7EE" stroke="#00A850" strokeWidth="1.4"/>
+          {/* 3 arbres — vert Duel */}
           <g style={active ? {animation:"treeSway 3.5s ease-in-out infinite"} : {}}>
-            <circle cx="-12" cy="-4" r="5" fill="#007A3A"/>
-            <circle cx="4" cy="-8" r="6" fill="#3a7a2a"/>
-            <circle cx="14" cy="0" r="4.5" fill="#007A3A"/>
+            <circle cx="-12" cy="-4" r="5" fill="#00A850"/>
+            <circle cx="4" cy="-8" r="6" fill="#00C45E"/>
+            <circle cx="14" cy="0" r="4.5" fill="#00A850"/>
           </g>
+          {/* Troncs */}
+          <rect x="-13" y="2" width="2" height="6" fill="#6B4226"/>
+          <rect x="3" y="0" width="2" height="6" fill="#6B4226"/>
+          <rect x="13" y="5" width="2" height="5" fill="#6B4226"/>
+          {/* Sol */}
+          <rect x="-24" y="12" width="48" height="4" fill="#C8EDD4"/>
         </>
       );
     case "RESTAU": // 🍽️
       return (
         <>
-          <rect {...baseRect} fill="#EDE8F8" stroke="#8a6aca" strokeWidth="1.2"/>
-          {/* Façade avec fenêtres clignotantes */}
-          <rect x="-20" y="-14" width="40" height="20" fill="#3a3048" stroke="#5a4878" strokeWidth=".6"/>
-          <rect x="-16" y="-11" width="7" height="8" fill="var(--c-orange)" opacity=".7" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite"} : {}}/>
-          <rect x="-5" y="-11" width="7" height="8" fill="var(--c-orange)" opacity=".7" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite .5s"} : {}}/>
-          <rect x="6" y="-11" width="7" height="8" fill="var(--c-orange)" opacity=".7" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite 1s"} : {}}/>
+          <rect {...baseRect} fill="#EEF4FB" stroke="#005EB8" strokeWidth="1.4"/>
+          {/* Façade bleue Duel */}
+          <rect x="-20" y="-14" width="40" height="20" fill="#005EB8" stroke="#004A9A" strokeWidth=".6"/>
+          {/* Fenêtres claires clignotantes */}
+          <rect x="-16" y="-11" width="7" height="8" fill="#FFF0CC" opacity=".9" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite"} : {}}/>
+          <rect x="-5" y="-11" width="7" height="8" fill="#FFF0CC" opacity=".9" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite .5s"} : {}}/>
+          <rect x="6" y="-11" width="7" height="8" fill="#FFF0CC" opacity=".9" style={active ? {animation:"windowBlink 2.2s ease-in-out infinite 1s"} : {}}/>
+          {/* Enseigne blanche */}
+          <rect x="-20" y="6" width="40" height="5" fill="#FFFFFF" opacity=".7"/>
         </>
       );
     case "STEP": // 🏭
       return (
         <>
-          <rect {...baseRect} fill="#E4EDF8" stroke="#4a78aa" strokeWidth="1.2"/>
-          {/* Bassins circulaires — effet rotatif subtil via stroke-dasharray */}
+          <rect {...baseRect} fill="#EEF4FB" stroke="#005EB8" strokeWidth="1.4"/>
+          {/* Bassins circulaires — bleu clair Duel */}
           <g style={active ? {animation:"basinSpin 6s linear infinite", transformOrigin:"-12px -4px"} : {}}>
-            <circle cx="-12" cy="-4" r="6" fill="#2A5A90" stroke="#3D8EE0" strokeWidth=".6" strokeDasharray="2 2"/>
+            <circle cx="-12" cy="-4" r="6" fill="#BFDBF7" stroke="#005EB8" strokeWidth=".8" strokeDasharray="2 2"/>
+            <circle cx="-12" cy="-4" r="3.5" fill="#7DB8EC"/>
           </g>
           <g style={active ? {animation:"basinSpin 6s linear infinite reverse", transformOrigin:"4px -4px"} : {}}>
-            <circle cx="4" cy="-4" r="6" fill="#2A5A90" stroke="#3D8EE0" strokeWidth=".6" strokeDasharray="2 2"/>
+            <circle cx="4" cy="-4" r="6" fill="#BFDBF7" stroke="#005EB8" strokeWidth=".8" strokeDasharray="2 2"/>
+            <circle cx="4" cy="-4" r="3.5" fill="#7DB8EC"/>
           </g>
-          <rect x="12" y="-12" width="12" height="16" fill="#DCE8F4"/>
+          {/* Bâtiment technique clair */}
+          <rect x="12" y="-12" width="12" height="16" fill="#D4E8F8" stroke="#005EB8" strokeWidth=".6"/>
+          <rect x="14" y="-10" width="8" height="5" fill="#A0C8EE"/>
         </>
       );
     case "INDUS": // ⚙️
       return (
         <>
-          <rect {...baseRect} fill="#3a1e1e" stroke="#aa4848" strokeWidth="1.2"/>
-          <rect x="-20" y="-6" width="30" height="20" fill="#2a1818"/>
-          {/* Cheminée + fumée animée */}
-          <rect x="12" y="-14" width="6" height="20" fill="#4a3030"/>
+          <rect {...baseRect} fill="#F0F4F8" stroke="#5A7A9A" strokeWidth="1.4"/>
+          {/* Hangar industriel clair */}
+          <rect x="-20" y="-8" width="28" height="20" fill="#D8E4EE" stroke="#8AAAC8" strokeWidth=".6"/>
+          {/* Toit */}
+          <polygon points="-20,-8 -6,-15 8,-8" fill="#C0D4E8"/>
+          {/* Cheminée grise claire */}
+          <rect x="10" y="-14" width="6" height="22" fill="#B0BEC8" stroke="#8AAAC8" strokeWidth=".6"/>
+          {/* Fumée animée */}
           {active && (
             <g style={{animation:"smokeRise 3.2s ease-out infinite"}}>
-              <circle cx="15" cy="-16" r="2.5" fill="rgba(180,180,190,.35)"/>
-              <circle cx="17" cy="-19" r="3" fill="rgba(180,180,190,.25)"/>
+              <circle cx="13" cy="-16" r="2.5" fill="rgba(100,130,160,.30)"/>
+              <circle cx="15" cy="-20" r="3" fill="rgba(100,130,160,.20)"/>
             </g>
           )}
+          {/* Engrenage décoratif */}
+          <text x="-8" y="8" textAnchor="middle" fontSize="10" opacity=".5" style={active ? {animation:"zonePulse 2s ease-in-out infinite"} : {}}>⚙️</text>
         </>
       );
     case "CIVE": // 🌾
       return (
         <>
-          <rect {...baseRect} fill="#F8F4E4" stroke="#aa9a48" strokeWidth="1.2"/>
-          {/* Champs en ondulation */}
+          <rect {...baseRect} fill="#FAFAF0" stroke="#00A850" strokeWidth="1.4"/>
+          {/* Sol */}
+          <rect x="-24" y="10" width="48" height="8" fill="#C8EDD4"/>
+          {/* Rangées de cultures — vert Duel */}
           <g style={active ? {animation:"fieldWave 2.8s ease-in-out infinite"} : {}}>
-            <path d="M -22 0 Q -15 -3 -8 0 Q -1 3 6 0 Q 13 -3 20 0" fill="none" stroke="#d4b84a" strokeWidth="1.8"/>
-            <path d="M -22 6 Q -15 3 -8 6 Q -1 9 6 6 Q 13 3 20 6" fill="none" stroke="#b8a040" strokeWidth="1.8"/>
+            <path d="M -22 -2 Q -15 -6 -8 -2 Q -1 2 6 -2 Q 13 -6 20 -2" fill="none" stroke="#00A850" strokeWidth="2"/>
+            <path d="M -22 5 Q -15 1 -8 5 Q -1 9 6 5 Q 13 1 20 5" fill="none" stroke="#00C45E" strokeWidth="2"/>
           </g>
+          {/* Tiges */}
+          <line x1="-15" y1="-2" x2="-15" y2="10" stroke="#5A8A3A" strokeWidth=".8"/>
+          <line x1="0" y1="-2" x2="0" y2="10" stroke="#5A8A3A" strokeWidth=".8"/>
+          <line x1="14" y1="-2" x2="14" y2="10" stroke="#5A8A3A" strokeWidth=".8"/>
         </>
       );
     case "BIOGAZ+": // 💨
       return (
         <>
-          <rect {...baseRect} fill="#1a1e2a" stroke="#4a6aaa" strokeWidth="1.2"/>
-          {/* Cuve + bulles qui montent */}
-          <rect x="-18" y="-10" width="36" height="22" rx="10" fill="#E4ECF8" stroke="#4a5a80" strokeWidth=".8"/>
+          <rect {...baseRect} fill="#EEF4FB" stroke="#005EB8" strokeWidth="1.4"/>
+          {/* Cuve arrondie — fond blanc Duel */}
+          <rect x="-18" y="-12" width="36" height="24" rx="10" fill="#FFFFFF" stroke="#005EB8" strokeWidth="1"/>
+          {/* Reflet cuve */}
+          <rect x="-14" y="-9" width="28" height="4" rx="2" fill="rgba(0,94,184,.10)"/>
+          {/* Bulles bleues Duel */}
           {active && (
             <g>
-              <circle cx="-8" cy="10" r="2" fill="rgba(120,200,255,.6)" style={{animation:"bubbleUp 2.5s ease-in-out infinite"}}/>
-              <circle cx="2" cy="12" r="2.5" fill="rgba(120,200,255,.6)" style={{animation:"bubbleUp 2.5s ease-in-out infinite .7s"}}/>
-              <circle cx="10" cy="10" r="1.8" fill="rgba(120,200,255,.6)" style={{animation:"bubbleUp 2.5s ease-in-out infinite 1.4s"}}/>
+              <circle cx="-8" cy="10" r="2" fill="rgba(0,94,184,.45)" style={{animation:"bubbleUp 2.5s ease-in-out infinite"}}/>
+              <circle cx="2" cy="12" r="2.5" fill="rgba(0,94,184,.40)" style={{animation:"bubbleUp 2.5s ease-in-out infinite .7s"}}/>
+              <circle cx="10" cy="10" r="1.8" fill="rgba(0,94,184,.45)" style={{animation:"bubbleUp 2.5s ease-in-out infinite 1.4s"}}/>
             </g>
           )}
+          {/* Icône gaz */}
+          <text x="0" y="4" textAnchor="middle" fontSize="10" opacity=".6">💨</text>
         </>
       );
     default:
