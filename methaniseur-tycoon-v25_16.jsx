@@ -6677,7 +6677,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
   const CORNER_R = 12; // rayon des virages aux coins du circuit
 
   return (
-    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"visible", background:"rgba(7,14,25,.55)"}}>
+    <div style={{height:"250px", flexShrink:0, position:"relative", display:"flex", flexDirection:"column", overflow:"visible", background:"rgba(240,246,252,.7)"}}>
 
       {/* ══ OVERLAY TRAJET COMPLET TRACTEUR — couvre Vue2 entière (350+250=600px) ══
           position:absolute, top:-350px → commence au sommet de la zone TOP
@@ -6906,7 +6906,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       {/* ── Stats footer ── */}
       <div style={{flexShrink:0, height:"26px", display:"flex", gap:"8px", alignItems:"center",
         justifyContent:"center", padding:"0 12px",
-        background:"rgba(7,14,25,.7)", borderTop:"1px solid rgba(0,80,160,.08)"}}>
+        background:"rgba(232,240,251,.9)", borderTop:"1px solid rgba(0,80,160,.14)"}}>
         <span style={{fontSize:"10px", color:"rgba(26,46,74,.52)"}}>
           ⛽ GNV : <strong style={{color:"var(--c-green)"}}>{fmt(gnvBm)}</strong> m³
         </span>
@@ -8075,7 +8075,7 @@ function DigesteurScene({
             </div>
             </div>
             {/* ─── BOTTOM : Station GNV + réseau GRDF (250px) ─── */}
-            <div style={{height:"250px", flexShrink:0, position:"relative", background:"rgba(7,14,25,.55)"}}>
+            <div style={{height:"250px", flexShrink:0, position:"relative", background:"rgba(240,246,252,.7)"}}>
               {!injected ? (
                 <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center"}}>
                   <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
@@ -8149,7 +8149,7 @@ function DigesteurScene({
               {/* KPIs overlay — positionnés absolument sur la zone aval */}
               {!injected && (
                 <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
-                  background:"rgba(7,14,25,.45)"}}>
+                  background:"rgba(240,246,252,.7)"}}>
                   <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
                     <div style={{fontSize:"20px", marginBottom:"4px"}}>🔒</div>
                     <div style={{fontSize:"10px", color:"rgba(26,46,74,.5)"}}>Réseau aval GRDF</div>
