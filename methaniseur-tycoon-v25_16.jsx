@@ -6372,67 +6372,148 @@ function MiniTractor({ isGnv, flipped, size }) {
 // viewBox 0 0 42 22. facing='left'=sens R→L (par défaut), 'right'=sens L→R (flip).
 function GnvCarSprite({ type, facing }) {
   const isVan = type === 'van';
-  const bodyH = isVan ? 16 : 12;
-  const bodyY = isVan ? 3 : 6;
-  const flip = facing === 'right' ? 'scale(-1,1) translate(-42,0)' : '';
+  const flip  = facing === 'right' ? 'scale(-1,1) translate(-42,0)' : '';
   return (
     <g transform={flip}>
-      {/* Corps */}
-      <rect x="1" y={bodyY} width="40" height={bodyH} rx="3"
-        fill="var(--c-bg)" stroke="#005EB8" strokeWidth="1"/>
-      {/* Habitacle */}
-      <rect x="6" y={bodyY+1} width="11" height={bodyH-4} rx="1.5"
-        fill="rgba(var(--c-blue-rgb),.35)" stroke="rgba(var(--c-blue-rgb),.2)" strokeWidth=".5"/>
-      <rect x="20" y={bodyY+1} width="9" height={bodyH-4} rx="1.5"
-        fill="rgba(var(--c-blue-rgb),.35)" stroke="rgba(var(--c-blue-rgb),.2)" strokeWidth=".5"/>
-      {/* Badge GNV */}
-      <rect x="1" y={bodyY+2} width="8" height="5" rx="1.5"
-        fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
-      <text x="5" y={bodyY+6} textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
-      {/* Roue avant */}
-      <circle cx="9" cy="20" r="4" fill="#4A5568" stroke="#2D3748" strokeWidth=".8"/>
-      <circle cx="9" cy="20" r="1.5" fill="#FFFFFF"/>
-      {/* Roue arrière */}
-      <circle cx="33" cy="20" r="4" fill="#4A5568" stroke="#2D3748" strokeWidth=".8"/>
-      <circle cx="33" cy="20" r="1.5" fill="#FFFFFF"/>
-      {/* Phare avant */}
-      <rect x="1" y={bodyY+3} width="2" height="3" rx="1" fill="var(--c-orange)" opacity=".8"/>
+      {isVan ? (
+        <>
+          {/* ── CAMIONNETTE GNV ── */}
+          {/* Bas de caisse */}
+          <rect x="2" y="12" width="38" height="6" rx="1.5" fill="#002F6C"/>
+          {/* Carrosserie */}
+          <rect x="2" y="2" width="38" height="16" rx="3" fill="#005EB8"/>
+          {/* Reflet toit */}
+          <rect x="3" y="2.5" width="36" height="3" rx="2" fill="rgba(255,255,255,.2)"/>
+          {/* Pare-brise avant */}
+          <rect x="3" y="3.5" width="8" height="9" rx="1.5" fill="rgba(200,230,255,.72)"/>
+          {/* Vitres latérales */}
+          <rect x="13" y="3.5" width="8"  height="7" rx="1" fill="rgba(200,230,255,.62)"/>
+          <rect x="23" y="3.5" width="8"  height="7" rx="1" fill="rgba(200,230,255,.55)"/>
+          <rect x="33" y="3.5" width="5"  height="7" rx="1" fill="rgba(200,230,255,.5)"/>
+          {/* Bande GNV verte */}
+          <rect x="2" y="14.5" width="38" height="3.5" rx="0" fill="#00A850"/>
+          <text x="20" y="17.3" textAnchor="middle" fontSize="3.2" fontWeight="900" fill="white" letterSpacing=".4">GNV</text>
+          {/* Phare avant */}
+          <rect x="2.5" y="5.5" width="3.5" height="5" rx="1" fill="#FFFDE7" opacity=".95"/>
+          {/* Feu arrière */}
+          <rect x="37.5" y="6" width="3" height="4" rx=".8" fill="#FF7875" opacity=".9"/>
+          {/* Arches roues */}
+          <path d="M 2,15 C 2,21 18,21 18,15 Z" fill="#002F6C"/>
+          <path d="M 24,15 C 24,21 40,21 40,15 Z" fill="#002F6C"/>
+        </>
+      ) : (
+        <>
+          {/* ── BERLINE GNV ── */}
+          {/* Bas de caisse */}
+          <rect x="3" y="13" width="36" height="5" rx="1.5" fill="#002F6C"/>
+          {/* Carrosserie — silhouette berline */}
+          <path d="M 3,13 L 6,6 L 14,3 L 29,3 L 37,6 L 39,13 Z" fill="#005EB8"/>
+          {/* Reflet toit */}
+          <path d="M 14,3 L 29,3 L 27.5,4.5 L 15.5,4.5 Z" fill="rgba(255,255,255,.22)"/>
+          {/* Pare-brise avant (incliné) */}
+          <path d="M 6,13 L 8,6.5 L 14.5,3.5 L 14.5,13 Z" fill="rgba(200,230,255,.72)"/>
+          {/* Vitre centrale */}
+          <rect x="15.5" y="3.8" width="11" height="9.2" fill="rgba(200,230,255,.65)"/>
+          {/* Vitre arrière (inclinée) */}
+          <path d="M 27.5,3.5 L 36,6.5 L 37.5,13 L 27.5,13 Z" fill="rgba(200,230,255,.55)"/>
+          {/* Séparation portes */}
+          <line x1="27" y1="4.2" x2="27" y2="13" stroke="rgba(255,255,255,.35)" strokeWidth=".8"/>
+          {/* Bande GNV verte */}
+          <rect x="3" y="14.5" width="36" height="3.5" rx="1" fill="#00A850"/>
+          <text x="13" y="17.3" textAnchor="middle" fontSize="3.2" fontWeight="900" fill="white" letterSpacing=".4">GNV</text>
+          {/* Phare avant */}
+          <rect x="3.5" y="7.5" width="3.5" height="4" rx="1" fill="#FFFDE7" opacity=".95"/>
+          {/* Feu arrière */}
+          <rect x="37.5" y="8" width="3" height="3.5" rx=".8" fill="#FF7875" opacity=".9"/>
+          {/* Arches roues */}
+          <path d="M 3,13 C 3,20 18,20 18,13 Z" fill="#002F6C"/>
+          <path d="M 24,13 C 24,20 39,20 39,13 Z" fill="#002F6C"/>
+        </>
+      )}
+      {/* ── Roues communes ── */}
+      <circle cx="10" cy="21" r="5"   fill="#1A2E4A"/>
+      <circle cx="10" cy="21" r="3.8" fill="#374151"/>
+      <circle cx="10" cy="21" r="2.2" fill="#CBD5E0"/>
+      <circle cx="10" cy="21" r=".9"  fill="#374151"/>
+      <circle cx="32" cy="21" r="5"   fill="#1A2E4A"/>
+      <circle cx="32" cy="21" r="3.8" fill="#374151"/>
+      <circle cx="32" cy="21" r="2.2" fill="#CBD5E0"/>
+      <circle cx="32" cy="21" r=".9"  fill="#374151"/>
     </g>
   );
 }
 
-// ─── MINI CAR SPRITE — petite voiture SVG cohérente thème Duel GRDF ─────────
-// viewBox 0 0 32 16. facing='left' = R→L, 'right' = L→R (flip).
-// type: 'car' | 'van' | 'truck'
+// ─── MINI CAR SPRITE — véhicule SVG Duel GRDF pour routes GnvNetworkView ─────
+// type: 'car' | 'van' | 'truck'  |  facing: 'left' | 'right'
 function MiniCarSprite({ type, facing }) {
   const isTruck = type === 'truck';
   const isVan   = type === 'van';
-  const bodyW   = isTruck ? 36 : isVan ? 28 : 24;
-  const bodyY   = isVan ? 2 : 4;
-  const bodyH   = isVan ? 11 : 9;
-  const vbW     = bodyW + 4;
-  const flip    = facing === 'right' ? `scale(-1,1) translate(-${vbW},0)` : '';
+  const W = isTruck ? 40 : isVan ? 32 : 28;
+  const H = 16;
+  const flip = facing === 'right' ? `scale(-1,1) translate(-${W},0)` : '';
   return (
-    <svg viewBox={`0 0 ${vbW} 16`} width={vbW} height="16" style={{display:"block",overflow:"visible",flexShrink:0}}>
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}
+      style={{display:"block", overflow:"visible", flexShrink:0}}>
       <g transform={flip}>
-        {/* Carrosserie */}
-        <rect x="1" y={bodyY} width={bodyW} height={bodyH} rx="2.5"
-          fill="#FFFFFF" stroke="#005EB8" strokeWidth="1"/>
-        {/* Toit / habitacle */}
-        {!isTruck && (
-          <rect x={isVan ? 4 : 5} y={bodyY+1} width={isVan ? 9 : 7} height={bodyH-3}
-            rx="1" fill="rgba(0,94,184,.25)" stroke="rgba(0,94,184,.15)" strokeWidth=".5"/>
+        {isTruck ? (
+          <>
+            {/* ── CAMION ── */}
+            <rect x="1" y="3" width={W-2} height="10" rx="1.5" fill="#005EB8"/>
+            <rect x="1" y="10" width={W-2} height="3" rx="1" fill="#002F6C"/>
+            {/* Cabine distincte */}
+            <rect x="1" y="2" width="12" height="11" rx="1.5" fill="#0070D8"/>
+            <rect x="2" y="3" width="9" height="7" rx="1" fill="rgba(200,230,255,.72)"/>
+            {/* Bande GNV sur remorque */}
+            <rect x="14" y="10" width={W-15} height="3" rx=".8" fill="#00A850"/>
+            <text x={14+(W-15)/2} y="12.6" textAnchor="middle" fontSize="2.5" fontWeight="900" fill="white">GNV</text>
+            {/* Phare */}
+            <rect x="1.5" y="5" width="2" height="3" rx=".5" fill="#FFFDE7" opacity=".95"/>
+          </>
+        ) : isVan ? (
+          <>
+            {/* ── CAMIONNETTE ── */}
+            <rect x="1" y="2" width={W-2} height="11" rx="2" fill="#005EB8"/>
+            <rect x="1" y="2" width={W-2} height="3" rx="2" fill="rgba(255,255,255,.18)"/>
+            {/* Pare-brise */}
+            <rect x="2" y="3" width="7" height="7" rx="1" fill="rgba(200,230,255,.72)"/>
+            {/* 2 vitres latérales */}
+            <rect x="11" y="3" width="7" height="6" rx=".8" fill="rgba(200,230,255,.62)"/>
+            <rect x="20" y="3" width={W-22} height="6" rx=".8" fill="rgba(200,230,255,.55)"/>
+            {/* Bande GNV */}
+            <rect x="1" y="10" width={W-2} height="3" rx="1" fill="#00A850"/>
+            <text x={W/2} y="12.6" textAnchor="middle" fontSize="2.5" fontWeight="900" fill="white">GNV</text>
+            {/* Phare / feu */}
+            <rect x="2" y="5" width="2.5" height="3" rx=".5" fill="#FFFDE7" opacity=".95"/>
+            <rect x={W-3.5} y="5.5" width="2" height="2.5" rx=".5" fill="#FF7875" opacity=".9"/>
+          </>
+        ) : (
+          <>
+            {/* ── BERLINE ── */}
+            <rect x="1" y="7" width={W-2} height="6" rx="1.5" fill="#002F6C"/>
+            <path d={`M 1,7 L 4,3 L 10,1 L ${W-10},1 L ${W-4},3 L ${W-1},7 Z`} fill="#005EB8"/>
+            {/* Pare-brise avant incliné */}
+            <path d={`M 4,7 L 5.5,3.5 L 10.5,1.5 L 10.5,7 Z`} fill="rgba(200,230,255,.7)"/>
+            {/* Vitre centrale */}
+            <rect x="11.5" y="1.8" width={W-23} height="5.2" fill="rgba(200,230,255,.65)"/>
+            {/* Vitre arrière inclinée */}
+            <path d={`M ${W-11.5},1.5 L ${W-4},3.5 L ${W-1},7 L ${W-11.5},7 Z`} fill="rgba(200,230,255,.55)"/>
+            {/* Bande GNV */}
+            <rect x="1" y="10" width={W-2} height="3" rx="1" fill="#00A850"/>
+            <text x={W*0.38} y="12.6" textAnchor="middle" fontSize="2.5" fontWeight="900" fill="white">GNV</text>
+            {/* Phare / feu */}
+            <rect x="1.5" y="5" width="2.5" height="2" rx=".5" fill="#FFFDE7" opacity=".9"/>
+            <rect x={W-3.5} y="5" width="2" height="2" rx=".5" fill="#FF7875" opacity=".9"/>
+          </>
         )}
-        {/* Badge GNV */}
-        <rect x="1" y={bodyY+2} width="7" height="4" rx="1.2" fill="#00A850"/>
-        <text x="4.5" y={bodyY+5.5} textAnchor="middle" fontSize="2.9" fontWeight="900" fill="#FFFFFF">GNV</text>
-        {/* Phare */}
-        <rect x="1" y={bodyY+3} width="1.5" height="2" rx=".5" fill="#FFF176" opacity=".95"/>
-        {/* Roues */}
-        <circle cx="7"        cy="14" r="3" fill="#4A5568" stroke="#2D3748" strokeWidth=".5"/>
-        <circle cx="7"        cy="14" r="1.2" fill="#FFFFFF"/>
-        <circle cx={bodyW-5}  cy="14" r="3" fill="#4A5568" stroke="#2D3748" strokeWidth=".5"/>
-        <circle cx={bodyW-5}  cy="14" r="1.2" fill="#FFFFFF"/>
+        {/* ── Roues communes ── */}
+        <circle cx="7"   cy="14.5" r="3.5" fill="#1A2E4A"/>
+        <circle cx="7"   cy="14.5" r="2.5" fill="#374151"/>
+        <circle cx="7"   cy="14.5" r="1.4" fill="#CBD5E0"/>
+        <circle cx="7"   cy="14.5" r=".5"  fill="#374151"/>
+        <circle cx={W-7} cy="14.5" r="3.5" fill="#1A2E4A"/>
+        <circle cx={W-7} cy="14.5" r="2.5" fill="#374151"/>
+        <circle cx={W-7} cy="14.5" r="1.4" fill="#CBD5E0"/>
+        <circle cx={W-7} cy="14.5" r=".5"  fill="#374151"/>
       </g>
     </svg>
   );
