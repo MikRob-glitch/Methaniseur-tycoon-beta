@@ -6712,18 +6712,18 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
 
       {/* ─ Bande DROITE : asphalte pur — les tracteurs sont sur les routes horizontales ─ */}
       <div style={{position:"absolute", right:0, top:0, width:"30px", height:"100%", zIndex:2,
-        background:"#C8D4E0", borderLeft:"2px solid rgba(0,80,160,.35)"}}>
+        background:"#2E3338", borderLeft:"2px solid rgba(255,255,255,.7)"}}>
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(0,80,160,.22) 0,rgba(0,80,160,.22) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(255,255,255,.65) 0,rgba(255,255,255,.65) 6px,transparent 6px,transparent 14px)"}}/>
       </div>
 
       {/* ─ Bande GAUCHE : asphalte pur ─ */}
       <div style={{position:"absolute", left:0, top:0, width:"30px", height:"100%", zIndex:2,
-        background:"#C8D4E0", borderRight:"2px solid rgba(0,80,160,.35)"}}>
+        background:"#2E3338", borderRight:"2px solid rgba(255,255,255,.7)"}}>
         <div style={{position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
           width:"2px", height:"100%",
-          backgroundImage:"repeating-linear-gradient(180deg,rgba(0,80,160,.22) 0,rgba(0,80,160,.22) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(180deg,rgba(255,255,255,.65) 0,rgba(255,255,255,.65) 6px,transparent 6px,transparent 14px)"}}/>
       </div>
 
       {/* ─ Lignes horizontales — ferment le rectangle du circuit ─ */}
@@ -6781,13 +6781,13 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       {/* ── Station road R→L ──
           Sens : droite → gauche. Véhicules entrent par la droite, s'arrêtent aux stations, sortent à gauche. */}
       <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
-        background:"#C8D4E0",
-        borderTop:"2px solid rgba(0,80,160,.35)",
-        borderBottom:"2px solid rgba(0,80,160,.20)"}}>
+        background:"#2E3338",
+        borderTop:"2px solid rgba(255,255,255,.7)",
+        borderBottom:"2px solid rgba(255,255,255,.5)"}}>
         {/* Marquage central rose — identique aux bandes verticales */}
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"2px",
-          backgroundImage:"repeating-linear-gradient(90deg,rgba(0,80,160,.22) 0,rgba(0,80,160,.22) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(255,255,255,.65) 0,rgba(255,255,255,.65) 6px,transparent 6px,transparent 14px)"}}/>
         {/* Véhicules R→L — tracteurs = vrai SVG MiniTractor, autres = emoji */}
         {stRoadVeh.map(v => (
           <div key={v.id} style={{
@@ -6862,13 +6862,13 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
 
       {/* ── Route de retour L→R — véhicules clients devant les bâtiments ── */}
       <div style={{flexShrink:0, height:"30px", position:"relative", overflow:"hidden",
-        background:"#C8D4E0",
-        borderTop:"2px solid rgba(0,80,160,.35)",
-        borderBottom:"2px solid rgba(0,80,160,.20)"}}>
+        background:"#2E3338",
+        borderTop:"2px solid rgba(255,255,255,.7)",
+        borderBottom:"2px solid rgba(255,255,255,.5)"}}>
         {/* Marquage central rose */}
         <div style={{position:"absolute", top:"50%", transform:"translateY(-50%)",
           left:0, right:0, height:"2px",
-          backgroundImage:"repeating-linear-gradient(90deg,rgba(0,80,160,.22) 0,rgba(0,80,160,.22) 6px,transparent 6px,transparent 14px)"}}/>
+          backgroundImage:"repeating-linear-gradient(90deg,rgba(255,255,255,.65) 0,rgba(255,255,255,.65) 6px,transparent 6px,transparent 14px)"}}/>
         {/* Véhicules L→R (retour) — face droite */}
         {retRoadVeh.map(v => (
           <div key={v.id} style={{
@@ -8174,7 +8174,7 @@ function DigesteurScene({
               return (
                 <>
                   {/* ── Couche 1 : ASPHALTE ── */}
-                  <g stroke="#C8D8EA" strokeWidth="12" fill="none" strokeLinecap="square">
+                  <g stroke="#2E3338" strokeWidth="12" fill="none" strokeLinecap="square">
                     {/* Route TOP haut Vue 1 : transit bac */}
                     <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
@@ -8201,7 +8201,7 @@ function DigesteurScene({
                     <path d={`M ${GNV_C_X} ${BOT_TOP_Y} L ${GNV_C_X} ${BOT_BOT_Y}`}/>
                   </g>
                   {/* ── Couche 2 : BORDS blancs (ligne de rive) ── */}
-                  <g stroke="rgba(220,220,220,.55)" strokeWidth="2" fill="none" strokeLinecap="square">
+                  <g stroke="rgba(255,255,255,.88)" strokeWidth="1.5" fill="none" strokeLinecap="square">
                     {/* Bords gisement loop — outer continus, inner segmentés aux T-junctions */}
                     <path d={`M ${V1_V2} ${LANE_TOP-5} L ${W} ${LANE_TOP-5}`}/>
                     <path d={`M ${V1_V2} ${LANE_TOP+5} L ${L_EDGE-5} ${LANE_TOP+5}`}/>
@@ -8245,7 +8245,7 @@ function DigesteurScene({
                     <path d={`M ${GNV_C_X+5} ${BOT_BOT_Y-5} L ${V1_V2} ${BOT_BOT_Y-5}`}/>
                   </g>
                   {/* ── Couche 3 : MARQUAGE tirets jaunes (axe central, standard français) ── */}
-                  <g stroke="rgba(255,210,0,.6)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
+                  <g stroke="rgba(255,255,255,.75)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeDasharray="6 10">
                     <path d={`M ${V1_V2} ${LANE_TOP} L ${DUMP_X_RIGHT} ${LANE_TOP}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${LANE_TOP} L ${DUMP_X_RIGHT} ${GNV_LANE}`}/>
                     <path d={`M ${DUMP_X_RIGHT} ${DUMP_Y} L ${DUMP_X} ${DUMP_Y}`}/>
