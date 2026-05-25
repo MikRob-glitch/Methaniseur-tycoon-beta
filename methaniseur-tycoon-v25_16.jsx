@@ -6390,14 +6390,51 @@ function GnvCarSprite({ type, facing }) {
         fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
       <text x="5" y={bodyY+6} textAnchor="middle" fontSize="3.5" fontWeight="900" fill="white">GNV</text>
       {/* Roue avant */}
-      <circle cx="9" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
-      <circle cx="9" cy="20" r="1.5" fill="#EEF5EE"/>
+      <circle cx="9" cy="20" r="4" fill="#4A5568" stroke="#2D3748" strokeWidth=".8"/>
+      <circle cx="9" cy="20" r="1.5" fill="#FFFFFF"/>
       {/* Roue arrière */}
-      <circle cx="33" cy="20" r="4" fill="#111827" stroke="#1f2937" strokeWidth="1"/>
-      <circle cx="33" cy="20" r="1.5" fill="#EEF5EE"/>
+      <circle cx="33" cy="20" r="4" fill="#4A5568" stroke="#2D3748" strokeWidth=".8"/>
+      <circle cx="33" cy="20" r="1.5" fill="#FFFFFF"/>
       {/* Phare avant */}
       <rect x="1" y={bodyY+3} width="2" height="3" rx="1" fill="var(--c-orange)" opacity=".8"/>
     </g>
+  );
+}
+
+// ─── MINI CAR SPRITE — petite voiture SVG cohérente thème Duel GRDF ─────────
+// viewBox 0 0 32 16. facing='left' = R→L, 'right' = L→R (flip).
+// type: 'car' | 'van' | 'truck'
+function MiniCarSprite({ type, facing }) {
+  const isTruck = type === 'truck';
+  const isVan   = type === 'van';
+  const bodyW   = isTruck ? 36 : isVan ? 28 : 24;
+  const bodyY   = isVan ? 2 : 4;
+  const bodyH   = isVan ? 11 : 9;
+  const vbW     = bodyW + 4;
+  const flip    = facing === 'right' ? `scale(-1,1) translate(-${vbW},0)` : '';
+  return (
+    <svg viewBox={`0 0 ${vbW} 16`} width={vbW} height="16" style={{display:"block",overflow:"visible",flexShrink:0}}>
+      <g transform={flip}>
+        {/* Carrosserie */}
+        <rect x="1" y={bodyY} width={bodyW} height={bodyH} rx="2.5"
+          fill="#FFFFFF" stroke="#005EB8" strokeWidth="1"/>
+        {/* Toit / habitacle */}
+        {!isTruck && (
+          <rect x={isVan ? 4 : 5} y={bodyY+1} width={isVan ? 9 : 7} height={bodyH-3}
+            rx="1" fill="rgba(0,94,184,.25)" stroke="rgba(0,94,184,.15)" strokeWidth=".5"/>
+        )}
+        {/* Badge GNV */}
+        <rect x="1" y={bodyY+2} width="7" height="4" rx="1.2" fill="#00A850"/>
+        <text x="4.5" y={bodyY+5.5} textAnchor="middle" fontSize="2.9" fontWeight="900" fill="#FFFFFF">GNV</text>
+        {/* Phare */}
+        <rect x="1" y={bodyY+3} width="1.5" height="2" rx=".5" fill="#FFF176" opacity=".95"/>
+        {/* Roues */}
+        <circle cx="7"        cy="14" r="3" fill="#4A5568" stroke="#2D3748" strokeWidth=".5"/>
+        <circle cx="7"        cy="14" r="1.2" fill="#FFFFFF"/>
+        <circle cx={bodyW-5}  cy="14" r="3" fill="#4A5568" stroke="#2D3748" strokeWidth=".5"/>
+        <circle cx={bodyW-5}  cy="14" r="1.2" fill="#FFFFFF"/>
+      </g>
+    </svg>
   );
 }
 
@@ -6625,9 +6662,10 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       const stIdx = Math.floor(Math.random() * gnvStations);
       const isTractor = Math.random() < 0.45; // tracteurs des gisements passent régulièrement
       const tractorIsGnv = isTractor && gnvConverted > 0 && Math.random() < 0.6;
-      const icon = isTractor ? "🚜" : GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const GNV_TYPES = ['car', 'van', 'car', 'van', 'truck'];
+      const vtype = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const id = uid++;
-      setStRoadVeh(prev => [...prev.slice(-5), { id, icon, stIdx, isTractor, tractorIsGnv }]);
+      setStRoadVeh(prev => [...prev.slice(-5), { id, vtype, stIdx, isTractor, tractorIsGnv }]);
       setTimeout(() => setStRoadVeh(prev => prev.filter(x => x.id !== id)), 5300);
     }, ms);
     return () => clearInterval(stTimerRef.current);
@@ -6639,9 +6677,10 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     if (!hasActive) { setRetRoadVeh([]); return; }
     const ms = Math.max(2500, 9000 - gnvSplit * 40 - gnvStations * 800);
     retTimerRef.current = setInterval(() => {
-      const icon = GNV_VEHICLES[Math.floor(Math.random() * GNV_VEHICLES.length)];
+      const GNV_TYPES = ['car', 'van', 'car', 'van', 'truck'];
+      const vtype = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const id = uid++;
-      setRetRoadVeh(prev => [...prev.slice(-4), { id, icon }]);
+      setRetRoadVeh(prev => [...prev.slice(-4), { id, vtype }]);
       setTimeout(() => setRetRoadVeh(prev => prev.filter(x => x.id !== id)), 6500);
     }, ms);
     return () => clearInterval(retTimerRef.current);
@@ -6796,7 +6835,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
           }}>
             {v.isTractor
               ? <MiniTractor isGnv={v.tractorIsGnv} flipped={true} size={22}/>
-              : <span style={{fontSize:"16px", lineHeight:"20px"}}>{v.icon}</span>
+              : <MiniCarSprite type={v.vtype} facing="left"/>
             }
           </div>
         ))}
@@ -6872,11 +6911,10 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
         {/* Véhicules L→R (retour) — face droite */}
         {retRoadVeh.map(v => (
           <div key={v.id} style={{
-            position:"absolute", top:"5px", fontSize:"13px", lineHeight:"16px",
+            position:"absolute", top:"7px",
             animation:"gnvRetLR 6.5s linear 1 forwards",
-            transform:"scaleX(-1)",
           }}>
-            {v.icon}
+            <MiniCarSprite type={v.vtype} facing="right"/>
           </div>
         ))}
       </div>
