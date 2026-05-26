@@ -6371,89 +6371,83 @@ function MiniTractor({ isGnv, flipped, size }) {
 // Corps navy, vitres steel-blue, jantes anthracite. Badge GNV vert.
 // viewBox 0 0 42 22. facing='left'=sens R→L (par défaut), 'right'=sens L→R (flip).
 function GnvCarSprite({ type, facing }) {
-  const isVan = type === 'van';
+  const isBus = type === 'bus';
   const flip  = facing === 'right' ? 'scale(-1,1) translate(-42,0)' : '';
-
-  // Géométrie roues / arches
   const wCy = 21, wR = 5.2, aR = 6.2, w1x = 11, w2x = 31;
-  // Deux demi-cercles (sweep=1 = sens horaire SVG = arc vers le haut)
-  // → via fillRule="evenodd" ils découpent la carrosserie : vraies arches
   const ARC =
     `M${w1x - aR},${wCy}A${aR},${aR} 0 0,1 ${w1x + aR},${wCy}Z ` +
     `M${w2x - aR},${wCy}A${aR},${aR} 0 0,1 ${w2x + aR},${wCy}Z`;
-
   return (
     <g transform={flip}>
-      {/* Ombre sol */}
       <ellipse cx="21" cy="27" rx="17" ry="1.5" fill="rgba(0,10,40,.18)"/>
+      <circle cx={w1x} cy={wCy} r={wR}       fill="#0D1520"/>
+      <circle cx={w1x} cy={wCy} r={wR - 1.3} fill="#243040"/>
+      <circle cx={w1x} cy={wCy} r={wR - 2.6} fill="#B8C8D8"/>
+      <circle cx={w1x} cy={wCy} r={wR - 3.6} fill="#2A3A4A"/>
+      <circle cx={w2x} cy={wCy} r={wR}       fill="#0D1520"/>
+      <circle cx={w2x} cy={wCy} r={wR - 1.3} fill="#243040"/>
+      <circle cx={w2x} cy={wCy} r={wR - 2.6} fill="#B8C8D8"/>
+      <circle cx={w2x} cy={wCy} r={wR - 3.6} fill="#2A3A4A"/>
 
-      {/* ── Roues rendues SOUS la carrosserie, visibles dans les arches ── */}
-      <circle cx={w1x} cy={wCy} r={wR}         fill="#0D1520"/>
-      <circle cx={w1x} cy={wCy} r={wR - 1.3}   fill="#243040"/>
-      <circle cx={w1x} cy={wCy} r={wR - 2.6}   fill="#B8C8D8"/>
-      <circle cx={w1x} cy={wCy} r={wR - 3.6}   fill="#2A3A4A"/>
-      <circle cx={w2x} cy={wCy} r={wR}         fill="#0D1520"/>
-      <circle cx={w2x} cy={wCy} r={wR - 1.3}   fill="#243040"/>
-      <circle cx={w2x} cy={wCy} r={wR - 2.6}   fill="#B8C8D8"/>
-      <circle cx={w2x} cy={wCy} r={wR - 3.6}   fill="#2A3A4A"/>
-
-      {isVan ? (<>
-        {/* ══ VAN : caisse haute + arches découpées ══ */}
+      {isBus ? (<>
+        {/* ══ BUS GNV ══ */}
         <path fillRule="evenodd" fill="#003A8C"
-          d={`M 2,${wCy} L 2,4 L 40,4 L 40,${wCy} Z ${ARC}`}/>
-        {/* Panneau toit plus clair */}
-        <rect x="2" y="4" width="38" height="10" fill="#005EB8"/>
-        {/* Reflet toit */}
-        <rect x="3" y="4.2" width="36" height="2" rx="1" fill="rgba(255,255,255,.16)"/>
-        {/* Séparation cabine / charge */}
-        <rect x="13" y="4" width="2" height="10" fill="#00153C" opacity=".5"/>
+          d={`M 2,${wCy} L 2,2 L 40,2 L 40,${wCy} Z ${ARC}`}/>
+        <rect x="2"   y="2"  width="38"  height="11" fill="#005EB8"/>
+        <rect x="2.5" y="2.3" width="37" height="2"  rx="1" fill="rgba(255,255,255,.15)"/>
+        {/* Panneau destination */}
+        <rect x="2.5" y="2.5" width="7"   height="3" rx=".5" fill="#00153C"/>
         {/* Pare-brise */}
-        <rect x="3"    y="5.5" width="9"   height="7.5" rx="1"  fill="rgba(185,225,255,.87)"/>
-        {/* Vitres × 3 */}
-        <rect x="16"   y="5.5" width="6.5" height="7"   rx=".7" fill="rgba(185,225,255,.76)"/>
-        <rect x="23.5" y="5.5" width="6.5" height="7"   rx=".7" fill="rgba(185,225,255,.66)"/>
-        <rect x="31"   y="5.5" width="7"   height="7"   rx=".7" fill="rgba(185,225,255,.55)"/>
+        <path fill="rgba(185,225,255,.85)" d="M 3,6 L 3,13 L 9.5,13 L 10,6 Z"/>
+        {/* Vitres × 4 */}
+        <rect x="11"   y="3.5" width="6"   height="9.5" rx=".8" fill="rgba(185,225,255,.82)"/>
+        <rect x="18"   y="3.5" width="6"   height="9.5" rx=".8" fill="rgba(185,225,255,.74)"/>
+        <rect x="25"   y="3.5" width="6"   height="9.5" rx=".8" fill="rgba(185,225,255,.66)"/>
+        <rect x="32"   y="3.5" width="5.5" height="9.5" rx=".8" fill="rgba(185,225,255,.58)"/>
         {/* Bande GNV */}
-        <rect x="2" y="14.5" width="38" height="2.5" fill="#00A850"/>
-        <text x="26" y="16.5" textAnchor="middle" fontSize="3.2" fontWeight="900" fill="white">GNV</text>
-        {/* Phare */}
-        <rect x="2.5" y="6"    width="2.5" height="6"   rx=".7" fill="#FFFDE7" opacity=".95"/>
-        {/* Feu AR */}
-        <rect x="39"  y="6"    width="2"   height="5.5" rx=".7" fill="#FF3030" opacity=".92"/>
+        <rect x="2"  y="13.5" width="38" height="2.5" fill="#00A850"/>
+        <text x="24" y="15.5" textAnchor="middle" fontSize="3.2" fontWeight="900" fill="white">GNV</text>
+        {/* Phare / feu */}
+        <rect x="2.5" y="7"   width="2.5" height="6"   rx=".7" fill="#FFFDE7" opacity=".95"/>
+        <rect x="39"  y="7"   width="2"   height="6"   rx=".7" fill="#FF3030" opacity=".92"/>
+        {/* Rainures portes */}
+        <rect x="10.5" y="13" width="1"   height="6.5" fill="#00153C" opacity=".28"/>
+        <rect x="25.5" y="13" width="1"   height="6.5" fill="#00153C" opacity=".28"/>
         {/* Pare-chocs */}
-        <rect x="2"   y="18.5" width="4"   height="2"   rx=".5" fill="#B8C2CC"/>
-        <rect x="36"  y="18.5" width="4"   height="2"   rx=".5" fill="#8A9298"/>
+        <rect x="2"   y="18.5" width="4"   height="2" rx=".5" fill="#C0CAD5"/>
+        <rect x="36"  y="18.5" width="4"   height="2" rx=".5" fill="#909AA5"/>
       </>) : (<>
-        {/* ══ BERLINE : greenhouse + arches découpées ══ */}
-        {/* Corps bas (capot + portes + coffre) — arches via evenodd */}
+        {/* ══ BERLINE — greenhouse corrigé ══ */}
+        {/* Corps bas avec arches réelles (evenodd) */}
         <path fillRule="evenodd" fill="#003A8C"
           d={`M 2,${wCy} L 2,18 L 4,15 L 7,12 L 35,12 L 38,15 L 40,18 L 40,${wCy} Z ${ARC}`}/>
-        {/* Greenhouse : toit trapèze clair */}
+        {/* Greenhouse plus haut (y=6.5) — plus de place pour les vitres */}
         <path fill="#005EB8"
-          d="M 7,12 C 9,9 12,8 15,8 L 27,8 C 30,8 33,9 35,12 Z"/>
+          d="M 8,12 C 10,8.5 13,6.5 16,6.5 L 26,6.5 C 29,6.5 32,8.5 34,12 Z"/>
         {/* Reflet toit */}
         <path fill="rgba(255,255,255,.18)"
-          d="M 15,8 L 27,8 L 26,9.5 L 16,9.5 Z"/>
-        {/* Pare-brise incliné (A-pillar) */}
+          d="M 16,6.5 L 26,6.5 L 25.5,8 L 16.5,8 Z"/>
+        {/* Pare-brise incliné */}
         <path fill="rgba(185,225,255,.87)"
-          d="M 9,12 C 11,9.5 13,8.5 15,8.5 L 21,8.5 L 21,12 Z"/>
-        {/* Vitre avant */}
-        <rect x="21.5" y="8.5" width="6"   height="3.5" rx=".4" fill="rgba(185,225,255,.77)"/>
+          d="M 10,12 C 12,9 14,7 16,6.8 L 21,6.8 L 21,12 Z"/>
+        {/* Vitre latérale */}
+        <rect x="21.5" y="6.8" width="5"   height="5.2" rx=".4" fill="rgba(185,225,255,.77)"/>
         {/* Montant B */}
-        <rect x="27.7" y="8.5" width="1.5" height="3.5" fill="#00153C" opacity=".6"/>
-        {/* Vitre AR */}
-        <rect x="29.3" y="8.5" width="4.7" height="3.5" rx=".4" fill="rgba(185,225,255,.65)"/>
-        {/* Bande GNV portes */}
-        <rect x="7" y="13" width="28" height="2.2" fill="#00A850"/>
+        <rect x="26.7" y="6.8" width="1.5" height="5.2" fill="#00153C" opacity=".6"/>
+        {/* Vitre AR trapézoïdale — suit le C-pillar, ne déborde jamais */}
+        <path fill="rgba(185,225,255,.65)"
+          d="M 28.3,6.8 L 29.5,6.8 L 33.5,12 L 28.3,12 Z"/>
+        {/* Bande GNV */}
+        <rect x="7"  y="13" width="28" height="2.2" fill="#00A850"/>
         <text x="21" y="14.8" textAnchor="middle" fontSize="3.2" fontWeight="900" fill="white">GNV</text>
-        {/* Phare avant (trapèze) */}
+        {/* Phare avant */}
         <path fill="#FFFDE7" opacity=".95"
           d="M 2,14.5 L 2,18 L 5.5,18 L 7.5,14.5 Z"/>
         {/* Feu AR */}
-        <rect x="38.5" y="14"  width="2.5" height="5"   rx=".6" fill="#FF3030" opacity=".92"/>
+        <rect x="38.5" y="14"   width="2.5" height="5"   rx=".6" fill="#FF3030" opacity=".92"/>
         {/* Pare-chocs */}
-        <rect x="2"    y="18.5" width="3.5" height="2"  rx=".5" fill="#B8C2CC"/>
-        <rect x="36.5" y="18.5" width="3.5" height="2"  rx=".5" fill="#8A9298"/>
+        <rect x="2"    y="18.5" width="3.5" height="2"   rx=".5" fill="#C0CAD5"/>
+        <rect x="36.5" y="18.5" width="3.5" height="2"   rx=".5" fill="#909AA5"/>
       </>)}
     </g>
   );
@@ -6462,15 +6456,13 @@ function GnvCarSprite({ type, facing }) {
 // ─── MINI CAR SPRITE — icônes véhicules sur les routes GnvNetworkView ─────────
 function MiniCarSprite({ type, facing }) {
   const isTruck = type === 'truck';
-  const isVan   = type === 'van';
-  const W  = isTruck ? 42 : isVan ? 32 : 28;
+  const isBus   = type === 'bus';
+  const W  = isTruck ? 42 : isBus ? 36 : 28;
   const H  = 18;
   const wCy = 14.5, wR = 3.8, aR = 4.6;
   const w1x = 8, w2x = W - 8;
   const flip = facing === 'right' ? `scale(-1,1) translate(-${W},0)` : '';
-  // Demi-cercle d'arche pour un axe cx
-  const arch = (cx) =>
-    `M${cx - aR},${wCy}A${aR},${aR} 0 0,1 ${cx + aR},${wCy}Z`;
+  const arch = (cx) => `M${cx - aR},${wCy}A${aR},${aR} 0 0,1 ${cx + aR},${wCy}Z`;
   const ARCS = arch(w1x) + ' ' + arch(w2x);
 
   return (
@@ -6478,19 +6470,17 @@ function MiniCarSprite({ type, facing }) {
       style={{ display: 'block', overflow: 'visible', flexShrink: 0 }}>
       <g transform={flip}>
         <ellipse cx={W / 2} cy={H + 1} rx={W / 2 - 2} ry="1.1" fill="rgba(0,10,40,.18)"/>
-
-        {/* Roues derrière carrosserie */}
-        <circle cx={w1x} cy={wCy} r={wR}         fill="#0D1520"/>
-        <circle cx={w1x} cy={wCy} r={wR - 1}     fill="#243040"/>
-        <circle cx={w1x} cy={wCy} r={wR - 2}     fill="#B8C8D8"/>
-        <circle cx={w1x} cy={wCy} r={wR - 2.9}   fill="#2A3A4A"/>
-        <circle cx={w2x} cy={wCy} r={wR}         fill="#0D1520"/>
-        <circle cx={w2x} cy={wCy} r={wR - 1}     fill="#243040"/>
-        <circle cx={w2x} cy={wCy} r={wR - 2}     fill="#B8C8D8"/>
-        <circle cx={w2x} cy={wCy} r={wR - 2.9}   fill="#2A3A4A"/>
+        <circle cx={w1x} cy={wCy} r={wR}       fill="#0D1520"/>
+        <circle cx={w1x} cy={wCy} r={wR - 1}   fill="#243040"/>
+        <circle cx={w1x} cy={wCy} r={wR - 2}   fill="#B8C8D8"/>
+        <circle cx={w1x} cy={wCy} r={wR - 2.9} fill="#2A3A4A"/>
+        <circle cx={w2x} cy={wCy} r={wR}       fill="#0D1520"/>
+        <circle cx={w2x} cy={wCy} r={wR - 1}   fill="#243040"/>
+        <circle cx={w2x} cy={wCy} r={wR - 2}   fill="#B8C8D8"/>
+        <circle cx={w2x} cy={wCy} r={wR - 2.9} fill="#2A3A4A"/>
 
         {isTruck ? (<>
-          {/* ── CAMION : cabine bleue + remorque grise ── */}
+          {/* ── CAMION ── */}
           <path fillRule="evenodd" fill="#003A8C"
             d={`M 1,${wCy} L 1,3 L 13,3 L 13,${wCy} Z ${arch(w1x)}`}/>
           <rect x="1" y="3" width="12" height="8" fill="#005EB8"/>
@@ -6502,46 +6492,42 @@ function MiniCarSprite({ type, facing }) {
           <text x={15 + (W - 18) / 2} y="11.3" textAnchor="middle" fontSize="2.8" fontWeight="900" fill="white">GNV</text>
           <rect x="1"     y="4.5" width="2"   height="4.5" rx=".5" fill="#FFFDE7" opacity=".95"/>
           <rect x={W - 3} y="5"   width="2"   height="4"   rx=".5" fill="#FF3030" opacity=".92"/>
-        </>) : isVan ? (<>
-          {/* ── VAN mini ── */}
+        </>) : isBus ? (<>
+          {/* ── BUS mini ── */}
           <path fillRule="evenodd" fill="#003A8C"
-            d={`M 1,${wCy} L 1,3 L ${W - 1},3 L ${W - 1},${wCy} Z ${ARCS}`}/>
-          <rect x="1" y="3" width={W - 2} height="8" fill="#005EB8"/>
-          <rect x="2" y="3.2" width={W - 4} height="1.5" rx=".7" fill="rgba(255,255,255,.15)"/>
-          <rect x="11" y="3" width="1.5" height="8" fill="#00153C" opacity=".5"/>
-          <rect x="2"  y="4.5" width="8"      height="6"   rx=".8" fill="rgba(185,225,255,.87)"/>
-          <rect x="14" y="4.5" width="5.5"    height="5.5" rx=".7" fill="rgba(185,225,255,.75)"/>
-          <rect x="21" y="4.5" width={W - 23} height="5.5" rx=".7" fill="rgba(185,225,255,.65)"/>
-          <rect x="1" y="11.5" width={W - 2} height="2" fill="#00A850"/>
-          <text x={W * 0.63} y="13.2" textAnchor="middle" fontSize="2.8" fontWeight="900" fill="white">GNV</text>
-          <rect x="1"     y="4.5" width="2"   height="5"   rx=".5" fill="#FFFDE7" opacity=".95"/>
-          <rect x={W - 3} y="4.5" width="1.8" height="4.5" rx=".5" fill="#FF3030" opacity=".92"/>
+            d={`M 1,${wCy} L 1,2 L ${W - 1},2 L ${W - 1},${wCy} Z ${ARCS}`}/>
+          <rect x="1" y="2" width={W - 2} height="9" fill="#005EB8"/>
+          <rect x="1.5" y="2.3" width={W - 3} height="1.8" rx=".7" fill="rgba(255,255,255,.15)"/>
+          {/* Panneau destination */}
+          <rect x="1.5" y="2.5" width="6" height="2.5" rx=".4" fill="#00153C"/>
+          {/* Pare-brise */}
+          <path fill="rgba(185,225,255,.85)" d="M 2,5 L 2,11 L 8,11 L 8.5,5 Z"/>
+          {/* Vitres */}
+          <rect x="9.5"  y="3"   width="5"     height="8" rx=".7" fill="rgba(185,225,255,.82)"/>
+          <rect x="15.5" y="3"   width="5"     height="8" rx=".7" fill="rgba(185,225,255,.74)"/>
+          <rect x="21.5" y="3"   width="5"     height="8" rx=".7" fill="rgba(185,225,255,.66)"/>
+          <rect x="27.5" y="3"   width={W-29}  height="8" rx=".7" fill="rgba(185,225,255,.58)"/>
+          {/* Bande GNV */}
+          <rect x="1"  y="11.5" width={W - 2} height="2" fill="#00A850"/>
+          <text x={W * 0.55} y="13.2" textAnchor="middle" fontSize="2.8" fontWeight="900" fill="white">GNV</text>
+          <rect x="1"     y="5.5" width="2"   height="5"   rx=".5" fill="#FFFDE7" opacity=".95"/>
+          <rect x={W - 3} y="5.5" width="1.8" height="5"   rx=".5" fill="#FF3030" opacity=".92"/>
         </>) : (<>
           {/* ── BERLINE mini greenhouse ── */}
-          {/* Corps bas avec arches */}
           <path fillRule="evenodd" fill="#003A8C"
             d={`M 1,${wCy} L 1,10 L 3,7.5 L 6,5.5 L ${W - 6},5.5 L ${W - 3},7.5 L ${W - 1},10 L ${W - 1},${wCy} Z ${ARCS}`}/>
-          {/* Cabin greenhouse */}
           <path fill="#005EB8"
             d={`M 6,5.5 C 8,3.5 10.5,2.5 12,2.5 L ${W - 12},2.5 C ${W - 10.5},2.5 ${W - 8},3.5 ${W - 6},5.5 Z`}/>
-          {/* Reflet toit */}
           <path fill="rgba(255,255,255,.18)"
             d={`M 12,2.5 L ${W - 12},2.5 L ${W - 12.5},4 L 12.5,4 Z`}/>
-          {/* Pare-brise */}
           <path fill="rgba(185,225,255,.87)"
             d={`M 7,5.5 C 9,4 11,3 12,3 L ${W / 2},3 L ${W / 2},5.5 Z`}/>
-          {/* Vitre latérale */}
           <rect x={W / 2 + 0.5} y="3" width={W / 2 - 11} height="2.5" rx=".4" fill="rgba(185,225,255,.76)"/>
-          {/* Montant B */}
-          <rect x={W - 10.5} y="3" width="1.2" height="2.5" fill="#00153C" opacity=".55"/>
-          {/* Vitre AR */}
-          <rect x={W - 9}    y="3" width="3.5" height="2.5" rx=".4" fill="rgba(185,225,255,.64)"/>
-          {/* Bande GNV */}
+          <rect x={W - 10.5}    y="3" width="1.2"         height="2.5" fill="#00153C" opacity=".55"/>
+          <rect x={W - 9}       y="3" width="3.5"         height="2.5" rx=".4" fill="rgba(185,225,255,.64)"/>
           <rect x="6" y="8" width={W - 12} height="1.8" fill="#00A850"/>
           <text x={W / 2} y="9.5" textAnchor="middle" fontSize="2.5" fontWeight="900" fill="white">GNV</text>
-          {/* Phare */}
           <rect x="1"     y="8.5" width="3"   height="3.5" rx=".5" fill="#FFFDE7" opacity=".95"/>
-          {/* Feu AR */}
           <rect x={W - 4} y="8.5" width="2.5" height="3.5" rx=".5" fill="#FF3030" opacity=".92"/>
         </>)}
       </g>
@@ -6565,7 +6551,7 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
     if (!hasActive) { setVehicles([]); return; }
     const ms = Math.max(2200, 8000 - gnvSplit * 40 - gnvStations * 600);
     timerRef.current = setInterval(() => {
-      const type = Math.random() < 0.4 ? 'van' : 'car';
+      const type = Math.random() < 0.4 ? 'bus' : 'car';
       const stIdx = Math.floor(Math.random() * gnvStations);
       const id = Date.now() + (uid2++);
       const dur = 10000 + Math.random() * 2000;
@@ -6773,7 +6759,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       const stIdx = Math.floor(Math.random() * gnvStations);
       const isTractor = Math.random() < 0.45; // tracteurs des gisements passent régulièrement
       const tractorIsGnv = isTractor && gnvConverted > 0 && Math.random() < 0.6;
-      const GNV_TYPES = ['car', 'van', 'car', 'van', 'truck'];
+      const GNV_TYPES = ['car', 'bus', 'car', 'bus', 'truck'];
       const vtype = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const id = uid++;
       setStRoadVeh(prev => [...prev.slice(-5), { id, vtype, stIdx, isTractor, tractorIsGnv }]);
@@ -6788,7 +6774,7 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
     if (!hasActive) { setRetRoadVeh([]); return; }
     const ms = Math.max(2500, 9000 - gnvSplit * 40 - gnvStations * 800);
     retTimerRef.current = setInterval(() => {
-      const GNV_TYPES = ['car', 'van', 'car', 'van', 'truck'];
+      const GNV_TYPES = ['car', 'bus', 'car', 'bus', 'truck'];
       const vtype = GNV_TYPES[Math.floor(Math.random() * GNV_TYPES.length)];
       const id = uid++;
       setRetRoadVeh(prev => [...prev.slice(-4), { id, vtype }]);
