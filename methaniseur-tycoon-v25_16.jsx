@@ -4250,158 +4250,153 @@ function Game({ username, region, maia }) {
               libère ~110px verticaux). Si besoin de réintroduction future, voir composant
               GasMeter (toujours défini, juste plus instancié ici). */}
 
-          {/* Progression raccordement */}
+          {/* ── CHAÎNE D'INJECTION — avant raccordement ── */}
           {!injected&&(
-            <div data-tut="buffer-zone" style={{marginTop:"14px",padding:"14px 16px",borderRadius:"16px",background:"rgba(244,247,251,.78)",border:`1px solid ${canConnect?"rgba(var(--c-orange-rgb),.45)":"rgba(var(--c-blue-rgb),.14)"}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
-                <div>
-                  <div style={{fontSize:"12px",fontWeight:700,color:canConnect?"var(--c-yellow)":"rgba(26,46,74,.72)"}}>{canConnect?"🔓 Raccordement possible !":"🎯 Objectif raccordement"}</div>
-                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)} accumulés</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:"20px",fontWeight:800,color:canConnect?"var(--c-yellow)":"var(--c-blue)"}}>{Math.round(bufferPct*100)}%</div>
-                  {isDigesting&&!canConnect&&bmPerHour>0&&<div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"1px"}}>~{fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</div>}
-                </div>
+            <div data-tut="buffer-zone" style={{marginTop:"14px",padding:"12px 14px",borderRadius:"14px",background:"rgba(244,247,251,.78)",border:`1px solid ${canConnect?"rgba(var(--c-orange-rgb),.45)":"rgba(var(--c-blue-rgb),.12)"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"7px"}}>
+                <span style={{fontSize:"11px",fontWeight:700,color:canConnect?"var(--c-orange)":"rgba(26,46,74,.72)"}}>{canConnect?"🔓 Raccordement possible !":"🎯 Cuve tampon"}</span>
+                <span style={{fontSize:"13px",fontWeight:800,color:canConnect?"var(--c-orange)":"var(--c-blue)"}}>{Math.round(bufferPct*100)}%</span>
               </div>
-              <div style={{height:"14px",borderRadius:"7px",background:"rgba(var(--c-blue-rgb),.09)",overflow:"hidden",position:"relative"}}>
-                <div style={{height:"100%",borderRadius:"7px",width:`${bufferPct*100}%`,background:canConnect?"linear-gradient(90deg,#C07800,var(--c-orange),#F5D888)":"linear-gradient(90deg,#E8F0FB,var(--c-blue-light),var(--c-blue))",transition:"width .5s ease,background .5s",animation:canConnect?"bufferPulse 1s ease infinite":"none",boxShadow:canConnect?"0 0 12px rgba(var(--c-orange-rgb),.55)":"none"}}/>
-                {[25,50,75].map(pct=>(<div key={pct} style={{position:"absolute",top:0,bottom:0,left:`${pct}%`,width:"1px",background:"rgba(244,247,251,.78)"}}/>))}
+              <div style={{height:"10px",borderRadius:"5px",background:"rgba(var(--c-blue-rgb),.09)",overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:"5px",width:`${bufferPct*100}%`,background:canConnect?"linear-gradient(90deg,#C07800,var(--c-orange),#F5D888)":"linear-gradient(90deg,var(--c-blue-dark),var(--c-blue))",transition:"width .5s ease,background .5s",animation:canConnect?"bufferPulse 1s ease infinite":"none",boxShadow:canConnect?"0 0 10px rgba(var(--c-orange-rgb),.45)":"none"}}/>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:"6px"}}>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>0 m³</span>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>{fmt(INJECTION_THRESHOLD/2)}</span>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>{fmt(INJECTION_THRESHOLD)}</span>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:"4px"}}>
+                <span style={{fontSize:"9px",color:"rgba(26,46,74,.60)"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)}</span>
+                {isDigesting&&bmPerHour>0&&!canConnect&&<span style={{fontSize:"9px",color:"rgba(26,46,74,.60)"}}>~{fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</span>}
               </div>
-              {isDigesting&&(
-                <div style={{marginTop:"8px",display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:"rgba(26,46,74,.75)"}}>
-                  <div style={{width:"6px",height:"6px",borderRadius:"50%",background:"var(--c-blue)",animation:"chargePulse 1s ease infinite"}}/>
-                  Alimentation cuve : <strong style={{color:"var(--c-blue-light)"}}>{fmt(bmPerHour)}/h</strong>
-                  {bmPerHour>0&&!canConnect&&<span style={{color:"rgba(26,46,74,.70)"}}>· encore {fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</span>}
-                </div>
-              )}
+              {isDigesting&&<div style={{marginTop:"6px",display:"flex",alignItems:"center",gap:"5px",fontSize:"10px",color:"rgba(26,46,74,.65)"}}><div style={{width:"5px",height:"5px",borderRadius:"50%",background:"var(--c-blue)",animation:"chargePulse 1s ease infinite"}}/><strong style={{color:"var(--c-blue-light)"}}>{fmt(bmPerHour)}/h</strong><span>alimentent la cuve</span></div>}
             </div>
           )}
+          {!injected&&(
+            <div data-tut="chain-steps" style={{marginTop:"10px",borderRadius:"14px",overflow:"hidden",border:"1px solid rgba(var(--c-blue-rgb),.12)",background:"rgba(244,247,251,.78)"}}>
+              <div style={{padding:"9px 14px 6px"}}>
+                <span style={{fontSize:"11px",fontWeight:700,color:"rgba(26,46,74,.80)"}}>📋 Étapes vers le raccordement réseau</span>
+              </div>
+              <div style={{padding:"4px 10px 12px",display:"flex",flexDirection:"column",gap:"6px"}}>
 
-          {/* v25.1.6 — Bloc "Chaîne d'injection" RETIRÉ d'ici (migré dans la VUE 1 bottom).
-              Le rendu inline en VUE 1 utilise PipelineGraphic. Les "ÉTAPES 1/2/3" détaillées
-              (épurateur/compresseur/raccordement) restent ci-dessous SI !injected, car ce sont
-              des éléments d'action utilisateur (boutons, progress bars), pas du décor. */}
-          {!injected && (
-          <div data-tut="chain-steps" style={{marginTop:"14px",borderRadius:"18px",overflow:"hidden",border:"1px solid rgba(var(--c-blue-rgb),.14)",background:"rgba(244,247,251,.78)"}}>
-            <div style={{padding:"12px 16px 8px",borderBottom:"1px solid rgba(var(--c-blue-rgb),.09)"}}>
-              <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.82)"}}>📋 Étapes vers le raccordement</div>
-              <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>Seuil : {fmt(INJECTION_THRESHOLD)}</div>
-            </div>
-              <div style={{padding:"4px 12px 14px",display:"flex",flexDirection:"column",gap:"10px"}}>
                 {/* ÉTAPE 1 — Épurateur */}
-                {(() => {
-                  const done = epurateurOk;
-                  const pct = done ? 100 : Math.min(100, buffer/EPURATEUR_THRESHOLD*100);
-                  const ready = canUnlockEpurateur;
-                  return (
-                    <div style={{padding:"12px 14px",borderRadius:"12px",
-                      background:done?"rgba(var(--c-purple-rgb),.12)":ready?"rgba(var(--c-purple-rgb),.08)":"rgba(0,80,160,.05)",
-                      border:`1px solid ${done?"rgba(var(--c-purple-rgb),.4)":ready?"rgba(var(--c-purple-rgb),.5)":"rgba(0,80,160,.12)"}`,
-                      animation:ready&&!done?"pulse 2s ease infinite":"none",
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:done?"#a78bfa":"rgba(26,46,74,.70)",background:done?"rgba(var(--c-purple-rgb),.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 1</span>
-                        <span style={{fontSize:"12px",fontWeight:800,color:done?"#a78bfa":"rgba(26,46,74,.7)"}}>🧪 Épurateur</span>
-                        {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
-                      </div>
-                      {!done && (
-                        <>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}>
-                            <span style={{fontSize:"10px",color:"rgba(26,46,74,.78)"}}>Condition : <strong style={{color:"#a78bfa"}}>{fmt(EPURATEUR_THRESHOLD)}</strong> dans la cuve</span>
-                            <span style={{fontSize:"11px",fontWeight:800,color:ready?"#a78bfa":"rgba(26,46,74,.72)"}}>{Math.round(pct)}%</span>
-                          </div>
-                          <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
-                            <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,var(--c-purple),#a78bfa)":"linear-gradient(90deg,var(--c-purple)55,var(--c-purple))",transition:"width .5s",boxShadow:ready?"0 0 8px rgba(var(--c-purple-rgb),.5)":"none"}}/>
-                          </div>
-                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"4px"}}>🎁 Débloque : Biodéchets restauration + Boues de STEP</div>
-                          {ready && <button data-tut="epurateur-btn" onClick={handleUnlockEpurateur} style={{width:"100%",marginTop:"8px",padding:"10px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,var(--c-purple),#7c3aed)",color:"white",fontSize:"13px",fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(var(--c-purple-rgb),.5)",animation:"pulse 1.5s ease infinite"}}>🧪 Débloquer l'Épurateur !</button>}
-                        </>
-                      )}
-                      {done && <div style={{fontSize:"10px",color:"rgba(167,139,250,.6)"}}>Biodéchets restauration + Boues de STEP débloqués</div>}
-                    </div>
-                  );
+                {(()=>{
+                  const done=epurateurOk, ready=canUnlockEpurateur;
+                  const pct=done?100:Math.min(100,buffer/EPURATEUR_THRESHOLD*100);
+                  return done
+                    ? (<div style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 12px",borderRadius:"10px",background:"rgba(var(--c-purple-rgb),.08)",border:"1px solid rgba(var(--c-purple-rgb),.18)"}}>
+                        <span style={{fontSize:"15px"}}>✅</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:"11px",fontWeight:700,color:"#a78bfa"}}>🧪 Épurateur · Actif</div>
+                          <div style={{fontSize:"9px",color:"rgba(167,139,250,.65)",marginTop:"1px"}}>CH₄ {">"} 97 % · H₂S éliminé · Biodéchets & STEP débloqués</div>
+                        </div>
+                      </div>)
+                    : (<div style={{padding:"10px 12px",borderRadius:"10px",background:ready?"rgba(var(--c-purple-rgb),.09)":"rgba(0,80,160,.04)",border:`1px solid ${ready?"rgba(var(--c-purple-rgb),.40)":"rgba(0,80,160,.10)"}`,animation:ready?"pulse 2s ease infinite":"none"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}}>
+                          <span style={{fontSize:"9px",fontWeight:900,color:"rgba(26,46,74,.55)",background:"rgba(0,80,160,.08)",padding:"2px 7px",borderRadius:"8px"}}>ÉTAPE 1</span>
+                          <span style={{fontSize:"11px",fontWeight:800,color:ready?"#a78bfa":"rgba(26,46,74,.60)"}}>🧪 Épurateur</span>
+                          <span style={{marginLeft:"auto",fontSize:"10px",fontWeight:700,color:ready?"#a78bfa":"rgba(26,46,74,.55)"}}>{Math.round(pct)}%</span>
+                        </div>
+                        <div style={{height:"6px",borderRadius:"3px",background:"rgba(0,80,160,.08)",overflow:"hidden",marginBottom:"5px"}}>
+                          <div style={{height:"100%",borderRadius:"3px",width:`${pct}%`,background:ready?"linear-gradient(90deg,var(--c-purple),#a78bfa)":"linear-gradient(90deg,rgba(var(--c-purple-rgb),.35),rgba(var(--c-purple-rgb),.60))",transition:"width .5s",boxShadow:ready?"0 0 6px rgba(var(--c-purple-rgb),.45)":"none"}}/>
+                        </div>
+                        <div style={{fontSize:"9px",color:"rgba(26,46,74,.60)",marginBottom:ready?"6px":"0"}}>Condition : <strong style={{color:ready?"#a78bfa":"rgba(26,46,74,.65)"}}>{fmt(EPURATEUR_THRESHOLD)}</strong> m³ dans la cuve · Débloque : biodéchets & STEP</div>
+                        {ready&&<button data-tut="epurateur-btn" onClick={handleUnlockEpurateur} style={{width:"100%",padding:"8px",borderRadius:"8px",border:"none",background:"linear-gradient(135deg,var(--c-purple),#7c3aed)",color:"white",fontSize:"12px",fontWeight:800,cursor:"pointer",boxShadow:"0 3px 12px rgba(var(--c-purple-rgb),.40)",animation:"pulse 1.5s ease infinite"}}>🧪 Débloquer l'Épurateur !</button>}
+                      </div>);
                 })()}
 
                 {/* ÉTAPE 2 — Compresseur */}
-                {(() => {
-                  const done = compresseurOk;
-                  const blocked = !epurateurOk;
-                  const pct = done ? 100 : blocked ? 0 : Math.min(100, buffer/COMPRESSEUR_THRESHOLD*100);
-                  const ready = canUnlockCompresseur;
+                {(()=>{
+                  const done=compresseurOk, blocked=!epurateurOk, ready=canUnlockCompresseur;
+                  const pct=done?100:blocked?0:Math.min(100,buffer/COMPRESSEUR_THRESHOLD*100);
+                  return done
+                    ? (<div style={{display:"flex",alignItems:"center",gap:"8px",padding:"8px 12px",borderRadius:"10px",background:"rgba(204,119,0,.08)",border:"1px solid rgba(204,119,0,.18)"}}>
+                        <span style={{fontSize:"15px"}}>✅</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:"11px",fontWeight:700,color:"var(--c-orange)"}}>🔩 Compresseur · Actif</div>
+                          <div style={{fontSize:"9px",color:"rgba(204,119,0,.60)",marginTop:"1px"}}>67 bar · Déchets industriels débloqués</div>
+                        </div>
+                      </div>)
+                    : (<div style={{padding:"10px 12px",borderRadius:"10px",background:ready?"rgba(204,119,0,.08)":"rgba(0,80,160,.04)",border:`1px solid ${ready?"rgba(204,119,0,.40)":"rgba(0,80,160,.10)"}`,opacity:blocked?.42:1,animation:ready?"pulse 2s ease infinite":"none"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}}>
+                          <span style={{fontSize:"9px",fontWeight:900,color:"rgba(26,46,74,.55)",background:"rgba(0,80,160,.08)",padding:"2px 7px",borderRadius:"8px"}}>ÉTAPE 2</span>
+                          <span style={{fontSize:"11px",fontWeight:800,color:ready?"var(--c-orange)":"rgba(26,46,74,.60)"}}>🔩 Compresseur</span>
+                          {!blocked&&<span style={{marginLeft:"auto",fontSize:"10px",fontWeight:700,color:ready?"var(--c-orange)":"rgba(26,46,74,.55)"}}>{Math.round(pct)}%</span>}
+                          {blocked&&<span style={{marginLeft:"auto",fontSize:"11px",opacity:.4}}>🔒</span>}
+                        </div>
+                        {!blocked&&<div style={{height:"6px",borderRadius:"3px",background:"rgba(0,80,160,.08)",overflow:"hidden",marginBottom:"5px"}}>
+                          <div style={{height:"100%",borderRadius:"3px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#CC7700,var(--c-orange))":"linear-gradient(90deg,rgba(204,119,0,.35),rgba(204,119,0,.60))",transition:"width .5s",boxShadow:ready?"0 0 6px rgba(204,119,0,.45)":"none"}}/>
+                        </div>}
+                        <div style={{fontSize:"9px",color:"rgba(26,46,74,.60)",marginBottom:ready?"6px":"0"}}>
+                          {blocked?"Nécessite l'épurateur (étape 1)":`Condition : ${fmt(COMPRESSEUR_THRESHOLD)} m³ + épurateur · Débloque : déchets industriels`}
+                        </div>
+                        {ready&&<button data-tut="compresseur-btn" onClick={handleUnlockCompresseur} style={{width:"100%",padding:"8px",borderRadius:"8px",border:"none",background:"linear-gradient(135deg,#CC7700,var(--c-orange))",color:"white",fontSize:"12px",fontWeight:800,cursor:"pointer",boxShadow:"0 3px 12px rgba(204,119,0,.38)",animation:"pulse 1.5s ease infinite"}}>🔩 Débloquer le Compresseur !</button>}
+                      </div>);
+                })()}
+
+                {/* ÉTAPE 3 — Raccordement GRDF */}
+                {(()=>{
+                  const blocked=!compresseurOk, hasIndus=owned[4]>=1, ready=canConnect;
+                  const pct=blocked?0:Math.min(100,buffer/INJECTION_THRESHOLD*100);
+                  const conds=[
+                    {ok:epurateurOk,   label:"Épurateur",   color:"#a78bfa",    bg:"rgba(var(--c-purple-rgb),.12)"},
+                    {ok:compresseurOk, label:"Compresseur", color:"var(--c-orange)", bg:"rgba(204,119,0,.12)"},
+                    {ok:hasIndus,      label:"⚙️ Indus.",   color:"var(--c-blue-light)", bg:"rgba(var(--c-blue-rgb),.12)"},
+                    {ok:buffer>=INJECTION_THRESHOLD, label:fmt(INJECTION_THRESHOLD)+" m³", color:"var(--c-blue)", bg:"rgba(var(--c-blue-rgb),.10)"},
+                  ];
                   return (
-                    <div style={{padding:"12px 14px",borderRadius:"12px",
-                      background:done?"rgba(204,119,0,.1)":ready?"rgba(204,119,0,.08)":"rgba(0,80,160,.05)",
-                      border:`1px solid ${done?"rgba(204,119,0,.4)":ready?"rgba(204,119,0,.5)":"rgba(0,80,160,.12)"}`,
-                      opacity:blocked?.45:1,
-                      animation:ready&&!done?"pulse 2s ease infinite":"none",
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:done?"var(--c-orange)":"rgba(26,46,74,.70)",background:done?"rgba(204,119,0,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 2</span>
-                        <span style={{fontSize:"12px",fontWeight:800,color:done?"var(--c-orange)":"rgba(26,46,74,.7)"}}>🔩 Compresseur</span>
-                        {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
+                    <div style={{padding:"10px 12px",borderRadius:"10px",background:ready?"rgba(0,94,184,.08)":"rgba(0,80,160,.04)",border:`1px solid ${ready?"rgba(0,94,184,.40)":"rgba(0,80,160,.10)"}`,opacity:blocked?.42:1,animation:ready?"pulse 2s ease infinite":"none"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}}>
+                        <span style={{fontSize:"9px",fontWeight:900,color:"rgba(26,46,74,.55)",background:"rgba(0,80,160,.08)",padding:"2px 7px",borderRadius:"8px"}}>ÉTAPE 3</span>
+                        <span style={{fontSize:"11px",fontWeight:800,color:ready?"var(--c-blue)":"rgba(26,46,74,.60)"}}>🏗️ Raccordement GRDF</span>
+                        {blocked&&<span style={{marginLeft:"auto",fontSize:"11px",opacity:.4}}>🔒</span>}
                       </div>
-                      {!done && (
-                        <>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
-                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(var(--c-purple-rgb),.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"var(--c-red)",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
-                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=COMPRESSEUR_THRESHOLD?"rgba(204,119,0,.2)":"rgba(0,80,160,.09)",color:buffer>=COMPRESSEUR_THRESHOLD?"var(--c-orange)":"rgba(26,46,74,.74)",fontWeight:700}}>{buffer>=COMPRESSEUR_THRESHOLD?"✅":"⏳"} {fmt(COMPRESSEUR_THRESHOLD)} dans la cuve</span>
-                          </div>
-                          {!blocked && (
-                            <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden",marginBottom:"4px"}}>
-                              <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#CC7700,var(--c-orange))":"linear-gradient(90deg,#CC770055,#CC7700)",transition:"width .5s",boxShadow:ready?"0 0 8px rgba(204,119,0,.5)":"none"}}/>
-                            </div>
-                          )}
-                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)"}}>🎁 Débloque : Déchets industriels</div>
-                          {ready && <button data-tut="compresseur-btn" onClick={handleUnlockCompresseur} style={{width:"100%",marginTop:"8px",padding:"10px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#CC7700,var(--c-orange))",color:"white",fontSize:"13px",fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(204,119,0,.5)",animation:"pulse 1.5s ease infinite"}}>🔩 Débloquer le Compresseur !</button>}
-                        </>
-                      )}
-                      {done && <div style={{fontSize:"10px",color:"rgba(var(--c-orange-rgb),.6)"}}>Déchets industriels débloqués</div>}
+                      {!blocked&&<div style={{height:"6px",borderRadius:"3px",background:"rgba(0,80,160,.08)",overflow:"hidden",marginBottom:"5px"}}>
+                        <div style={{height:"100%",borderRadius:"3px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#C07800,var(--c-orange),#F5D888)":"linear-gradient(90deg,rgba(0,94,184,.35),var(--c-blue))",transition:"width .5s",boxShadow:ready?"0 0 10px rgba(var(--c-orange-rgb),.45)":"none",animation:ready?"bufferPulse 1s ease infinite":"none"}}/>
+                      </div>}
+                      <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginBottom:"6px"}}>
+                        {conds.map((c,i)=>(
+                          <span key={i} style={{fontSize:"9px",padding:"2px 6px",borderRadius:"6px",background:c.ok?c.bg:"rgba(220,38,38,.07)",color:c.ok?c.color:"#dc2626",fontWeight:700}}>{c.ok?"✅":"❌"} {c.label}</span>
+                        ))}
+                      </div>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.60)",marginBottom:ready?"6px":"0"}}>🎁 CIVE · Parc biogaz+ · Injection réseau · Prime {fmtEuro(RACCORDEMENT_BONUS)}</div>
+                      {ready&&<button data-tut="raccordement-btn" onClick={handleConnect} style={{width:"100%",padding:"10px",borderRadius:"8px",border:"none",background:"linear-gradient(135deg,#C07800,var(--c-orange),var(--c-yellow))",color:"white",fontSize:"13px",fontWeight:900,cursor:"pointer",boxShadow:"0 4px 18px rgba(var(--c-orange-rgb),.50)",animation:"pulse 1.5s ease infinite"}}>🏗️ Raccorder au réseau GRDF !</button>}
                     </div>
                   );
                 })()}
 
-                {/* ÉTAPE 3 — Raccordement */}
-                {(() => {
-                  const blocked = !compresseurOk;
-                  const hasIndus = owned[4] >= 1;
-                  const pct = blocked ? 0 : Math.min(100, buffer/INJECTION_THRESHOLD*100);
-                  const ready = canConnect;
-                  return (
-                    <div style={{padding:"12px 14px",borderRadius:"12px",
-                      background:ready?"rgba(42,125,187,.1)":"rgba(0,80,160,.05)",
-                      border:`1px solid ${ready?"rgba(42,125,187,.55)":"rgba(0,80,160,.12)"}`,
-                      opacity:blocked?.45:1,
-                      animation:ready?"pulse 2s ease infinite":"none",
-                    }}>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:"rgba(26,46,74,.70)",background:ready?"rgba(42,125,187,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 3</span>
-                        <span style={{fontSize:"12px",fontWeight:800,color:ready?"var(--c-yellow)":"rgba(26,46,74,.7)"}}>🏗️ Raccordement GRDF</span>
-                      </div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(var(--c-purple-rgb),.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"var(--c-red)",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:compresseurOk?"rgba(204,119,0,.2)":"rgba(255,68,68,.1)",color:compresseurOk?"var(--c-orange)":"var(--c-red)",fontWeight:700}}>{compresseurOk?"✅":"❌"} Compresseur</span>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:hasIndus?"rgba(var(--c-blue-rgb),.2)":"rgba(255,68,68,.1)",color:hasIndus?"var(--c-blue-light)":"var(--c-red)",fontWeight:700}}>{hasIndus?"✅":"❌"} ⚙️ Déchets indus.</span>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=INJECTION_THRESHOLD?"rgba(var(--c-yellow-rgb),.2)":"rgba(0,80,160,.09)",color:buffer>=INJECTION_THRESHOLD?"var(--c-yellow)":"rgba(26,46,74,.74)",fontWeight:700}}>{buffer>=INJECTION_THRESHOLD?"✅":"⏳"} {fmt(INJECTION_THRESHOLD)}</span>
-                      </div>
-                      {!blocked && (
-                        <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden",marginBottom:"4px"}}>
-                          <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#C07800,var(--c-orange),#F5D888)":"linear-gradient(90deg,var(--c-blue-dark)55,var(--c-blue-dark))",transition:"width .5s",boxShadow:ready?"0 0 12px rgba(var(--c-orange-rgb),.5)":"none",animation:ready?"bufferPulse 1s ease infinite":"none"}}/>
-                        </div>
-                      )}
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)"}}>🎁 Débloque : CIVE + Parc biogaz+ et injection réseau</div>
-                      {ready && <button data-tut="raccordement-btn" onClick={handleConnect} style={{width:"100%",marginTop:"8px",padding:"12px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#C07800,var(--c-orange),var(--c-yellow))",color:"white",fontSize:"14px",fontWeight:900,cursor:"pointer",boxShadow:"0 4px 20px rgba(var(--c-orange-rgb),.6)",animation:"pulse 1.5s ease infinite"}}>🏗️ Raccorder au réseau GRDF !</button>}
-                    </div>
-                  );
-                })()}
               </div>
-            {/* v25.1.6 — Le bandeau "Injection en cours" est désormais rendu dans la VUE 1 bottom.
-                On retire ici l'ancien bloc {injected && ...} pour éviter le doublon. */}
-          </div>
+            </div>
+          )}
+
+          {/* ── CHAÎNE D'INJECTION — après raccordement ── */}
+          {injected&&(
+            <div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"14px",background:"linear-gradient(135deg,rgba(0,94,184,.05),rgba(0,168,80,.05))",border:"1px solid rgba(0,94,184,.16)"}}>
+              <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.65)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"9px"}}>🔌 Chaîne d'injection active</div>
+              <div style={{display:"flex",alignItems:"center",gap:"3px",overflowX:"auto",paddingBottom:"2px"}}>
+                {[
+                  {icon:"🐄",label:"Intrants",      color:"var(--c-blue)"},
+                  null,
+                  {icon:"🗑️",label:"Bac",          color:"var(--c-blue)"},
+                  null,
+                  {icon:"⚙️",label:`Digesteur ×${digesteurs}`, color:"var(--c-blue)"},
+                  null,
+                  {icon:"🧪",label:"Épurateur",    color:"#a78bfa"},
+                  null,
+                  {icon:"🔩",label:"Compresseur",  color:"var(--c-orange)"},
+                  null,
+                  {icon:"🏗️",label:"Réseau GRDF",  color:"var(--c-blue)"},
+                ].map((s,i)=>s===null
+                  ? <div key={i} style={{fontSize:"9px",color:"rgba(var(--c-blue-rgb),.35)",flexShrink:0,fontWeight:700}}>›</div>
+                  : <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"2px",padding:"5px 7px",borderRadius:"8px",background:`rgba(var(--c-blue-rgb),.05)`,border:`1px solid ${s.color}28`,flexShrink:0,minWidth:"44px"}}>
+                      <span style={{fontSize:"13px"}}>{s.icon}</span>
+                      <span style={{fontSize:"8px",fontWeight:700,color:s.color,whiteSpace:"nowrap",textAlign:"center"}}>{s.label}</span>
+                    </div>
+                )}
+              </div>
+              {bmPerHour>0&&(
+                <div style={{marginTop:"9px",display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                  <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.07)",border:"1px solid rgba(var(--c-blue-rgb),.15)",borderRadius:"7px",padding:"3px 9px",color:"var(--c-blue-light)",fontWeight:700}}>⚡ +{fmt(bmPerHour)}/h</span>
+                  <span style={{fontSize:"10px",background:"rgba(var(--c-green-rgb),.07)",border:"1px solid rgba(var(--c-green-rgb),.18)",borderRadius:"7px",padding:"3px 9px",color:"var(--c-green)",fontWeight:700}}>💰 +{fmtEuro(bmPerHour)}/h</span>
+                  <span style={{fontSize:"10px",background:"rgba(26,46,74,.04)",border:"1px solid rgba(26,46,74,.10)",borderRadius:"7px",padding:"3px 9px",color:reliability<50?"#dc2626":reliability<80?"var(--c-orange)":"var(--c-green)",fontWeight:700}}>📊 {Math.round(reliability)}% fiabilité</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── SECTION GNV ── */}
