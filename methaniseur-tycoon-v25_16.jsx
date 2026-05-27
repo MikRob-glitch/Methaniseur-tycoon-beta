@@ -3813,7 +3813,7 @@ function Game({ username, region, maia }) {
       })()}
 
       {/* Header */}
-      <div style={{background:"rgba(244,247,251,.92)",backdropFilter:"blur(10px)",padding:"14px 20px 10px",borderBottom:"1px solid rgba(var(--c-blue-rgb),.12)"}}>
+      <div style={{position:"relative",zIndex:50,background:"rgba(244,247,251,.92)",backdropFilter:"blur(10px)",padding:"14px 20px 10px",borderBottom:"1px solid rgba(var(--c-blue-rgb),.12)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div ref={userMenuRef} style={{position:"relative"}}>
             <button
