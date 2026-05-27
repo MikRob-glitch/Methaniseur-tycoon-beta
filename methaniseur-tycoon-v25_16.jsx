@@ -3920,22 +3920,22 @@ function Game({ username, region, maia }) {
       {/* v25.0.6 — Récompenses promu au niveau principal (sortie de Classement)
                    pour améliorer la découvrabilité. Libellés raccourcis
                    pour rester lisibles avec 4 onglets en portrait mobile. */}
-      <div style={{display:"flex",background:"rgba(0,94,184,.06)",borderBottom:"2px solid rgba(var(--c-blue-rgb),.14)",padding:"6px 6px 0",gap:"3px"}}>
-        {[["game",<><MiniDigesterIcon size={13}/> Digesteur</>],["upgrades","⬆️ Achats"],["ranking","🏆 Classement"],["rewards","🎖️ Récomp."]].map(([id,lbl])=>{
+      <div style={{display:"flex",background:"var(--c-surface)",borderBottom:"3px solid var(--c-blue)",padding:"8px 8px 0",gap:"4px"}}>
+        {[["game",<><MiniDigesterIcon size={14}/> Digesteur</>],["upgrades","⬆️ Achats"],["ranking","🏆 Classement"],["rewards","🎖️ Récomp."]].map(([id,lbl])=>{
           const active=tab===id;
           const highlight=id==="upgrades"&&canBuySomething&&!active;
           return (
             <button key={id} {...(id==="upgrades"?{"data-tut":"tab-upgrades"}:{})} {...(id==="rewards"?{"data-tut":"tab-rewards"}:{})} onClick={()=>{ setTab(id); if(id==="upgrades"&&tutStep===0) setTutStep(1); }} style={{
-              flex:1,padding:"9px 4px 8px",border:"none",
-              borderRadius:"7px 7px 0 0",
-              background:active?"#ffffff":highlight?"rgba(var(--c-blue-rgb),.12)":"transparent",
-              color:active?"var(--c-blue)":highlight?"var(--c-blue)":"rgba(26,46,74,.65)",
-              fontSize:"12px",fontWeight:active?800:highlight?700:600,
-              borderBottom:active?"2px solid var(--c-blue)":highlight?"2px solid rgba(var(--c-blue-rgb),.45)":"2px solid transparent",
-              boxShadow:active?"0 -1px 6px rgba(0,94,184,.10), inset 0 1px 0 rgba(0,94,184,.08)":"none",
-              cursor:"pointer",position:"relative",transition:"all .2s",whiteSpace:"nowrap"}}>
+              flex:1,padding:"11px 4px",border:"none",
+              borderRadius:"8px 8px 0 0",
+              background:active?"var(--c-blue)":highlight?"rgba(var(--c-blue-rgb),.10)":"rgba(26,46,74,.05)",
+              color:active?"#ffffff":highlight?"var(--c-blue)":"rgba(26,46,74,.68)",
+              fontSize:"12px",fontWeight:active?700:highlight?700:500,
+              boxShadow:active?"0 -3px 10px rgba(0,94,184,.25)":"none",
+              border:highlight?"1px solid rgba(var(--c-blue-rgb),.30)":"1px solid transparent",
+              cursor:"pointer",position:"relative",transition:"all .2s",whiteSpace:"nowrap",letterSpacing:".01em"}}>
               {lbl}
-              {highlight&&<span style={{position:"absolute",top:"5px",right:"5px",width:"7px",height:"7px",borderRadius:"50%",background:"var(--c-blue)",boxShadow:"0 0 6px rgba(var(--c-blue-rgb),.95)"}}/>}
+              {highlight&&<span style={{position:"absolute",top:"4px",right:"4px",width:"7px",height:"7px",borderRadius:"50%",background:"var(--c-blue)",boxShadow:"0 0 6px rgba(var(--c-blue-rgb),.95)"}}/>}
             </button>
           );
         })}
