@@ -727,6 +727,16 @@ const RELIABILITY_DROP_PER_SEC_SAT   = 0.5;  // -0,5 pt/s pendant saturation
 const RELIABILITY_DROP_ON_PANNE      = 15;   // -15 pts lors d'une panne
 const RELIABILITY_RECOVER_PER_SEC    = 0.1;  // +0,1 pt/s quand tout va bien
 const RELIABILITY_RESET_ON_RELAUNCH  = 50;   // après relance, fiabilité min. 50%
+
+// ── SYSTÈME URGENCE FINANCIÈRE (v25.17) ───────────────────────────────────
+const EUROS_FLOOR          = -500;             // plancher avant modale urgence
+const PANNE_DAILY_MS       = 5 * 60 * 1000;   // 5 min réel = 1 "jour de panne"
+const PANNE_DAILY_RATE     = 0.20;             // 20% du coût relance par jour
+const LOAN_AMOUNT          = 1000;             // montant prêt bancaire
+const LOAN_REPAY_RATE      = 0.10;             // 10% gains euros → remboursement auto
+const LOAN_COOLDOWN_MS     = 30 * 60 * 1000;  // 1 prêt max toutes les 30 min
+const SCORE_LOAN_MALUS     = 0.10;             // -10% score visible si prêt actif
+const SELL_REFUND_RATE     = 0.50;             // 50% valeur achat récupérée
 // v25.6 — Effet gameplay de la fiabilité sur le yield CH₄
 //   · La fiabilité industrielle module la qualité d'extraction du méthane.
 //   · Mêmes intrants, même tonnage digéré → m³ effectifs variables selon la fiabilité.
@@ -2212,6 +2222,15 @@ function Game({ username, region, maia }) {
   // états reset à 'ok' sauf zones encore en panne).
   const [localStock,     setLocalStock]     = useState(() => offlineGains?.remainingLocalStock ?? (Array.isArray(saved?.localStock)     && saved.localStock.length === 7     ? saved.localStock     : [0,0,0,0,0,0,0]));
   const [zoneState,      setZoneState]      = useState(() => offlineGains?.resetZoneState      ?? (Array.isArray(saved?.zoneState)      && saved.zoneState.length === 7      ? saved.zoneState      : ["ok","ok","ok","ok","ok","ok","ok"]));
+
+  // ── URGENCE FINANCIÈRE (v25.17) ──────────────────────────────────────────
+  const [loanAmount,       setLoanAmount]       = useState(saved?.loanAmount      ?? 0);
+  const [loanLastTaken,    setLoanLastTaken]    = useState(saved?.loanLastTaken   ?? 0);
+  const [lastPanneCharge,  setLastPanneCharge]  = useState(() =>
+    Array.isArray(saved?.lastPanneCharge) && saved.lastPanneCharge.length === 7
+      ? saved.lastPanneCharge
+      : [null,null,null,null,null,null,null]);
+  const [emergencyModal,   setEmergencyModal]   = useState(false);
   const [saturatedSince, setSaturatedSince] = useState(() => offlineGains?.resetSaturatedSince ?? (Array.isArray(saved?.saturatedSince) && saved.saturatedSince.length === 7 ? saved.saturatedSince : [null,null,null,null,null,null,null]));
   const [offlineUntil,   setOfflineUntil]   = useState(() => offlineGains?.resetOfflineUntil   ?? (Array.isArray(saved?.offlineUntil)   && saved.offlineUntil.length === 7   ? saved.offlineUntil   : [null,null,null,null,null,null,null]));
   // v25.1.25 — Animation au paiement de la relance (timestamp par zone, null si pas d'anim active)
@@ -2460,7 +2479,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,tractorGnvArr,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,tractorGnvArr,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability,loanAmount,loanLastTaken,lastPanneCharge };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -2526,6 +2545,10 @@ function Game({ username, region, maia }) {
       saturated_since:     stateRef.current.saturatedSince,
       offline_until:       stateRef.current.offlineUntil,
       reliability:         stateRef.current.reliability,
+      // v25.17 — urgence financière
+      loanAmount:          stateRef.current.loanAmount,
+      loanLastTaken:       stateRef.current.loanLastTaken,
+      lastPanneCharge:     stateRef.current.lastPanneCharge,
       // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
       stock_yield:         stateRef.current.stockYield,
       charge_yield:        stateRef.current.chargeYield,
@@ -2630,6 +2653,9 @@ function Game({ username, region, maia }) {
   const ownedRefV24        = useRef(owned);           useEffect(()=>{ownedRefV24.current=owned;},[owned]);
   const localStockRef      = useRef(localStock);      useEffect(()=>{localStockRef.current=localStock;},[localStock]);
   const zoneStateRef       = useRef(zoneState);       useEffect(()=>{zoneStateRef.current=zoneState;},[zoneState]);
+  const eurosRef           = useRef(euros);           useEffect(()=>{eurosRef.current=euros;},[euros]);
+  const loanAmountRef      = useRef(loanAmount);      useEffect(()=>{loanAmountRef.current=loanAmount;},[loanAmount]);
+  const lastPanneChargeRef = useRef(lastPanneCharge); useEffect(()=>{lastPanneChargeRef.current=lastPanneCharge;},[lastPanneCharge]);
   const satSinceRef        = useRef(saturatedSince);  useEffect(()=>{satSinceRef.current=saturatedSince;},[saturatedSince]);
   const offlineUntilRef    = useRef(offlineUntil);    useEffect(()=>{offlineUntilRef.current=offlineUntil;},[offlineUntil]);
   // Les refs gnvBonusRefV24 / injectedRefV24 sont déclarées APRÈS gnvBonus/injected (plus bas) pour éviter le TDZ.
@@ -2721,7 +2747,10 @@ function Game({ username, region, maia }) {
           // v25.0 — production = masse digérée × yield moyen pondéré du digesteur
           // v25.6 — modulé par la fiabilité industrielle (qualité d'extraction CH₄)
           const relMult  = reliabilityMultFor(reliabilityRef.current ?? 100);
-          const produced = actual * (chargeYieldRef.current || 0) * relMult;
+          // v25.17 — malus de production si solde négatif (debt spiral limité à 50%)
+          const eurosNow1  = eurosRef.current ?? 0;
+          const debtMalus1 = eurosNow1 < 0 ? Math.min(0.50, Math.abs(eurosNow1) / 5000) : 0;
+          const produced = actual * (chargeYieldRef.current || 0) * relMult * (1 - debtMalus1);
           if (produced > 0) {
             if (st.injected) {
               const euroGain = produced * BM_TO_EUR;
@@ -2732,7 +2761,15 @@ function Game({ username, region, maia }) {
               } else {
                 setBm(b => b + produced);
               }
-              setEuros(e => e + euroGain);
+              // Remboursement automatique prêt (v25.17)
+              const loanNow1 = loanAmountRef.current ?? 0;
+              if (loanNow1 > 0 && euroGain > 0) {
+                const repay1 = Math.min(loanNow1, euroGain * LOAN_REPAY_RATE);
+                setLoanAmount(l => Math.max(0, l - repay1));
+                setEuros(e => e + euroGain - repay1);
+              } else {
+                setEuros(e => e + euroGain);
+              }
             } else {
               setBuffer(b => Math.min(INJECTION_THRESHOLD, b + produced));
             }
@@ -2911,6 +2948,8 @@ function Game({ username, region, maia }) {
             newZoneState[i]    = 'ok';
             newSatSince[i]     = null;
             newOfflineUntil[i] = null;
+            // Réinitialiser compteur journalier (v25.17)
+            setLastPanneCharge(prev => { const n=[...prev]; n[i]=null; return n; });
           }
           continue;
         }
@@ -2961,24 +3000,49 @@ function Game({ username, region, maia }) {
         setOfflineUntil(newOfflineUntil);
       }
 
-      // 4) Traitement des pannes déclenchées : pénalité + notif + fiabilité
+      // 4) Traitement des pannes déclenchées : init facturation journalière (v25.17)
       if (panneTriggered.length > 0) {
+        const nowTs = Date.now();
+        setLastPanneCharge(prev => {
+          const n = [...prev];
+          panneTriggered.forEach(i => { n[i] = nowTs - PANNE_DAILY_MS; }); // 1ère charge immédiate au prochain tick
+          return n;
+        });
         panneTriggered.forEach(i => {
-          const cost = getRelaunchCost(i, ownedNow[i]);
-          if (injectedRefV24.current) {
-            setEuros(e => Math.max(0, e - cost));
-          } else {
-            setBuffer(b => Math.max(0, b - cost));
-          }
           setReliability(r => Math.max(0, r - RELIABILITY_DROP_ON_PANNE));
           const u = UPGRADES[i];
-          const costStr = injectedRefV24.current ? fmtEuro(cost) : fmt(cost);
+          const dailyCost = getRelaunchCost(i, ownedNow[i]) * PANNE_DAILY_RATE;
           showNotif(
             `⚠ PANNE : ${u.name}`,
             'warning',
-            `Gisement saturé trop longtemps — ${costStr} de frais d'urgence. Relance manuelle requise.`
+            `Gisement en panne — ${fmtEuro(dailyCost)}/jour facturés jusqu'à relance.`
           );
         });
+      }
+
+      // 4b) Facturation journalière des zones offline (v25.17)
+      if (injectedRefV24.current) {
+        const nowTs2 = Date.now();
+        const lpc = lastPanneChargeRef.current;
+        const stCheck = stateChanged ? newZoneState : stNow;
+        let lpcChanged = false;
+        const newLpc = [...lpc];
+        stCheck.forEach((state, i) => {
+          if (state === 'offline' && lpc[i] != null && nowTs2 - lpc[i] >= PANNE_DAILY_MS) {
+            const qty = ownedNow[i] || 0;
+            if (qty > 0) {
+              const dailyCost = getRelaunchCost(i, qty) * PANNE_DAILY_RATE;
+              setEuros(e => {
+                const next = e - dailyCost;
+                if (next < EUROS_FLOOR) setEmergencyModal(true);
+                return next;
+              });
+              newLpc[i] = nowTs2;
+              lpcChanged = true;
+            }
+          }
+        });
+        if (lpcChanged) setLastPanneCharge(newLpc);
       }
 
       // 5) Fiabilité en continu
@@ -3015,7 +3079,10 @@ function Game({ username, region, maia }) {
         // Le yield reste invariant pendant la digestion (consommation proportionnelle)
         // v25.6 — modulé par la fiabilité industrielle (qualité d'extraction CH₄)
         const relMult  = reliabilityMultFor(reliabilityRef.current ?? 100);
-        const produced = actual * (chargeYieldRef.current || 0) * relMult;
+        // v25.17 — malus de production si solde négatif
+        const eurosNow2  = eurosRef.current ?? 0;
+        const debtMalus2 = eurosNow2 < 0 ? Math.min(0.50, Math.abs(eurosNow2) / 5000) : 0;
+        const produced = actual * (chargeYieldRef.current || 0) * relMult * (1 - debtMalus2);
         // v25.0.9 — décrément composition proportionnel à la consommation
         if (actual > 0 && f > 0) {
           const ratio = actual / f;
@@ -3031,7 +3098,15 @@ function Game({ username, region, maia }) {
             } else {
               setBm(b=>b+produced);
             }
-            setEuros(e=>e+euroGain);
+            // Remboursement automatique prêt (v25.17)
+            const loanNow2 = loanAmountRef.current ?? 0;
+            if (loanNow2 > 0 && euroGain > 0) {
+              const repay2 = Math.min(loanNow2, euroGain * LOAN_REPAY_RATE);
+              setLoanAmount(l => Math.max(0, l - repay2));
+              setEuros(e => e + euroGain - repay2);
+            } else {
+              setEuros(e=>e+euroGain);
+            }
           } else {
             setBuffer(b=>Math.min(INJECTION_THRESHOLD,b+produced));
           }
@@ -3164,7 +3239,7 @@ function Game({ username, region, maia }) {
       // v25.0.5 — tri composite : score → euros → chainLevel
       const me = {
         name: username, region,
-        score: totalScore, scoreNet: bm, scoreGnv: gnvBm,
+        score: totalScore * (loanAmount > 0 ? (1 - SCORE_LOAN_MALUS) : 1), scoreNet: bm, scoreGnv: gnvBm,
         connected: injected, buffer: bufferQ,
         epurateur: epurateurOk, compresseur: compresseurOk,
         digesteurs, euros,
@@ -3381,6 +3456,7 @@ function Game({ username, region, maia }) {
     setOfflineUntil(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
     setSaturatedSince(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
     setLocalStock(prev => { const n = [...prev]; n[upgradeId] = 0; return n; });
+    setLastPanneCharge(prev => { const n = [...prev]; n[upgradeId] = null; return n; }); // v25.17 — stoppe la facturation journalière
     setReliability(r => Math.max(RELIABILITY_RESET_ON_RELAUNCH, r));
     // v25.1.25 — Déclenche l'animation visuelle de relance (1.2s)
     setRelaunchAnim(prev => { const n = [...prev]; n[upgradeId] = Date.now(); return n; });
@@ -3388,6 +3464,47 @@ function Game({ username, region, maia }) {
       setRelaunchAnim(prev => { const n = [...prev]; n[upgradeId] = null; return n; });
     }, 1200);
     showNotif(`✓ ${UPGRADES[upgradeId].name} relancé`, 'success', `Production reprise · Fiabilité restaurée`);
+  };
+
+  // ── URGENCE FINANCIÈRE — handlers vente + prêt (v25.17) ──────────────────
+  const handleSellTractor = () => {
+    if (tractorCount <= 1) return;
+    const costKey = tractorCount === 3 ? 'count3' : 'count2';
+    const refund = Math.round(TRACTOR_UPGRADES[costKey].cost * SELL_REFUND_RATE);
+    setTractorCount(c => c - 1);
+    setTractorGnvArr(a => { const n=[...a]; n[tractorCount-1]=false; return n; });
+    setTractorTrailers(a => { const n=[...a]; n[tractorCount-1]=false; return n; });
+    setEuros(e => e + refund);
+    showNotif('🚜 Tracteur vendu', 'info', `+${fmtEuro(refund)} récupérés`);
+  };
+
+  const handleSellGnvStation = () => {
+    if (gnvStations <= 0) return;
+    const refund = Math.round(GNV_STATION_COSTS[gnvStations - 1] * SELL_REFUND_RATE);
+    setGnvStations(s => s - 1);
+    setEuros(e => e + refund);
+    showNotif('⛽ Station GNV vendue', 'info', `+${fmtEuro(refund)} récupérés`);
+  };
+
+  const handleSellDigesteur = () => {
+    if (digesteurs <= 1) return;
+    const refund = Math.round(DIGESTEUR_COSTS[digesteurs - 2] * SELL_REFUND_RATE);
+    setDigesteurs(d => d - 1);
+    setEuros(e => e + refund);
+    showNotif('🏭 Digesteur vendu', 'info', `+${fmtEuro(refund)} récupérés`);
+  };
+
+  const handleTakeLoan = () => {
+    const now = Date.now();
+    if (now - loanLastTaken < LOAN_COOLDOWN_MS) {
+      const minLeft = Math.ceil((LOAN_COOLDOWN_MS - (now - loanLastTaken)) / 60000);
+      showNotif('Prêt refusé', 'warning', `Un seul prêt par période — réessaie dans ${minLeft} min`);
+      return;
+    }
+    setEuros(e => e + LOAN_AMOUNT);
+    setLoanAmount(l => l + LOAN_AMOUNT);
+    setLoanLastTaken(now);
+    showNotif('🏦 Prêt accordé', 'success', `+${fmtEuro(LOAN_AMOUNT)} · Remboursement auto 10 % des gains`);
   };
 
   // ── ACHATS ─────────────────────────────────────────────────────────────────
@@ -3419,6 +3536,92 @@ function Game({ username, region, maia }) {
 
   const binRotate = pouring?35*pourProg:0;
   const binTransX = pouring?18*pourProg:0;
+
+  // ── MODALE URGENCE FINANCIÈRE (v25.17) ────────────────────────────────────
+  const EmergencyModal = () => {
+    const canSellTractor    = tractorCount > 1;
+    const canSellGnv        = gnvStations  > 0;
+    const canSellDigesteur  = digesteurs   > 1;
+    const loanOnCooldown    = Date.now() - loanLastTaken < LOAN_COOLDOWN_MS;
+    const refundTractor     = canSellTractor   ? Math.round(TRACTOR_UPGRADES[tractorCount===3?'count3':'count2'].cost * SELL_REFUND_RATE) : 0;
+    const refundGnv         = canSellGnv       ? Math.round(GNV_STATION_COSTS[gnvStations-1] * SELL_REFUND_RATE) : 0;
+    const refundDigesteur   = canSellDigesteur ? Math.round(DIGESTEUR_COSTS[digesteurs-2]    * SELL_REFUND_RATE) : 0;
+
+    const btnStyle = (enabled) => ({
+      padding:'12px 16px', borderRadius:'10px', border:'none', cursor: enabled ? 'pointer' : 'not-allowed',
+      background: enabled ? 'var(--c-blue)' : 'rgba(26,46,74,.15)',
+      color: enabled ? '#fff' : 'rgba(26,46,74,.35)',
+      fontSize:'13px', fontWeight:700, textAlign:'left', width:'100%',
+      opacity: enabled ? 1 : 0.6,
+    });
+
+    return (
+      <div style={{
+        position:'fixed', inset:0, zIndex:9999,
+        background:'rgba(0,0,0,.55)', backdropFilter:'blur(4px)',
+        display:'flex', alignItems:'center', justifyContent:'center', padding:'20px',
+      }}>
+        <div style={{
+          background:'#fff', borderRadius:'16px', maxWidth:'380px', width:'100%',
+          padding:'24px', boxShadow:'0 20px 60px rgba(0,0,0,.25)',
+          border:'3px solid #e53e3e',
+        }}>
+          <div style={{textAlign:'center', marginBottom:'16px'}}>
+            <div style={{fontSize:'32px', marginBottom:'8px'}}>🚨</div>
+            <div style={{fontSize:'18px', fontWeight:800, color:'#e53e3e'}}>
+              Situation financière critique
+            </div>
+            <div style={{fontSize:'13px', color:'rgba(26,46,74,.65)', marginTop:'6px'}}>
+              Solde : <strong style={{color:'#e53e3e'}}>{fmtEuro(euros)}</strong>
+              {' '}— Les pannes accumulent des frais journaliers.
+            </div>
+          </div>
+
+          <div style={{fontSize:'11px', fontWeight:700, color:'rgba(26,46,74,.45)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'10px'}}>
+            Mesures d'urgence
+          </div>
+
+          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+            <button style={btnStyle(canSellTractor)} onClick={() => { if(canSellTractor){ handleSellTractor(); setEmergencyModal(false); }}}>
+              🚜 Vendre un tracteur
+              <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellTractor ? .8 : 1}}>
+                {canSellTractor ? `+${fmtEuro(refundTractor)} récupérés (50% valeur)` : '1 seul tracteur — indisponible'}
+              </span>
+            </button>
+
+            <button style={btnStyle(canSellGnv)} onClick={() => { if(canSellGnv){ handleSellGnvStation(); setEmergencyModal(false); }}}>
+              ⛽ Vendre une station GNV
+              <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellGnv ? .8 : 1}}>
+                {canSellGnv ? `+${fmtEuro(refundGnv)} récupérés (50% valeur)` : 'Aucune station — indisponible'}
+              </span>
+            </button>
+
+            <button style={btnStyle(canSellDigesteur)} onClick={() => { if(canSellDigesteur){ handleSellDigesteur(); setEmergencyModal(false); }}}>
+              🏭 Vendre un digesteur
+              <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellDigesteur ? .8 : 1}}>
+                {canSellDigesteur ? `+${fmtEuro(refundDigesteur)} récupérés (50% valeur)` : '1 seul digesteur — indisponible'}
+              </span>
+            </button>
+
+            <button
+              style={{...btnStyle(!loanOnCooldown), background: !loanOnCooldown ? '#00A850' : 'rgba(26,46,74,.15)'}}
+              onClick={() => { if(!loanOnCooldown){ handleTakeLoan(); setEmergencyModal(false); }}}>
+              🏦 Prêt bancaire d'urgence
+              <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: !loanOnCooldown ? .8 : 1}}>
+                {loanOnCooldown
+                  ? `Disponible dans ${Math.ceil((LOAN_COOLDOWN_MS-(Date.now()-loanLastTaken))/60000)} min`
+                  : `+${fmtEuro(LOAN_AMOUNT)} · Remboursement 10% des gains`}
+              </span>
+            </button>
+          </div>
+
+          <div style={{marginTop:'16px', fontSize:'11px', color:'rgba(26,46,74,.45)', textAlign:'center'}}>
+            Répare tes gisements en panne pour stopper la facturation.
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
@@ -3502,6 +3705,9 @@ function Game({ username, region, maia }) {
         }
         @keyframes gasBubbleSvg{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(-32px);opacity:0}}
       `}</style>
+
+      {/* Modal urgence financière (v25.17) */}
+      {emergencyModal && <EmergencyModal />}
 
       {/* Modal hors-ligne */}
       {offlineModal && displayedGains && (
@@ -3901,10 +4107,17 @@ function Game({ username, region, maia }) {
               <>
                 <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)",textTransform:"uppercase",letterSpacing:".05em"}}>Biométhane injecté</div>
                 <div style={{fontSize:"20px",fontWeight:800,color:"var(--c-blue)",letterSpacing:"-.5px"}}>{fmt(totalScore)}</div>
+                {bmPerHour > 0 && <div style={{fontSize:"10px",color:"var(--c-green)",fontWeight:700,marginTop:"1px"}}>▲ +{fmt(bmPerHour)}/h en cours</div>}
                 <div style={{display:"flex",alignItems:"center",gap:"6px",justifyContent:"flex-end",marginTop:"3px"}}>
-                  <span style={{fontSize:"10px",color:"var(--c-orange)",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"4px"}}><BankIcon size={12}/> {fmtEuro(euros)}</span>
+                  <span style={{fontSize:"10px",color: euros < 0 ? "#e53e3e" : "var(--c-orange)",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"4px"}}><BankIcon size={12}/> {fmtEuro(euros)}</span>
                   <span style={{fontSize:"10px",color:"rgba(26,46,74,.60)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
                 </div>
+                {/* v25.17 — indicateur prêt bancaire */}
+                {loanAmount > 0 && (
+                  <div style={{display:"flex",alignItems:"center",gap:"4px",justifyContent:"flex-end",marginTop:"2px"}}>
+                    <span style={{fontSize:"10px",color:"#e53e3e",fontWeight:700}}>🏦 Prêt : -{fmtEuro(loanAmount)} restants</span>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -3949,27 +4162,6 @@ function Game({ username, region, maia }) {
                    recevait plus rien tant qu'on n'était pas sur l'onglet jeu.
                    Maintenant : composant monté en permanence, juste caché. */}
       <div style={{padding:"16px 16px 30px",display: tab==="game" ? "block" : "none"}}>
-
-          {/* Flux */}
-          <div style={{marginBottom:"16px",padding:"10px 12px",borderRadius:"12px",background:"rgba(var(--c-blue-rgb),.05)",border:"1px solid rgba(var(--c-blue-rgb),.09)"}}>
-            <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"7px"}}>🔄 Flux de production</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"5px"}}>
-              {[
-                {label:"Upgrades",    icon:"⬆️",color:"#AA7700",dim:fillRate===0},
-                {label:"Bac",         icon:"🗑️",color:"var(--c-blue)",dim:stock<1},
-                {label:"Digesteur",   icon:<MiniDigesterIcon/>,color:"var(--c-blue-light)",dim:charge<1},
-                {label:"Biogaz",     icon:"♻️",color:"#A8CCEC",dim:charge<1},
-                {label:"Cuve tampon", icon:"🫙",color:"var(--c-teal)",dim:buffer<1&&!injected},
-                {label:"Réseau GRDF", icon:"🔌",color:"var(--c-blue)",dim:!injected},
-              ].map((s,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:"4px",padding:"4px 7px",borderRadius:"8px",background:`${s.color}${s.dim?"0a":"18"}`,border:`1px solid ${s.color}${s.dim?"18":"40"}`,transition:"all .5s"}}>
-                  <span style={{fontSize:"11px"}}>{s.icon}</span>
-                  <span style={{fontSize:"9px",fontWeight:600,color:s.dim?"rgba(26,46,74,.82)":s.color,transition:"color .5s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
-                  {!s.dim&&<span style={{marginLeft:"auto",width:"5px",height:"5px",borderRadius:"50%",background:s.color,flexShrink:0,boxShadow:`0 0 4px ${s.color}`}}/>}
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Stats */}
           <div style={{display:"flex",gap:"8px",marginBottom:"16px"}}>
