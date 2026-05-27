@@ -4817,116 +4817,170 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
 function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockAnim, bufferPct, buffer, digesteurs }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const id=setInterval(()=>setTick(t=>(t+1)%1000),40); return ()=>clearInterval(id); }, []);
-  const act = i => { if(i===0) return buffer>0; if(i===1) return epurateurOk; if(i===2) return compresseurOk; if(i===3) return injected; return false; };
-  const anim = i => { if(i===1) return unlockAnim==="epurateur"; if(i===2) return unlockAnim==="compresseur"; if(i===3) return unlockAnim==="injection"; return false; };
-  const flow = -(tick*0.9)%20;
+  const act  = i => { if(i===0)return buffer>0; if(i===1)return epurateurOk; if(i===2)return compresseurOk; if(i===3)return injected; return false; };
+  const anim = i => { if(i===1)return unlockAnim==="epurateur"; if(i===2)return unlockAnim==="compresseur"; if(i===3)return unlockAnim==="injection"; return false; };
+  const flow = -(tick*1.1)%16;
   const bladeAngle = tick*(act(2)?4:0);
-  const cx = 90; // pipeline center (décalé à droite pour labels gauche)
-  const LX = 62; // droite de la zone label gauche (textAnchor="end")
-  // Offset Y pour aligner l'entrée biogaz (y=7 SVG) avec le manifold de Vue 1
+  const cx = 80;
   const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
+
+  /* ── Helper : tuyau de raccordement avec brides ── */
+  const Pipe = ({ y, h=14, active, color }) => {
+    const col = active ? color : "rgba(0,80,160,.10)";
+    const strokeCol = active ? color : "rgba(0,80,160,.15)";
+    return (<>
+      <rect x={cx-8} y={y}     width="16" height="4"  rx="2" fill={col} stroke={strokeCol} strokeWidth=".6" opacity={active?.85:.7}/>
+      <rect x={cx-4} y={y+4}   width="8"  height={h}  rx="2" fill={active?`${color}99`:"rgba(0,80,160,.07)"} stroke={strokeCol} strokeWidth=".8"/>
+      {active&&<rect x={cx-3} y={y+4} width="6" height={h} rx="2" fill="none" stroke="rgba(255,255,255,.4)" strokeWidth=".7" strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
+      <rect x={cx-8} y={y+h+4} width="16" height="4"  rx="2" fill={col} stroke={strokeCol} strokeWidth=".6" opacity={active?.85:.7}/>
+    </>);
+  };
+
   return (
-    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"flex-end",overflow:"visible"}}>
+    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
       <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block",overflow:"visible"}}>
         <defs>
-          <linearGradient id="gvTank" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0098CC" stopOpacity={act(0)?1:.25}/><stop offset="100%" stopColor="#164e63" stopOpacity={act(0)?1:.15}/></linearGradient>
-          <linearGradient id="gvLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="rgba(74,188,223,.5)"/><stop offset="100%" stopColor="rgba(74,188,223,.85)"/></linearGradient>
-          <linearGradient id="gvFilter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6d28d9" stopOpacity={act(1)?1:.25}/><stop offset="100%" stopColor="#3b0764" stopOpacity={act(1)?1:.15}/></linearGradient>
-          <linearGradient id="gvComp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#BB6600" stopOpacity={act(2)?1:.25}/><stop offset="100%" stopColor="#431407" stopOpacity={act(2)?1:.15}/></linearGradient>
-          <linearGradient id="gvInj" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--c-blue-dark)" stopOpacity={act(3)?1:.25}/><stop offset="100%" stopColor="#EEF4FB" stopOpacity={act(3)?1:.15}/></linearGradient>
-          <filter id="glow3" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <clipPath id="vTankBody"><rect x={cx-26} y="15" width="52" height="58" rx="3"/></clipPath>
+          <linearGradient id="gvTank"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#00AADD" stopOpacity={act(0)?1:.18}/><stop offset="100%" stopColor="#0c4a6e" stopOpacity={act(0)?1:.10}/></linearGradient>
+          <linearGradient id="gvLiq"    x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="rgba(56,189,248,.55)"/><stop offset="100%" stopColor="rgba(14,165,233,.88)"/></linearGradient>
+          <linearGradient id="gvFilter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#7c3aed" stopOpacity={act(1)?1:.18}/><stop offset="100%" stopColor="#2e1065" stopOpacity={act(1)?1:.10}/></linearGradient>
+          <linearGradient id="gvComp"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#d97706" stopOpacity={act(2)?1:.18}/><stop offset="100%" stopColor="#431407" stopOpacity={act(2)?1:.10}/></linearGradient>
+          <linearGradient id="gvInj"    x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#005EB8" stopOpacity={act(3)?1:.18}/><stop offset="100%" stopColor="#1e3a5f" stopOpacity={act(3)?1:.10}/></linearGradient>
+          <filter id="glow3" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="dropshadow"><feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="rgba(0,0,0,.18)"/></filter>
+          <clipPath id="vTankClip"><rect x={cx-27} y="15" width="54" height="57" rx="3"/></clipPath>
         </defs>
 
-        <g transform={`translate(0, ${yOffset})`}>
+        <g transform={`translate(0,${yOffset})`}>
 
-        {/* ── Biogaz entry : coude vertical + tuyau horizontal dans CrossBoundaryPipesOverlay ── */}
+          {/* ── Guide vertical central ── */}
+          <rect x={cx-5} y="0" width="10" height="330" rx="5" fill="rgba(0,94,184,.04)" stroke="rgba(0,94,184,.07)" strokeWidth=".8"/>
 
-        {/* ── Cuve tampon ── */}
-        <ellipse cx={cx} cy="15" rx="26" ry="6" fill={act(0)?"#0098CC":"rgba(42,140,192,.25)"} stroke={act(0)?"var(--c-teal)":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
-        <ellipse cx={cx-6} cy="13" rx="9" ry="3" fill="rgba(0,80,160,.14)"/>
-        <rect x={cx-26} y="15" width="52" height="58" rx="4" fill="url(#gvTank)" stroke={act(0)?"var(--c-teal)":"rgba(74,188,223,.25)"} strokeWidth="1.5"/>
-        <rect x={cx-25} y={15+58*(1-bufferPct)} width="50" height={58*bufferPct} fill="url(#gvLiquid)" clipPath="url(#vTankBody)"/>
-        {bufferPct>0.02&&<ellipse cx={cx} cy={15+58*(1-bufferPct)} rx="24" ry="3" fill="rgba(74,188,223,.4)"/>}
-        <ellipse cx={cx} cy="73" rx="26" ry="6" fill={act(0)?"#0c4a6e":"rgba(12,74,110,.2)"} stroke={act(0)?"var(--c-teal)":"rgba(74,188,223,.2)"} strokeWidth="1.5"/>
-        <text x={cx} y="43" textAnchor="middle" fontSize="8" fontWeight="800" fill={act(0)?"#e0f2fe":"rgba(224,242,254,.2)"}>{Math.round(bufferPct*100)}%</text>
-        <text x={cx} y="54" textAnchor="middle" fontSize="6.5" fill={act(0)?"rgba(186,230,253,.7)":"rgba(186,230,253,.2)"}>{Math.floor(buffer)} m³</text>
-        {act(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="none" stroke="#00E5FF" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
-        {!act(0)&&<text x={cx} y="50" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
-        {anim(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="#00E5FF" opacity=".15"/>}
-        <text x={LX} y="37" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(26,46,74,.82)"}>Cuve tampon</text>
-        <text x={LX} y="47" textAnchor="end" fontSize="6" fill={act(0)?"rgba(103,232,249,.6)":"rgba(0,80,160,.22)"}>0,5 bar · 100 m³</text>
+          {/* ══ CUVE TAMPON ══ */}
+          {/* Highlight reflet */}
+          <ellipse cx={cx-7} cy="20" rx="7" ry="3" fill="rgba(255,255,255,.12)"/>
+          {/* Corps */}
+          <rect x={cx-27} y="15" width="54" height="57" rx="5" fill="url(#gvTank)" stroke={act(0)?"rgba(0,180,230,.6)":"rgba(74,188,223,.14)"} strokeWidth="1.5" filter={act(0)?"url(#dropshadow)":undefined}/>
+          {/* Liquide */}
+          <rect x={cx-25} y={15+57*(1-bufferPct)} width="50" height={57*bufferPct} fill="url(#gvLiq)" clipPath="url(#vTankClip)"/>
+          {bufferPct>.04&&<ellipse cx={cx} cy={15+57*(1-bufferPct)} rx="23" ry="2.5" fill="rgba(56,189,248,.4)"/>}
+          {/* Haut */}
+          <ellipse cx={cx} cy="15" rx="27" ry="7" fill={act(0)?"#0098CC":"rgba(42,140,192,.18)"} stroke={act(0)?"rgba(0,229,255,.55)":"rgba(74,188,223,.14)"} strokeWidth="1.5"/>
+          {/* Bas */}
+          <ellipse cx={cx} cy="72" rx="27" ry="7" fill={act(0)?"#0c4a6e":"rgba(12,74,110,.16)"} stroke={act(0)?"rgba(0,152,204,.45)":"rgba(74,188,223,.14)"} strokeWidth="1.5"/>
+          {/* Glow actif */}
+          {act(0)&&<rect x={cx-27} y="15" width="54" height="57" rx="5" fill="none" stroke="rgba(0,229,255,.45)" strokeWidth="2" filter="url(#glow3)"/>}
+          {/* Texte interne */}
+          <text x={cx} y="44" textAnchor="middle" fontSize="11" fontWeight="900" fill={act(0)?"#e0f2fe":"rgba(224,242,254,.15)"}>{Math.round(bufferPct*100)}%</text>
+          <text x={cx} y="57" textAnchor="middle" fontSize="6.5" fontWeight="600" fill={act(0)?"rgba(186,230,253,.8)":"rgba(186,230,253,.12)"}>{Math.floor(buffer)} m³</text>
+          {!act(0)&&<text x={cx} y="51" textAnchor="middle" fontSize="18" opacity=".3">🔒</text>}
+          {anim(0)&&<rect x={cx-27} y="15" width="54" height="57" rx="5" fill="#00E5FF" opacity=".18"/>}
+          {/* Badge statut */}
+          {act(0)&&<>
+            <rect x={cx-18} y="76" width="36" height="10" rx="5" fill="rgba(0,152,204,.18)" stroke="rgba(0,229,255,.3)" strokeWidth=".8"/>
+            <text x={cx} y="83.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(0,229,255,.85)">● ACTIF</text>
+          </>}
+          {/* Label */}
+          <text x={cx} y={act(0)?92:88} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(0)?"rgba(0,184,212,.9)":"rgba(26,46,74,.68)"}>Cuve tampon</text>
+          <text x={cx} y={act(0)?102:98} textAnchor="middle" fontSize="6.5" fill={act(0)?"rgba(0,229,255,.55)":"rgba(0,80,160,.22)"}>0,5 bar · {Math.floor(buffer)} m³</text>
 
-        {/* ── Pipe Cuve → Épurateur ── */}
-        <rect x={cx-4} y="79" width="8" height="18" rx="3" fill={act(1)?"var(--c-purple)":"rgba(var(--c-blue-rgb),.08)"} stroke={act(1)?"var(--c-purple)":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(1)&&<rect x={cx-3} y="79" width="6" height="18" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+          {/* ── Tuyau 1 ── */}
+          <Pipe y={104} h={13} active={act(1)} color="#7c3aed"/>
 
-        {/* ── Épurateur ── */}
-        <ellipse cx={cx} cy="97" rx="22" ry="6" fill={act(1)?"#5b21b6":"rgba(91,33,182,.25)"} stroke={act(1)?"var(--c-purple)":"rgba(var(--c-purple-rgb),.2)"} strokeWidth="1.5"/>
-        <ellipse cx={cx} cy="97" rx="22" ry="6" fill="rgba(0,80,160,.12)"/>
-        <rect x={cx-22} y="97" width="44" height="66" rx="6" fill="url(#gvFilter)" stroke={act(1)?"var(--c-purple)":"rgba(var(--c-purple-rgb),.25)"} strokeWidth="1.5"/>
-        {[108,117,126,135,144,153].map((y,i)=>(
-          <rect key={i} x={cx-20} y={y} width="40" height="6" rx="2" fill={act(1)?`rgba(167,139,250,${.07+i*.025})`:"rgba(167,139,250,.03)"} stroke={act(1)?"rgba(196,181,253,.3)":"rgba(196,181,253,.07)"} strokeWidth=".5"/>
-        ))}
-        {act(1)&&<text x={cx} y="143" textAnchor="middle" fontSize="6.5" fontWeight="700" fill="rgba(221,214,254,.75)">H₂S · CO₂</text>}
-        <ellipse cx={cx} cy="163" rx="22" ry="6" fill={act(1)?"#3b0764":"rgba(59,7,100,.2)"} stroke={act(1)?"var(--c-purple)":"rgba(var(--c-purple-rgb),.2)"} strokeWidth="1.5"/>
-        <rect x={cx-30} y="106" width="7" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
-        <rect x={cx+23} y="151" width="7" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
-        {act(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="none" stroke="#a78bfa" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
-        {!act(1)&&<text x={cx} y="138" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
-        {anim(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="#a78bfa" opacity=".15"/>}
-        <text x={LX} y="120" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(26,46,74,.82)"}>Épurateur</text>
-        <text x={LX} y="130" textAnchor="end" fontSize="6" fill={act(1)?"rgba(196,181,253,.6)":"rgba(0,80,160,.22)"}>CH₄ {">"} 97%</text>
+          {/* ══ ÉPURATEUR ══ */}
+          {/* Haut */}
+          <ellipse cx={cx} cy="124" rx="23" ry="6" fill={act(1)?"#5b21b6":"rgba(91,33,182,.18)"} stroke={act(1)?"rgba(124,58,237,.55)":"rgba(var(--c-purple-rgb),.13)"} strokeWidth="1.5"/>
+          <ellipse cx={cx} cy="124" rx="23" ry="6" fill="rgba(0,0,20,.08)"/>
+          {/* Corps */}
+          <rect x={cx-23} y="124" width="46" height="64" rx="6" fill="url(#gvFilter)" stroke={act(1)?"rgba(124,58,237,.55)":"rgba(var(--c-purple-rgb),.18)"} strokeWidth="1.5" filter={act(1)?"url(#dropshadow)":undefined}/>
+          {/* Grilles de filtration */}
+          {[133,141,149,157,165,173].map((y,i)=>(
+            <rect key={i} x={cx-21} y={y} width="42" height="5.5" rx="2"
+              fill={act(1)?`rgba(167,139,250,${.055+i*.026})`:"rgba(167,139,250,.022)"}
+              stroke={act(1)?"rgba(196,181,253,.25)":"rgba(196,181,253,.055)"} strokeWidth=".5"/>
+          ))}
+          {act(1)&&<>
+            <text x={cx} y="158" textAnchor="middle" fontSize="7" fontWeight="700" fill="rgba(221,214,254,.8)">H₂S · CO₂</text>
+            <text x={cx} y="167" textAnchor="middle" fontSize="6" fill="rgba(196,181,253,.55)">éliminés</text>
+          </>}
+          {/* Bas */}
+          <ellipse cx={cx} cy="188" rx="23" ry="6" fill={act(1)?"#3b0764":"rgba(59,7,100,.16)"} stroke={act(1)?"rgba(124,58,237,.45)":"rgba(var(--c-purple-rgb),.13)"} strokeWidth="1.5"/>
+          {/* Valves latérales */}
+          <rect x={cx-31} y="133" width="8" height="5" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.16)"}/>
+          <rect x={cx+23} y="179" width="8" height="5" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.16)"}/>
+          {act(1)&&<rect x={cx-23} y="124" width="46" height="64" rx="6" fill="none" stroke="#a78bfa" strokeWidth="2" opacity=".38" filter="url(#glow3)"/>}
+          {!act(1)&&<text x={cx} y="162" textAnchor="middle" fontSize="18" opacity=".28">🔒</text>}
+          {anim(1)&&<rect x={cx-23} y="124" width="46" height="64" rx="6" fill="#a78bfa" opacity=".15"/>}
+          {act(1)&&<>
+            <rect x={cx-18} y="193" width="36" height="10" rx="5" fill="rgba(109,40,217,.18)" stroke="rgba(167,139,250,.3)" strokeWidth=".8"/>
+            <text x={cx} y="200.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(196,181,253,.85)">● ACTIF</text>
+          </>}
+          <text x={cx} y={act(1)?209:205} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(1)?"#a78bfa":"rgba(26,46,74,.68)"}>Épurateur</text>
+          <text x={cx} y={act(1)?219:215} textAnchor="middle" fontSize="6.5" fill={act(1)?"rgba(196,181,253,.55)":"rgba(0,80,160,.20)"}>CH₄ {">"} 97 %</text>
 
-        {/* ── Pipe Épurateur → Compresseur ── */}
-        <rect x={cx-4} y="169" width="8" height="15" rx="3" fill={act(2)?"#CC7700":"rgba(var(--c-blue-rgb),.08)"} stroke={act(2)?"#CC7700":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(2)&&<rect x={cx-3} y="169" width="6" height="15" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+          {/* ── Tuyau 2 ── */}
+          <Pipe y={221} h={13} active={act(2)} color="#d97706"/>
 
-        {/* ── Compresseur ── */}
-        <rect x={cx-16} y="180" width="32" height="12" rx="5" fill={act(2)?"#92400e":"rgba(146,64,14,.25)"} stroke={act(2)?"#CC7700":"rgba(217,119,6,.2)"} strokeWidth="1"/>
-        <text x={cx} y="189" textAnchor="middle" fontSize="5.5" fill={act(2)?"rgba(253,230,138,.85)":"rgba(253,230,138,.2)"}>IN</text>
-        <rect x={cx-26} y="188" width="52" height="58" rx="7" fill="url(#gvComp)" stroke={act(2)?"#CC7700":"rgba(217,119,6,.25)"} strokeWidth="1.5"/>
-        <circle cx={cx} cy="219" r="20" fill={act(2)?"rgba(146,64,14,.4)":"rgba(146,64,14,.1)"} stroke={act(2)?"#f59e0b":"rgba(245,158,11,.2)"} strokeWidth="1.5"/>
-        {[0,45,90,135,180,225,270,315].map((a,i)=>{const ang=(a+bladeAngle)*Math.PI/180,r1=3,r2=15;return(<line key={i} x1={cx+Math.cos(ang)*r1} y1={219+Math.sin(ang)*r1} x2={cx+Math.cos(ang)*r2} y2={219+Math.sin(ang)*r2} stroke={act(2)?"var(--c-orange)":"rgba(var(--c-orange-rgb),.18)"} strokeWidth="2" strokeLinecap="round"/>);})}
-        <circle cx={cx} cy="219" r="4" fill={act(2)?"var(--c-orange)":"rgba(var(--c-orange-rgb),.22)"} stroke={act(2)?"#fffbeb":"rgba(255,251,235,.15)"} strokeWidth="1"/>
-        <rect x={cx-24} y="237" width="48" height="4" rx="2" fill={act(2)?"rgba(251,191,36,.25)":"rgba(var(--c-orange-rgb),.08)"}/>
-        <text x={cx} y="241" textAnchor="middle" fontSize="5.5" fill={act(2)?"rgba(253,230,138,.9)":"rgba(253,230,138,.2)"}>67 bar</text>
-        {act(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="none" stroke="var(--c-orange)" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
-        {!act(2)&&<text x={cx} y="223" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
-        {anim(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="var(--c-orange)" opacity=".15"/>}
-        <text x={LX} y="209" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.82)"}>Compresseur</text>
-        <text x={LX} y="219" textAnchor="end" fontSize="6" fill={act(2)?"rgba(253,230,138,.6)":"rgba(0,80,160,.22)"}>4 – 67 bar</text>
+          {/* ══ COMPRESSEUR ══ */}
+          {/* Entrée */}
+          <rect x={cx-15} y="238" width="30" height="10" rx="4" fill={act(2)?"#92400e":"rgba(146,64,14,.2)"} stroke={act(2)?"#CC7700":"rgba(217,119,6,.16)"} strokeWidth="1"/>
+          <text x={cx} y="246" textAnchor="middle" fontSize="5.5" fontWeight="700" fill={act(2)?"rgba(253,230,138,.85)":"rgba(253,230,138,.16)"}>IN</text>
+          {/* Corps */}
+          <rect x={cx-26} y="244" width="52" height="56" rx="7" fill="url(#gvComp)" stroke={act(2)?"#d97706":"rgba(217,119,6,.18)"} strokeWidth="1.5" filter={act(2)?"url(#dropshadow)":undefined}/>
+          {/* Cercle turbine */}
+          <circle cx={cx} cy="274" r="20" fill={act(2)?"rgba(120,53,15,.42)":"rgba(120,53,15,.09)"} stroke={act(2)?"#f59e0b":"rgba(245,158,11,.18)"} strokeWidth="1.5"/>
+          {[0,45,90,135,180,225,270,315].map((a,i)=>{
+            const ang=(a+bladeAngle)*Math.PI/180;
+            return(<line key={i} x1={cx+Math.cos(ang)*3} y1={274+Math.sin(ang)*3} x2={cx+Math.cos(ang)*15} y2={274+Math.sin(ang)*15} stroke={act(2)?"#fb923c":"rgba(251,146,60,.14)"} strokeWidth="2.5" strokeLinecap="round"/>);
+          })}
+          <circle cx={cx} cy="274" r="4.5" fill={act(2)?"#f97316":"rgba(249,115,22,.2)"} stroke={act(2)?"#fffbeb":"rgba(255,251,235,.1)"} strokeWidth=".8"/>
+          <rect x={cx-22} y="291" width="44" height="5" rx="2.5" fill={act(2)?"rgba(251,191,36,.22)":"rgba(var(--c-orange-rgb),.06)"}/>
+          <text x={cx} y="296.5" textAnchor="middle" fontSize="5.5" fontWeight="600" fill={act(2)?"rgba(253,230,138,.88)":"rgba(253,230,138,.16)"}>67 bar</text>
+          {act(2)&&<rect x={cx-26} y="244" width="52" height="56" rx="7" fill="none" stroke="#fb923c" strokeWidth="2" opacity=".35" filter="url(#glow3)"/>}
+          {!act(2)&&<text x={cx} y="278" textAnchor="middle" fontSize="18" opacity=".28">🔒</text>}
+          {anim(2)&&<rect x={cx-26} y="244" width="52" height="56" rx="7" fill="var(--c-orange)" opacity=".15"/>}
+          {act(2)&&<>
+            <rect x={cx-18} y="301" width="36" height="10" rx="5" fill="rgba(180,83,9,.18)" stroke="rgba(251,191,36,.3)" strokeWidth=".8"/>
+            <text x={cx} y="308.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(253,230,138,.85)">● ACTIF</text>
+          </>}
+          <text x={cx} y={act(2)?318:314} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.68)"}>Compresseur</text>
+          <text x={cx} y={act(2)?328:324} textAnchor="middle" fontSize="6.5" fill={act(2)?"rgba(253,230,138,.55)":"rgba(0,80,160,.20)"}>4 – 67 bar</text>
 
-        {/* ── Pipe Compresseur → Poste injection ── */}
-        <rect x={cx-4} y="246" width="8" height="16" rx="3" fill={act(3)?"#005EB8":"rgba(var(--c-blue-rgb),.08)"} stroke={act(3)?"#005EB8":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(3)&&<rect x={cx-3} y="246" width="6" height="16" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+          {/* ── Tuyau 3 ── */}
+          <Pipe y={330} h={13} active={act(3)} color="#005EB8"/>
 
-        {/* ── Poste d'injection ── */}
-        <rect x={cx-32} y="262" width="64" height="60" rx="7" fill="url(#gvInj)" stroke={act(3)?"#005EB8":"rgba(0,153,68,.25)"} strokeWidth="1.5"/>
-        <rect x={cx-32} y="262" width="64" height="14" rx="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
-        <rect x={cx-32} y="269" width="64" height="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
-        <text x={cx} y="272" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(26,46,74,.82)"}>GRDF</text>
-        <circle cx={cx-12} cy="298" r="11" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
-        {act(3)&&<><line x1={cx-12} y1="298" x2={cx-12+Math.cos(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} y2={298+Math.sin(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} stroke="#f87171" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx-12} cy="298" r="2" fill="#f87171"/></>}
-        <text x={cx-12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>P</text>
-        <circle cx={cx+12} cy="298" r="11" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
-        {act(3)&&<><line x1={cx+12} y1="298" x2={cx+12+Math.cos(-Math.PI/2+Math.PI*0.82)*8} y2={298+Math.sin(-Math.PI/2+Math.PI*0.82)*8} stroke="#34d399" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx+12} cy="298" r="2" fill="#34d399"/></>}
-        <text x={cx+12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>Q</text>
-        <rect x={cx-28} y="315" width="56" height="9" rx="3" fill="rgba(244,247,251,.94)" stroke={act(3)?"rgba(var(--c-blue-rgb),.4)":"rgba(var(--c-blue-rgb),.1)"} strokeWidth="1"/>
-        <text x={cx} y="322" textAnchor="middle" fontSize="6" fontFamily="monospace" fontWeight="600" fill={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"}>{act(3)?"CH₄ 98.2 %":"— — — —"}</text>
-        {act(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="none" stroke="var(--c-blue-light)" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
-        {!act(3)&&<text x={cx} y="295" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
-        {anim(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="var(--c-blue-light)" opacity=".15"/>}
-        <text x={LX} y="280" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(26,46,74,.82)"}>Poste d'injection</text>
-        <text x={LX} y="290" textAnchor="end" fontSize="6" fill={act(3)?"rgba(255,255,255,.62)":"rgba(0,80,160,.22)"}>Odorisation · Comptage</text>
-
-        {/* ── GRDF exit : stub vertical + horizontal dans CrossBoundaryPipesOverlay ── */}
+          {/* ══ POSTE D'INJECTION ══ */}
+          {/* Corps */}
+          <rect x={cx-32} y="347" width="64" height="60" rx="8" fill="url(#gvInj)" stroke={act(3)?"rgba(0,94,184,.65)":"rgba(0,153,68,.2)"} strokeWidth="1.5" filter={act(3)?"url(#dropshadow)":undefined}/>
+          {/* Bandeau GRDF */}
+          <rect x={cx-32} y="347" width="64" height="15" rx="8" fill={act(3)?"rgba(0,94,184,.7)":"rgba(0,94,184,.15)"}/>
+          <rect x={cx-32} y="354" width="64" height="8"  fill={act(3)?"rgba(0,94,184,.7)":"rgba(0,94,184,.15)"}/>
+          <text x={cx} y="357" textAnchor="middle" fontSize="8.5" fontWeight="900" letterSpacing="1.5" fill={act(3)?"white":"rgba(26,46,74,.55)"}>GRDF</text>
+          {/* Instruments */}
+          <circle cx={cx-12} cy="383" r="11" fill="rgba(244,247,251,.9)" stroke={act(3)?"rgba(96,165,250,.6)":"rgba(var(--c-blue-rgb),.18)"} strokeWidth="1.5"/>
+          {act(3)&&<><line x1={cx-12} y1="383" x2={cx-12+Math.cos(-Math.PI/2+Math.PI*.7)*8} y2={383+Math.sin(-Math.PI/2+Math.PI*.7)*8} stroke="#f87171" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx-12} cy="383" r="2" fill="#f87171"/></>}
+          <text x={cx-12} y="398" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(96,165,250,.8)":"rgba(26,46,74,.55)"}>P</text>
+          <circle cx={cx+12} cy="383" r="11" fill="rgba(244,247,251,.9)" stroke={act(3)?"rgba(52,211,153,.6)":"rgba(var(--c-blue-rgb),.18)"} strokeWidth="1.5"/>
+          {act(3)&&<><line x1={cx+12} y1="383" x2={cx+12+Math.cos(-Math.PI/2+Math.PI*.82)*8} y2={383+Math.sin(-Math.PI/2+Math.PI*.82)*8} stroke="#34d399" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx+12} cy="383" r="2" fill="#34d399"/></>}
+          <text x={cx+12} y="398" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(52,211,153,.8)":"rgba(26,46,74,.55)"}>Q</text>
+          {/* Afficheur CH4 */}
+          <rect x={cx-26} y="399" width="52" height="10" rx="3" fill="rgba(244,247,251,.95)" stroke={act(3)?"rgba(96,165,250,.35)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth="1"/>
+          <text x={cx} y="407" textAnchor="middle" fontSize="6.5" fontFamily="monospace" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"}>{act(3)?"CH₄  98.2 %":"— — — —"}</text>
+          {act(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="none" stroke="rgba(96,165,250,.45)" strokeWidth="2" filter="url(#glow3)"/>}
+          {!act(3)&&<text x={cx} y="382" textAnchor="middle" fontSize="18" opacity=".28">🔒</text>}
+          {anim(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="var(--c-blue-light)" opacity=".15"/>}
+          {act(3)&&<>
+            <rect x={cx-18} y="410" width="36" height="10" rx="5" fill="rgba(0,94,184,.18)" stroke="rgba(96,165,250,.3)" strokeWidth=".8"/>
+            <text x={cx} y="417.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(96,165,250,.85)">● INJECTÉ</text>
+          </>}
+          <text x={cx} y={act(3)?427:423} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(3)?"rgba(96,165,250,.9)":"rgba(26,46,74,.68)"}>Poste d'injection</text>
+          <text x={cx} y={act(3)?437:433} textAnchor="middle" fontSize="6.5" fill={act(3)?"rgba(147,197,253,.55)":"rgba(0,80,160,.20)"}>Odorisation · Comptage</text>
 
         </g>
       </svg>
     </div>
   );
 }
+
 
 // ─── GRDF REGIONS DATA ────────────────────────────────────────────────────────
 const GRDF_REGIONS = {
