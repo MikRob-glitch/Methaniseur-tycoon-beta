@@ -788,7 +788,7 @@ const DARK = {
   bg:'linear-gradient(180deg,#FFFFFF 0%,#F4F7FB 100%)',headerBg:'rgba(255,255,255,.96)',
   tabBg:'rgba(244,247,251,.97)',cardBg:'#FFFFFF',cardBdr:'rgba(0,80,160,.12)',
   primary:'var(--c-blue)',primaryL:'var(--c-blue-light)',primaryBg:'rgba(var(--c-blue-rgb),.08)',
-  text:'var(--c-text)',textDim:'rgba(26,46,74,.7)',textFaint:'rgba(26,46,74,.42)',
+  text:'var(--c-text)',textDim:'rgba(26,46,74,.7)',textFaint:'rgba(26,46,74,.82)',
   amber:'var(--c-orange)',amberBg:'rgba(var(--c-orange-rgb),.1)',amberBdr:'rgba(var(--c-orange-rgb),.28)',
   danger:'var(--c-red)',inputBg:'#F4F7FB',inputBdr:'rgba(0,80,160,.22)',
   btnGrad:'linear-gradient(135deg,var(--c-blue-dark),var(--c-blue))',
@@ -819,7 +819,7 @@ const AUTH_INPUT = {
   marginTop:"6px",
 };
 const AUTH_LABEL = {
-  color:"rgba(26,46,74,.65)", fontSize:"11px", fontWeight:600,
+  color:"rgba(26,46,74,.82)", fontSize:"11px", fontWeight:600,
   letterSpacing:".08em", textTransform:"uppercase",
 };
 
@@ -1122,7 +1122,7 @@ function TutorialOverlay({ step, onNext, onSkip }) {
         </div>
 
         {/* Corps */}
-        <div style={{ fontSize: '13px', color: 'rgba(26,46,74,.65)', lineHeight: 1.6, marginBottom: '16px' }}>
+        <div style={{ fontSize: '13px', color: 'rgba(26,46,74,.82)', lineHeight: 1.6, marginBottom: '16px' }}>
           {step.body}
         </div>
 
@@ -1130,7 +1130,7 @@ function TutorialOverlay({ step, onNext, onSkip }) {
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button onClick={onSkip} style={{
             padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(0,80,160,.14)',
-            background: 'transparent', color: 'rgba(26,46,74,.50)', fontSize: '12px',
+            background: 'transparent', color: 'rgba(26,46,74,.72)', fontSize: '12px',
             cursor: 'pointer', fontWeight: 600,
           }}>Passer tout</button>
           <button onClick={onNext} style={{
@@ -1282,7 +1282,7 @@ function App() {
               <button key={s} onClick={()=>{ setScreen(s); setAuthError(""); setPassword(""); setConfirmPw(""); }} style={{
                 flex:1, padding:"9px", borderRadius:"10px", border:"none",
                 background: screen===s ? "linear-gradient(135deg,var(--c-blue-dark),var(--c-blue))" : "transparent",
-                color: screen===s ? "#fff" : "rgba(26,46,74,.58)",
+                color: screen===s ? "#fff" : "rgba(26,46,74,.78)",
                 fontWeight:700, fontSize:"13px", cursor:"pointer", transition:"all .2s",
               }}>{label}</button>
             ))}
@@ -1309,7 +1309,7 @@ function App() {
             />
             <button onClick={()=>setShowPw(v=>!v)} style={{
               position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)",
-              background:"none", border:"none", color:"rgba(26,46,74,.52)", cursor:"pointer", fontSize:"16px", padding:"4px",
+              background:"none", border:"none", color:"rgba(26,46,74,.74)", cursor:"pointer", fontSize:"16px", padding:"4px",
             }}>{showPw?"🙈":"👁️"}</button>
           </div>
 
@@ -1323,7 +1323,7 @@ function App() {
               placeholder="Répétez votre mot de passe"
               style={{...AUTH_INPUT}}
             />
-            <div style={{...AUTH_LABEL, marginTop:"14px"}}>Prénom &amp; initiale <span style={{color:"rgba(26,46,74,.35)",fontWeight:400,fontSize:"10px",textTransform:"none"}}>(affiché dans le classement)</span></div>
+            <div style={{...AUTH_LABEL, marginTop:"14px"}}>Prénom &amp; initiale <span style={{color:"rgba(26,46,74,.60)",fontWeight:400,fontSize:"10px",textTransform:"none"}}>(affiché dans le classement)</span></div>
             <input
               value={displayName} onChange={e=>{ setDisplayName(e.target.value); setAuthError(""); }}
               onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
@@ -1358,7 +1358,7 @@ function App() {
             {authLoading ? "⏳ Vérification…" : isRegister ? "🚀 Créer mon compte" : "🔑 Se connecter"}
           </button>
 
-          <div style={{textAlign:"center",marginTop:"14px",color:"rgba(26,46,74,.33)",fontSize:"10px"}}>
+          <div style={{textAlign:"center",marginTop:"14px",color:"rgba(26,46,74,.60)",fontSize:"10px"}}>
             Application interne GRDF · Accès réservé aux agents
           </div>
         </div>
@@ -1453,7 +1453,7 @@ function CNGauge({ composition }) {
       position: 'absolute', left: '-38px', top: '24px', zIndex: 5, cursor: 'pointer',
       transition: 'transform .15s ease'
     }} className="hov-scale">
-      <div style={{fontSize: '8px', color: 'rgba(26,46,74,.55)', textTransform: 'uppercase', letterSpacing: '.05em'}}>C/N</div>
+      <div style={{fontSize: '8px', color: 'rgba(26,46,74,.75)', textTransform: 'uppercase', letterSpacing: '.05em'}}>C/N</div>
       <div style={{
         width: '24px', height: '112px', position: 'relative',
         background: 'linear-gradient(180deg, rgba(var(--c-red-rgb),.25), rgba(var(--c-blue-rgb),.08), rgba(var(--c-red-rgb),.25))',
@@ -1481,16 +1481,16 @@ function CNGauge({ composition }) {
           }}/>
         )}
         {/* Labels haut/bas */}
-        <div style={{position:'absolute',top:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(26,46,74,.52)'}}>45</div>
-        <div style={{position:'absolute',bottom:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(26,46,74,.52)'}}>5</div>
+        <div style={{position:'absolute',top:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(26,46,74,.74)'}}>45</div>
+        <div style={{position:'absolute',bottom:'2px',left:0,right:0,textAlign:'center',fontSize:'9px',color:'rgba(26,46,74,.74)'}}>5</div>
         <div style={{position:'absolute',top:'48%',left:0,right:0,textAlign:'center',fontSize:'9px',fontWeight:700,color:'rgba(var(--c-green-rgb),.85)'}}>25</div>
       </div>
       {/* Valeur courante */}
       <div style={{textAlign:'center',lineHeight:1.2}}>
-        <div style={{fontSize:'11px', fontWeight:800, color: isEmpty ? 'rgba(26,46,74,.40)' : bonusColor}}>
+        <div style={{fontSize:'11px', fontWeight:800, color: isEmpty ? 'rgba(26,46,74,.82)' : bonusColor}}>
           {isEmpty ? '—' : cn.toFixed(1)}
         </div>
-        <div style={{fontSize:'10px', fontWeight:700, color: isEmpty ? 'rgba(26,46,74,.33)' : bonusColor}}>
+        <div style={{fontSize:'10px', fontWeight:700, color: isEmpty ? 'rgba(26,46,74,.60)' : bonusColor}}>
           {isEmpty ? '' : (bonusPct >= 0 ? '+' : '') + bonusPct + '%'}
         </div>
       </div>
@@ -1541,7 +1541,7 @@ function CNGauge({ composition }) {
               }}>⚗️</div>
               <div style={{flex:1, minWidth:0}}>
                 <div style={{fontSize:'15px',fontWeight:800,color:'var(--c-blue-light)',lineHeight:1.2,letterSpacing:'-.2px'}}>Ratio C/N</div>
-                <div style={{fontSize:'10px',color:'rgba(26,46,74,.5)',marginTop:'2px'}}>La recette du méthaniseur idéal</div>
+                <div style={{fontSize:'10px',color:'rgba(26,46,74,.72)',marginTop:'2px'}}>La recette du méthaniseur idéal</div>
               </div>
             </div>
           </div>
@@ -1560,7 +1560,7 @@ function CNGauge({ composition }) {
               </div>
             </div>
 
-            <div style={{fontSize:'10px',fontWeight:700,color:'rgba(26,46,74,.65)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'.04em'}}>
+            <div style={{fontSize:'10px',fontWeight:700,color:'rgba(26,46,74,.82)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'.04em'}}>
               Les 7 intrants
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:'2px',marginBottom:'10px'}}>
@@ -1578,7 +1578,7 @@ function CNGauge({ composition }) {
               })}
             </div>
 
-            <div style={{fontSize:'10px',lineHeight:1.45,color:'rgba(26,46,74,.55)',padding:'8px 10px',background:'rgba(var(--c-yellow-rgb),.06)',border:'1px solid rgba(var(--c-yellow-rgb),.18)',borderRadius:'7px'}}>
+            <div style={{fontSize:'10px',lineHeight:1.45,color:'rgba(26,46,74,.75)',padding:'8px 10px',background:'rgba(var(--c-yellow-rgb),.06)',border:'1px solid rgba(var(--c-yellow-rgb),.18)',borderRadius:'7px'}}>
               <b style={{color:'var(--c-yellow)'}}>💡</b> <b>Azotés</b> (lisier, boues, restau) C/N bas ;
               <b> carbonés</b> (CIVE, verts, indus) C/N haut. Mixer les deux familles → C/N ≈ 25.
               <br/>
@@ -1586,15 +1586,15 @@ function CNGauge({ composition }) {
             </div>
 
             {/* v25.15 — Sources scientifiques (credibilite pedago GRDF) */}
-            <div style={{marginTop:'10px',padding:'8px 10px',background:'rgba(var(--c-blue-rgb),.05)',border:'1px solid rgba(var(--c-blue-rgb),.18)',borderRadius:'7px',fontSize:'9px',lineHeight:1.55,color:'rgba(26,46,74,.55)'}}>
+            <div style={{marginTop:'10px',padding:'8px 10px',background:'rgba(var(--c-blue-rgb),.05)',border:'1px solid rgba(var(--c-blue-rgb),.18)',borderRadius:'7px',fontSize:'9px',lineHeight:1.55,color:'rgba(26,46,74,.75)'}}>
               <div style={{fontSize:'10px',fontWeight:700,color:'var(--c-blue-light)',marginBottom:'4px'}}>📚 Pour aller plus loin</div>
               <div><b style={{color:'rgba(26,46,74,.8)'}}>ADEME</b> — Guides méthanisation agricole · plage C/N 15-30 recommandée</div>
               <div><b style={{color:'rgba(26,46,74,.8)'}}>GRDF Synergrid</b> — Guide technique exploitants biométhane</div>
-              <div style={{marginTop:'4px',fontSize:'9px',color:'rgba(26,46,74,.52)'}}>
+              <div style={{marginTop:'4px',fontSize:'9px',color:'rgba(26,46,74,.74)'}}>
                 Sources académiques : Yen &amp; Brune (2007), Wang et al. (2012),
                 Mata-Alvarez (2014), Deublein &amp; Steinhauser (2010)
               </div>
-              <div style={{marginTop:'4px',fontSize:'9px',fontStyle:'italic',color:'rgba(26,46,74,.46)'}}>
+              <div style={{marginTop:'4px',fontSize:'9px',fontStyle:'italic',color:'rgba(26,46,74,.70)'}}>
                 Les valeurs C/N par intrant varient ±30% selon l'origine et la saison —
                 les chiffres ici sont des moyennes pédagogiques dans les fourchettes admises.
               </div>
@@ -1605,11 +1605,11 @@ function CNGauge({ composition }) {
           <div style={{borderTop: '1px solid rgba(var(--c-blue-rgb),.15)', padding: '12px 18px', flexShrink: 0}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 10px',background:'rgba(var(--c-blue-rgb),.08)',border:'1px solid rgba(var(--c-blue-rgb),.25)',borderRadius:'8px'}}>
               <div>
-                <div style={{fontSize:'9px',color:'rgba(26,46,74,.5)'}}>Ton mix</div>
+                <div style={{fontSize:'9px',color:'rgba(26,46,74,.72)'}}>Ton mix</div>
                 <div style={{fontSize:'16px',fontWeight:800,color:bonusColor}}>{isEmpty ? '—' : cn.toFixed(1)}</div>
               </div>
               <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'9px',color:'rgba(26,46,74,.5)'}}>Bonus</div>
+                <div style={{fontSize:'9px',color:'rgba(26,46,74,.72)'}}>Bonus</div>
                 <div style={{fontSize:'16px',fontWeight:800,color:bonusColor}}>{isEmpty ? '—' : (bonusPct >= 0 ? '+' : '') + bonusPct + '%'}</div>
               </div>
             </div>
@@ -1770,11 +1770,11 @@ function BadgeUnlockOverlay({ badge, onClose }) {
           boxShadow:`0 0 50px ${badge.color}35, 0 24px 60px rgba(0,0,0,.55)`,
         }}>
           <div style={{ fontSize:"10px", fontWeight:800, letterSpacing:".14em", color:`${badge.color}dd`, textTransform:"uppercase", marginBottom:"4px" }}>🎖️ Badge débloqué</div>
-          <div style={{ fontSize:"10px", fontWeight:700, letterSpacing:".18em", color:"rgba(26,46,74,.46)", textTransform:"uppercase", marginBottom:"14px" }}>{catLabel}</div>
+          <div style={{ fontSize:"10px", fontWeight:700, letterSpacing:".18em", color:"rgba(26,46,74,.70)", textTransform:"uppercase", marginBottom:"14px" }}>{catLabel}</div>
           <div style={{ fontSize:"72px", filter:`drop-shadow(0 0 18px ${badge.color}90)`, marginBottom:"14px", lineHeight:1 }}>{badge.icon}</div>
           <div style={{ fontSize:"18px", fontWeight:900, color:badge.color, marginBottom:"5px", letterSpacing:"-.3px" }}>{badge.name}</div>
-          <div style={{ fontSize:"11px", color:"rgba(26,46,74,.55)", marginBottom:"6px" }}>{badge.desc}</div>
-          <div style={{ fontSize:"9px", color:"rgba(26,46,74,.40)", marginTop:"12px" }}>Touchez pour fermer</div>
+          <div style={{ fontSize:"11px", color:"rgba(26,46,74,.75)", marginBottom:"6px" }}>{badge.desc}</div>
+          <div style={{ fontSize:"9px", color:"rgba(26,46,74,.82)", marginTop:"12px" }}>Touchez pour fermer</div>
         </div>
         <div style={{
           position:"absolute", top:"50%", left:"50%", pointerEvents:"none",
@@ -3820,16 +3820,16 @@ function Game({ username, region, maia }) {
               onClick={() => setShowUserMenu(v => !v)}
               style={{
                 background:"none", border:"none", padding:0, margin:0, cursor:"pointer",
-                fontSize:"11px", color:"rgba(26,46,74,.55)", textAlign:"left",
+                fontSize:"11px", color:"rgba(26,46,74,.75)", textAlign:"left",
                 display:"flex", alignItems:"center", gap:"4px",
                 fontFamily:"inherit",
               }}
               aria-label="Menu utilisateur"
             >
               <span style={{display:"inline-flex",alignItems:"center",gap:"4px"}}><MiniDigesterIcon size={14}/> {username} · {region}</span>
-              <span style={{fontSize:"10px", color:"rgba(26,46,74,.52)", transition:"transform .2s", transform: showUserMenu ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>
+              <span style={{fontSize:"10px", color:"rgba(26,46,74,.74)", transition:"transform .2s", transform: showUserMenu ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>
             </button>
-            <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"1px"}}>
+            <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"1px"}}>
               {injected?"🔌 Raccordé réseau GRDF":`🫙 Cuve : ${fmt(buffer)} / ${fmt(INJECTION_THRESHOLD)}`}
             </div>
             <div style={{fontSize:"9px",marginTop:"3px",display:"flex",alignItems:"center",gap:"4px"}}>
@@ -3856,7 +3856,7 @@ function Game({ username, region, maia }) {
               }}>
                 <div style={{
                   padding:"8px 12px 6px",
-                  fontSize:"9px", color:"rgba(26,46,74,.46)",
+                  fontSize:"9px", color:"rgba(26,46,74,.70)",
                   textTransform:"uppercase", letterSpacing:".08em", fontWeight:600,
                   borderBottom:"1px solid rgba(0,80,160,.09)", marginBottom:"4px",
                 }}>
@@ -3883,7 +3883,7 @@ function Game({ username, region, maia }) {
                   onClick={() => { replayTutos(); setShowUserMenu(false); }}
                   style={{
                     width:"100%", padding:"10px 14px", background:"transparent",
-                    border:"none", color:"rgba(26,46,74,.5)", cursor:"pointer",
+                    border:"none", color:"rgba(26,46,74,.72)", cursor:"pointer",
                     textAlign:"left", fontSize:"12px", display:"flex", alignItems:"center", gap:"10px",
                     borderTop:"1px solid rgba(0,80,160,.09)", fontFamily:"inherit",
                     transition:"background .15s",
@@ -3899,17 +3899,17 @@ function Game({ username, region, maia }) {
           <div style={{textAlign:"right"}}>
             {injected ? (
               <>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.58)",textTransform:"uppercase",letterSpacing:".05em"}}>Biométhane injecté</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)",textTransform:"uppercase",letterSpacing:".05em"}}>Biométhane injecté</div>
                 <div style={{fontSize:"20px",fontWeight:800,color:"var(--c-blue)",letterSpacing:"-.5px"}}>{fmt(totalScore)}</div>
                 <div style={{display:"flex",alignItems:"center",gap:"6px",justifyContent:"flex-end",marginTop:"3px"}}>
                   <span style={{fontSize:"10px",color:"var(--c-orange)",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"4px"}}><BankIcon size={12}/> {fmtEuro(euros)}</span>
-                  <span style={{fontSize:"10px",color:"rgba(26,46,74,.33)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
+                  <span style={{fontSize:"10px",color:"rgba(26,46,74,.60)"}}>· Tarif GRDF : {BM_TO_EUR.toFixed(2)} €/m³</span>
                 </div>
               </>
             ) : (
               <>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.58)",textTransform:"uppercase",letterSpacing:".05em"}}>En attente injection</div>
-                <div style={{fontSize:"20px",fontWeight:800,color:"rgba(26,46,74,.58)",letterSpacing:"-.5px"}}>—</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)",textTransform:"uppercase",letterSpacing:".05em"}}>En attente injection</div>
+                <div style={{fontSize:"20px",fontWeight:800,color:"rgba(26,46,74,.78)",letterSpacing:"-.5px"}}>—</div>
               </>
             )}
           </div>
@@ -3927,7 +3927,7 @@ function Game({ username, region, maia }) {
             <button key={id} {...(id==="upgrades"?{"data-tut":"tab-upgrades"}:{})} {...(id==="rewards"?{"data-tut":"tab-rewards"}:{})} onClick={()=>{ setTab(id); if(id==="upgrades"&&tutStep===0) setTutStep(1); }} style={{
               flex:1,padding:"11px 2px",border:"none",
               background:highlight?"rgba(var(--c-blue-rgb),.14)":"transparent",
-              color:tab===id?"var(--c-blue)":highlight?"var(--c-blue-light)":"rgba(26,46,74,.46)",
+              color:tab===id?"var(--c-blue)":highlight?"var(--c-blue-light)":"rgba(26,46,74,.70)",
               fontSize:"11px",fontWeight:tab===id||highlight?700:400,
               borderBottom:tab===id?"2px solid var(--c-blue)":highlight?"2px solid rgba(var(--c-blue-rgb),.5)":"2px solid transparent",
               cursor:"pointer",position:"relative",transition:"all .3s",whiteSpace:"nowrap"}}>
@@ -3949,7 +3949,7 @@ function Game({ username, region, maia }) {
 
           {/* Flux */}
           <div style={{marginBottom:"16px",padding:"10px 12px",borderRadius:"12px",background:"rgba(var(--c-blue-rgb),.05)",border:"1px solid rgba(var(--c-blue-rgb),.09)"}}>
-            <div style={{fontSize:"9px",color:"rgba(26,46,74,.58)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"7px"}}>🔄 Flux de production</div>
+            <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"7px"}}>🔄 Flux de production</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"5px"}}>
               {[
                 {label:"Upgrades",    icon:"⬆️",color:"#AA7700",dim:fillRate===0},
@@ -3961,7 +3961,7 @@ function Game({ username, region, maia }) {
               ].map((s,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:"4px",padding:"4px 7px",borderRadius:"8px",background:`${s.color}${s.dim?"0a":"18"}`,border:`1px solid ${s.color}${s.dim?"18":"40"}`,transition:"all .5s"}}>
                   <span style={{fontSize:"11px"}}>{s.icon}</span>
-                  <span style={{fontSize:"9px",fontWeight:600,color:s.dim?"rgba(26,46,74,.40)":s.color,transition:"color .5s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
+                  <span style={{fontSize:"9px",fontWeight:600,color:s.dim?"rgba(26,46,74,.82)":s.color,transition:"color .5s",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
                   {!s.dim&&<span style={{marginLeft:"auto",width:"5px",height:"5px",borderRadius:"50%",background:s.color,flexShrink:0,boxShadow:`0 0 4px ${s.color}`}}/>}
                 </div>
               ))}
@@ -3986,7 +3986,7 @@ function Game({ username, region, maia }) {
               <div key={s.label} style={{flex:1,background:"rgba(var(--c-blue-rgb),.06)",border:"1px solid rgba(var(--c-blue-rgb),.12)",borderRadius:"10px",padding:"8px 6px",textAlign:"center"}}>
                 <div style={{fontSize:"16px"}}>{s.icon}</div>
                 <div style={{fontSize:"11px",fontWeight:700,color:s.customColor||"var(--c-blue-light)",marginTop:"2px"}}>{s.val}</div>
-                <div style={{fontSize:"9px",color:"rgba(26,46,74,.58)",marginTop:"1px"}}>{s.label}</div>
+                <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",marginTop:"1px"}}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -4061,11 +4061,11 @@ function Game({ username, region, maia }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
                 <div>
                   <div style={{fontSize:"12px",fontWeight:700,color:canConnect?"var(--c-yellow)":"rgba(26,46,74,.72)"}}>{canConnect?"🔓 Raccordement possible !":"🎯 Objectif raccordement"}</div>
-                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)} accumulés</div>
+                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{fmt(buffer)} / {fmt(INJECTION_THRESHOLD)} accumulés</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:"20px",fontWeight:800,color:canConnect?"var(--c-yellow)":"var(--c-blue)"}}>{Math.round(bufferPct*100)}%</div>
-                  {isDigesting&&!canConnect&&bmPerHour>0&&<div style={{fontSize:"9px",color:"rgba(26,46,74,.46)",marginTop:"1px"}}>~{fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</div>}
+                  {isDigesting&&!canConnect&&bmPerHour>0&&<div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"1px"}}>~{fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</div>}
                 </div>
               </div>
               <div style={{height:"14px",borderRadius:"7px",background:"rgba(var(--c-blue-rgb),.09)",overflow:"hidden",position:"relative"}}>
@@ -4073,15 +4073,15 @@ function Game({ username, region, maia }) {
                 {[25,50,75].map(pct=>(<div key={pct} style={{position:"absolute",top:0,bottom:0,left:`${pct}%`,width:"1px",background:"rgba(244,247,251,.78)"}}/>))}
               </div>
               <div style={{display:"flex",justifyContent:"space-between",marginTop:"6px"}}>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.42)"}}>0 m³</span>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.42)"}}>{fmt(INJECTION_THRESHOLD/2)}</span>
-                <span style={{fontSize:"9px",color:"rgba(26,46,74,.42)"}}>{fmt(INJECTION_THRESHOLD)}</span>
+                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>0 m³</span>
+                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>{fmt(INJECTION_THRESHOLD/2)}</span>
+                <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>{fmt(INJECTION_THRESHOLD)}</span>
               </div>
               {isDigesting&&(
-                <div style={{marginTop:"8px",display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:"rgba(26,46,74,.55)"}}>
+                <div style={{marginTop:"8px",display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:"rgba(26,46,74,.75)"}}>
                   <div style={{width:"6px",height:"6px",borderRadius:"50%",background:"var(--c-blue)",animation:"chargePulse 1s ease infinite"}}/>
                   Alimentation cuve : <strong style={{color:"var(--c-blue-light)"}}>{fmt(bmPerHour)}/h</strong>
-                  {bmPerHour>0&&!canConnect&&<span style={{color:"rgba(26,46,74,.46)"}}>· encore {fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</span>}
+                  {bmPerHour>0&&!canConnect&&<span style={{color:"rgba(26,46,74,.70)"}}>· encore {fmtETA(buffer,INJECTION_THRESHOLD,bmPerHour)}</span>}
                 </div>
               )}
             </div>
@@ -4095,7 +4095,7 @@ function Game({ username, region, maia }) {
           <div data-tut="chain-steps" style={{marginTop:"14px",borderRadius:"18px",overflow:"hidden",border:"1px solid rgba(var(--c-blue-rgb),.14)",background:"rgba(244,247,251,.78)"}}>
             <div style={{padding:"12px 16px 8px",borderBottom:"1px solid rgba(var(--c-blue-rgb),.09)"}}>
               <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.82)"}}>📋 Étapes vers le raccordement</div>
-              <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>Seuil : {fmt(INJECTION_THRESHOLD)}</div>
+              <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>Seuil : {fmt(INJECTION_THRESHOLD)}</div>
             </div>
               <div style={{padding:"4px 12px 14px",display:"flex",flexDirection:"column",gap:"10px"}}>
                 {/* ÉTAPE 1 — Épurateur */}
@@ -4110,20 +4110,20 @@ function Game({ username, region, maia }) {
                       animation:ready&&!done?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:done?"#a78bfa":"rgba(26,46,74,.46)",background:done?"rgba(var(--c-purple-rgb),.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 1</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:done?"#a78bfa":"rgba(26,46,74,.70)",background:done?"rgba(var(--c-purple-rgb),.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 1</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:done?"#a78bfa":"rgba(26,46,74,.7)"}}>🧪 Épurateur</span>
                         {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
                       </div>
                       {!done && (
                         <>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}>
-                            <span style={{fontSize:"10px",color:"rgba(26,46,74,.58)"}}>Condition : <strong style={{color:"#a78bfa"}}>{fmt(EPURATEUR_THRESHOLD)}</strong> dans la cuve</span>
-                            <span style={{fontSize:"11px",fontWeight:800,color:ready?"#a78bfa":"rgba(26,46,74,.5)"}}>{Math.round(pct)}%</span>
+                            <span style={{fontSize:"10px",color:"rgba(26,46,74,.78)"}}>Condition : <strong style={{color:"#a78bfa"}}>{fmt(EPURATEUR_THRESHOLD)}</strong> dans la cuve</span>
+                            <span style={{fontSize:"11px",fontWeight:800,color:ready?"#a78bfa":"rgba(26,46,74,.72)"}}>{Math.round(pct)}%</span>
                           </div>
                           <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
                             <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,var(--c-purple),#a78bfa)":"linear-gradient(90deg,var(--c-purple)55,var(--c-purple))",transition:"width .5s",boxShadow:ready?"0 0 8px rgba(var(--c-purple-rgb),.5)":"none"}}/>
                           </div>
-                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)",marginTop:"4px"}}>🎁 Débloque : Biodéchets restauration + Boues de STEP</div>
+                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"4px"}}>🎁 Débloque : Biodéchets restauration + Boues de STEP</div>
                           {ready && <button data-tut="epurateur-btn" onClick={handleUnlockEpurateur} style={{width:"100%",marginTop:"8px",padding:"10px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,var(--c-purple),#7c3aed)",color:"white",fontSize:"13px",fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(var(--c-purple-rgb),.5)",animation:"pulse 1.5s ease infinite"}}>🧪 Débloquer l'Épurateur !</button>}
                         </>
                       )}
@@ -4146,7 +4146,7 @@ function Game({ username, region, maia }) {
                       animation:ready&&!done?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:done?"var(--c-orange)":"rgba(26,46,74,.46)",background:done?"rgba(204,119,0,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 2</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:done?"var(--c-orange)":"rgba(26,46,74,.70)",background:done?"rgba(204,119,0,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 2</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:done?"var(--c-orange)":"rgba(26,46,74,.7)"}}>🔩 Compresseur</span>
                         {done && <span style={{fontSize:"10px",marginLeft:"auto"}}>✅</span>}
                       </div>
@@ -4154,14 +4154,14 @@ function Game({ username, region, maia }) {
                         <>
                           <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
                             <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(var(--c-purple-rgb),.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"var(--c-red)",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
-                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=COMPRESSEUR_THRESHOLD?"rgba(204,119,0,.2)":"rgba(0,80,160,.09)",color:buffer>=COMPRESSEUR_THRESHOLD?"var(--c-orange)":"rgba(26,46,74,.52)",fontWeight:700}}>{buffer>=COMPRESSEUR_THRESHOLD?"✅":"⏳"} {fmt(COMPRESSEUR_THRESHOLD)} dans la cuve</span>
+                            <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=COMPRESSEUR_THRESHOLD?"rgba(204,119,0,.2)":"rgba(0,80,160,.09)",color:buffer>=COMPRESSEUR_THRESHOLD?"var(--c-orange)":"rgba(26,46,74,.74)",fontWeight:700}}>{buffer>=COMPRESSEUR_THRESHOLD?"✅":"⏳"} {fmt(COMPRESSEUR_THRESHOLD)} dans la cuve</span>
                           </div>
                           {!blocked && (
                             <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden",marginBottom:"4px"}}>
                               <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#CC7700,var(--c-orange))":"linear-gradient(90deg,#CC770055,#CC7700)",transition:"width .5s",boxShadow:ready?"0 0 8px rgba(204,119,0,.5)":"none"}}/>
                             </div>
                           )}
-                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)"}}>🎁 Débloque : Déchets industriels</div>
+                          <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)"}}>🎁 Débloque : Déchets industriels</div>
                           {ready && <button data-tut="compresseur-btn" onClick={handleUnlockCompresseur} style={{width:"100%",marginTop:"8px",padding:"10px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#CC7700,var(--c-orange))",color:"white",fontSize:"13px",fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(204,119,0,.5)",animation:"pulse 1.5s ease infinite"}}>🔩 Débloquer le Compresseur !</button>}
                         </>
                       )}
@@ -4184,21 +4184,21 @@ function Game({ username, region, maia }) {
                       animation:ready?"pulse 2s ease infinite":"none",
                     }}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
-                        <span style={{fontSize:"10px",fontWeight:900,color:"rgba(26,46,74,.46)",background:ready?"rgba(42,125,187,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 3</span>
+                        <span style={{fontSize:"10px",fontWeight:900,color:"rgba(26,46,74,.70)",background:ready?"rgba(42,125,187,.3)":"rgba(0,80,160,.12)",padding:"2px 7px",borderRadius:"10px"}}>ÉTAPE 3</span>
                         <span style={{fontSize:"12px",fontWeight:800,color:ready?"var(--c-yellow)":"rgba(26,46,74,.7)"}}>🏗️ Raccordement GRDF</span>
                       </div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:"6px",marginBottom:"6px"}}>
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:epurateurOk?"rgba(var(--c-purple-rgb),.2)":"rgba(255,68,68,.1)",color:epurateurOk?"#a78bfa":"var(--c-red)",fontWeight:700}}>{epurateurOk?"✅":"❌"} Épurateur</span>
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:compresseurOk?"rgba(204,119,0,.2)":"rgba(255,68,68,.1)",color:compresseurOk?"var(--c-orange)":"var(--c-red)",fontWeight:700}}>{compresseurOk?"✅":"❌"} Compresseur</span>
                         <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:hasIndus?"rgba(var(--c-blue-rgb),.2)":"rgba(255,68,68,.1)",color:hasIndus?"var(--c-blue-light)":"var(--c-red)",fontWeight:700}}>{hasIndus?"✅":"❌"} ⚙️ Déchets indus.</span>
-                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=INJECTION_THRESHOLD?"rgba(var(--c-yellow-rgb),.2)":"rgba(0,80,160,.09)",color:buffer>=INJECTION_THRESHOLD?"var(--c-yellow)":"rgba(26,46,74,.52)",fontWeight:700}}>{buffer>=INJECTION_THRESHOLD?"✅":"⏳"} {fmt(INJECTION_THRESHOLD)}</span>
+                        <span style={{fontSize:"9px",padding:"2px 8px",borderRadius:"8px",background:buffer>=INJECTION_THRESHOLD?"rgba(var(--c-yellow-rgb),.2)":"rgba(0,80,160,.09)",color:buffer>=INJECTION_THRESHOLD?"var(--c-yellow)":"rgba(26,46,74,.74)",fontWeight:700}}>{buffer>=INJECTION_THRESHOLD?"✅":"⏳"} {fmt(INJECTION_THRESHOLD)}</span>
                       </div>
                       {!blocked && (
                         <div style={{height:"8px",borderRadius:"4px",background:"rgba(0,80,160,.09)",overflow:"hidden",marginBottom:"4px"}}>
                           <div style={{height:"100%",borderRadius:"4px",width:`${pct}%`,background:ready?"linear-gradient(90deg,#C07800,var(--c-orange),#F5D888)":"linear-gradient(90deg,var(--c-blue-dark)55,var(--c-blue-dark))",transition:"width .5s",boxShadow:ready?"0 0 12px rgba(var(--c-orange-rgb),.5)":"none",animation:ready?"bufferPulse 1s ease infinite":"none"}}/>
                         </div>
                       )}
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)"}}>🎁 Débloque : CIVE + Parc biogaz+ et injection réseau</div>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)"}}>🎁 Débloque : CIVE + Parc biogaz+ et injection réseau</div>
                       {ready && <button data-tut="raccordement-btn" onClick={handleConnect} style={{width:"100%",marginTop:"8px",padding:"12px",borderRadius:"10px",border:"none",background:"linear-gradient(135deg,#C07800,var(--c-orange),var(--c-yellow))",color:"white",fontSize:"14px",fontWeight:900,cursor:"pointer",boxShadow:"0 4px 20px rgba(var(--c-orange-rgb),.6)",animation:"pulse 1.5s ease infinite"}}>🏗️ Raccorder au réseau GRDF !</button>}
                     </div>
                   );
@@ -4260,13 +4260,13 @@ function Game({ username, region, maia }) {
                   <span style={{fontSize:"20px"}}>🤖</span>
                   <div>
                     <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.82)"}}>Déverseur automatique</div>
-                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)"}}>Le bac se vide tout seul dans le digesteur</div>
+                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)"}}>Le bac se vide tout seul dans le digesteur</div>
                   </div>
                 </div>
                 <button onClick={handleBuyAutoDump} disabled={euros<AUTODUMP_COST} style={{
                   width:"100%",padding:"12px",borderRadius:"12px",border:"none",
                   background:euros>=AUTODUMP_COST?"linear-gradient(135deg,#C07800,var(--c-orange))":"rgba(0,80,160,.08)",
-                  color:euros>=AUTODUMP_COST?"white":"rgba(26,46,74,.36)",
+                  color:euros>=AUTODUMP_COST?"white":"rgba(26,46,74,.82)",
                   fontWeight:800,fontSize:"13px",cursor:euros>=AUTODUMP_COST?"pointer":"not-allowed",
                   boxShadow:euros>=AUTODUMP_COST?"0 4px 18px rgba(var(--c-orange-rgb),.45)":"none",
                   transition:"all .3s"}}>
@@ -4284,7 +4284,7 @@ function Game({ username, region, maia }) {
                 <span style={{fontSize:"20px"}}>🤖</span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:"12px",fontWeight:700,color:"var(--c-orange)"}}>Déverseur automatique ✅</div>
-                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.58)"}}>
+                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)"}}>
                     {autoDumpThreshold === 0
                       ? "Déverse en continu (toutes les 2s)"
                       : `Déverse seulement si BAC ≥ ${autoDumpThreshold}%`}
@@ -4310,7 +4310,7 @@ function Game({ username, region, maia }) {
                     appearance:"none",WebkitAppearance:"none",outline:"none",cursor:"pointer"
                   }}
                 />
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:"9px",color:"rgba(26,46,74,.52)",marginTop:"4px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:"9px",color:"rgba(26,46,74,.74)",marginTop:"4px"}}>
                   <span>0% (continu)</span>
                   <span>50% (équilibré)</span>
                   <span>100% (anti-saturation)</span>
@@ -4318,7 +4318,7 @@ function Game({ username, region, maia }) {
                 <div style={{
                   marginTop:"8px",padding:"6px 10px",borderRadius:"8px",
                   background:"rgba(0,80,160,.06)",border:"1px solid rgba(0,80,160,.09)",
-                  fontSize:"10px",color:"rgba(26,46,74,.5)",lineHeight:1.5
+                  fontSize:"10px",color:"rgba(26,46,74,.72)",lineHeight:1.5
                 }}>
                   💡 Plus le seuil est haut, plus le BAC se remplit avant déversement.
                   Utile pour produire un mélange d'intrants avant de l'envoyer dans le digesteur.
@@ -4394,17 +4394,17 @@ function UnlockButton({ label, sublabel, condition, done, animating, locked, req
   if (done) return (
     <div style={{display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",borderRadius:"11px",background:`${color}15`,border:`1px solid ${color}40`}}>
       <div style={{fontSize:"16px"}}>✅</div>
-      <div><div style={{fontSize:"12px",fontWeight:700,color}}>{label}</div><div style={{fontSize:"10px",color:"rgba(26,46,74,.58)",marginTop:"1px"}}>{sublabel}</div></div>
+      <div><div style={{fontSize:"12px",fontWeight:700,color}}>{label}</div><div style={{fontSize:"10px",color:"rgba(26,46,74,.78)",marginTop:"1px"}}>{sublabel}</div></div>
     </div>
   );
   const active = condition && !animating;
   return (
-    <button onClick={onClick} disabled={!active} style={{width:"100%",padding:"12px 14px",borderRadius:"11px",border:"none",background:animating?`${color}30`:active?`linear-gradient(135deg,${color}cc,${color})`:`rgba(0,80,160,.13)`,border:`1px solid ${active||animating?color+"60":"rgba(0,80,160,.14)"}`,color:active?"white":"rgba(26,46,74,.40)",cursor:active?"pointer":"not-allowed",textAlign:"left",transition:"all .3s",boxShadow:active&&highlight?`0 4px 20px ${color}50`:"none",animation:active&&highlight?"connectGlow 2s ease infinite":"none",opacity:locked?.4:1}}>
+    <button onClick={onClick} disabled={!active} style={{width:"100%",padding:"12px 14px",borderRadius:"11px",border:"none",background:animating?`${color}30`:active?`linear-gradient(135deg,${color}cc,${color})`:`rgba(0,80,160,.13)`,border:`1px solid ${active||animating?color+"60":"rgba(0,80,160,.14)"}`,color:active?"white":"rgba(26,46,74,.82)",cursor:active?"pointer":"not-allowed",textAlign:"left",transition:"all .3s",boxShadow:active&&highlight?`0 4px 20px ${color}50`:"none",animation:active&&highlight?"connectGlow 2s ease infinite":"none",opacity:locked?.4:1}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{fontWeight:800,fontSize:"13px"}}>{animating?"⚙️ Mise en service...":active?label:`🔒 ${label}`}</span>
         {reqLabel&&!active&&!animating&&<span style={{fontSize:"10px",color:`${color}80`,background:`${color}15`,padding:"2px 8px",borderRadius:"10px",whiteSpace:"nowrap",marginLeft:"8px"}}>{reqLabel}</span>}
       </div>
-      <div style={{fontSize:"10px",color:active?"rgba(255,255,255,.6)":"rgba(26,46,74,.40)",marginTop:"3px"}}>{sublabel}</div>
+      <div style={{fontSize:"10px",color:active?"rgba(255,255,255,.6)":"rgba(26,46,74,.82)",marginTop:"3px"}}>{sublabel}</div>
     </button>
   );
 }
@@ -4445,7 +4445,7 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
         <text x="75" y="100" textAnchor="middle" fontSize="7" fill={act(0)?"rgba(186,230,253,.7)":"rgba(186,230,253,.2)"}>{Math.floor(buffer)} m³</text>
         <circle cx="76" cy="124" r="4" fill={act(0)?"var(--c-teal)":"rgba(74,188,223,.2)"} stroke={act(0)?"#bae6fd":"rgba(186,230,253,.2)"} strokeWidth="1"/>
         {act(0)&&<rect x="50" y="42" width="50" height="78" rx="5" fill="none" stroke="#00E5FF" strokeWidth="1.5" opacity=".3" filter="url(#glow2)"/>}
-        <text x="75" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(26,46,74,.40)"}>Cuve tampon</text>
+        <text x="75" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(26,46,74,.82)"}>Cuve tampon</text>
         <text x="75" y="170" textAnchor="middle" fontSize="7" fill={act(0)?"rgba(103,232,249,.6)":"rgba(0,80,160,.22)"}>0,5 bar · 100 m³</text>
         {/* Épurateur */}
         <rect x="197" y="118" width="8" height={PY-118} rx="3" fill={act(1)?"var(--c-purple)":"rgba(var(--c-purple-rgb),.2)"}/>
@@ -4459,7 +4459,7 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
         <rect x="171" y="38" width="8" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
         <rect x="224" y="100" width="8" height="6" rx="2" fill={act(1)?"#6d28d9":"rgba(120,40,220,.2)"}/>
         {act(1)&&<rect x="179" y="22" width="44" height="96" rx="8" fill="none" stroke="#a78bfa" strokeWidth="1.5" opacity=".3" filter="url(#glow2)"/>}
-        <text x="201" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(26,46,74,.40)"}>Épurateur</text>
+        <text x="201" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(26,46,74,.82)"}>Épurateur</text>
         <text x="201" y="170" textAnchor="middle" fontSize="7" fill={act(1)?"rgba(196,181,253,.6)":"rgba(0,80,160,.22)"}>CH₄ {">"} 97%</text>
         {/* Compresseur */}
         <rect x="327" y="112" width="8" height={PY-112} rx="3" fill={act(2)?"#CC7700":"rgba(217,119,6,.2)"}/>
@@ -4473,33 +4473,33 @@ function PipelineGraphic({ injected, epurateurOk, compresseurOk, unlockAnim, buf
         <text x="333" y="107" textAnchor="middle" fontSize="6" fill={act(2)?"rgba(253,230,138,.9)":"rgba(253,230,138,.2)"}>67 bar</text>
         <rect x="364" y="77" width="10" height="6" rx="2" fill={act(2)?"#CC7700":"rgba(217,119,6,.2)"}/>
         {act(2)&&<rect x="302" y="48" width="62" height="64" rx="8" fill="none" stroke="var(--c-orange)" strokeWidth="1.5" opacity=".35" filter="url(#glow2)"/>}
-        <text x="333" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.40)"}>Compresseur</text>
+        <text x="333" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.82)"}>Compresseur</text>
         <text x="333" y="170" textAnchor="middle" fontSize="7" fill={act(2)?"rgba(253,230,138,.6)":"rgba(0,80,160,.22)"}>4 – 67 bar</text>
         {/* Poste injection */}
         <rect x="455" y="115" width="8" height={PY-115} rx="3" fill={act(3)?"#005EB8":"rgba(0,153,68,.2)"}/>
         <rect x="426" y="36" width="68" height="79" rx="7" fill="url(#gInj)" stroke={act(3)?"#005EB8":"rgba(0,153,68,.25)"} strokeWidth="1.5"/>
         <rect x="426" y="36" width="68" height="18" rx="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
         <rect x="426" y="47" width="68" height="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
-        <text x="460" y="50" textAnchor="middle" fontSize="9" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(26,46,74,.40)"}>GRDF</text>
+        <text x="460" y="50" textAnchor="middle" fontSize="9" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(26,46,74,.82)"}>GRDF</text>
         <circle cx="447" cy="76" r="13" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
         {act(3)&&<><line x1="447" y1="76" x2={447+Math.cos(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*9} y2={76+Math.sin(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*9} stroke="#f87171" strokeWidth="1.5" strokeLinecap="round"/><circle cx="447" cy="76" r="2" fill="#f87171"/></>}
-        <text x="447" y="93" textAnchor="middle" fontSize="6" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.40)"}>P</text>
+        <text x="447" y="93" textAnchor="middle" fontSize="6" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>P</text>
         <circle cx="474" cy="76" r="13" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
         {act(3)&&<><line x1="474" y1="76" x2={474+Math.cos(-Math.PI/2+Math.PI*0.82)*9} y2={76+Math.sin(-Math.PI/2+Math.PI*0.82)*9} stroke="#34d399" strokeWidth="1.5" strokeLinecap="round"/><circle cx="474" cy="76" r="2" fill="#34d399"/></>}
-        <text x="474" y="93" textAnchor="middle" fontSize="6" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.40)"}>Q</text>
+        <text x="474" y="93" textAnchor="middle" fontSize="6" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>Q</text>
         <rect x="432" y="98" width="56" height="13" rx="3" fill="rgba(244,247,251,.94)" stroke={act(3)?"rgba(var(--c-blue-rgb),.4)":"rgba(var(--c-blue-rgb),.1)"} strokeWidth="1"/>
         <text x="460" y="108" textAnchor="middle" fontSize="7" fontFamily="monospace" fontWeight="600" fill={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"}>{act(3)?"CH₄ 98.2 %":"— — — —"}</text>
         <circle cx="494" cy="60" r="5" fill={act(3)?"rgba(22,163,74,.4)":"rgba(22,163,74,.1)"} stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        <text x="494" y="63" textAnchor="middle" fontSize="5" fill={act(3)?"rgba(255,255,255,.82)":"rgba(26,46,74,.40)"}>O</text>
+        <text x="494" y="63" textAnchor="middle" fontSize="5" fill={act(3)?"rgba(255,255,255,.82)":"rgba(26,46,74,.82)"}>O</text>
         {act(3)&&<rect x="426" y="36" width="68" height="79" rx="7" fill="none" stroke="var(--c-blue-light)" strokeWidth="1.5" opacity=".35" filter="url(#glow2)"/>}
-        <text x="460" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(26,46,74,.40)"}>Poste d'injection</text>
+        <text x="460" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(26,46,74,.82)"}>Poste d'injection</text>
         <text x="460" y="170" textAnchor="middle" fontSize="7" fill={act(3)?"rgba(255,255,255,.62)":"rgba(0,80,160,.22)"}>Odorisation · Comptage</text>
         {/* Output réseau */}
         <rect x="494" y={PY-6} width="60" height="12" rx="6" fill={injected?"url(#gGrdf)":"rgba(var(--c-blue-rgb),.09)"} stroke={injected?"rgba(var(--c-blue-rgb),.6)":"rgba(var(--c-blue-rgb),.17)"} strokeWidth="1"/>
-        {injected&&<rect x="494" y={PY-5} width="60" height="10" rx="5" fill="none" stroke="rgba(26,46,74,.40)" strokeWidth="1.5" strokeDasharray="10 7" strokeDashoffset={flow}/>}
+        {injected&&<rect x="494" y={PY-5} width="60" height="10" rx="5" fill="none" stroke="rgba(26,46,74,.82)" strokeWidth="1.5" strokeDasharray="10 7" strokeDashoffset={flow}/>}
         <polygon points={`548,${PY-8} 560,${PY} 548,${PY+8}`} fill={injected?"var(--c-blue)":"rgba(var(--c-blue-rgb),.22)"}/>
-        <text x="540" y={PY-12} textAnchor="middle" fontSize="8" fontWeight="800" fill={injected?"var(--c-blue-light)":"rgba(26,46,74,.40)"}>Réseau</text>
-        <text x="540" y={PY-3} textAnchor="middle" fontSize="8" fontWeight="800" fill={injected?"var(--c-blue-light)":"rgba(26,46,74,.40)"}>GRDF</text>
+        <text x="540" y={PY-12} textAnchor="middle" fontSize="8" fontWeight="800" fill={injected?"var(--c-blue-light)":"rgba(26,46,74,.82)"}>Réseau</text>
+        <text x="540" y={PY-3} textAnchor="middle" fontSize="8" fontWeight="800" fill={injected?"var(--c-blue-light)":"rgba(26,46,74,.82)"}>GRDF</text>
         {/* Locks */}
         {!act(0)&&<text x="75" y="88" textAnchor="middle" fontSize="16" opacity=".4">🔒</text>}
         {!act(1)&&<text x="201" y="75" textAnchor="middle" fontSize="16" opacity=".4">🔒</text>}
@@ -4617,7 +4617,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           stroke={grdfOn?"rgba(var(--c-blue-rgb),.45)":"rgba(var(--c-blue-rgb),.15)"}
           strokeWidth="1"/>
         <text x={pipeX+4} y={322+yOffset-3} textAnchor="start" fontSize="5.5" fontWeight="800"
-          fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.33)"}>Réseau GRDF aval ↓</text>
+          fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval ↓</text>
 
       </svg>
     </div>
@@ -4664,12 +4664,12 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         {act(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="none" stroke="#00E5FF" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
         {!act(0)&&<text x={cx} y="50" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
         {anim(0)&&<rect x={cx-26} y="15" width="52" height="58" rx="4" fill="#00E5FF" opacity=".15"/>}
-        <text x={LX} y="37" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(26,46,74,.40)"}>Cuve tampon</text>
+        <text x={LX} y="37" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(0)?"#00E5FF":"rgba(26,46,74,.82)"}>Cuve tampon</text>
         <text x={LX} y="47" textAnchor="end" fontSize="6" fill={act(0)?"rgba(103,232,249,.6)":"rgba(0,80,160,.22)"}>0,5 bar · 100 m³</text>
 
         {/* ── Pipe Cuve → Épurateur ── */}
         <rect x={cx-4} y="79" width="8" height="18" rx="3" fill={act(1)?"var(--c-purple)":"rgba(var(--c-blue-rgb),.08)"} stroke={act(1)?"var(--c-purple)":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(1)&&<rect x={cx-3} y="79" width="6" height="18" rx="3" fill="none" stroke="rgba(26,46,74,.30)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+        {act(1)&&<rect x={cx-3} y="79" width="6" height="18" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
 
         {/* ── Épurateur ── */}
         <ellipse cx={cx} cy="97" rx="22" ry="6" fill={act(1)?"#5b21b6":"rgba(91,33,182,.25)"} stroke={act(1)?"var(--c-purple)":"rgba(var(--c-purple-rgb),.2)"} strokeWidth="1.5"/>
@@ -4685,12 +4685,12 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         {act(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="none" stroke="#a78bfa" strokeWidth="1.5" opacity=".3" filter="url(#glow3)"/>}
         {!act(1)&&<text x={cx} y="138" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
         {anim(1)&&<rect x={cx-22} y="97" width="44" height="66" rx="6" fill="#a78bfa" opacity=".15"/>}
-        <text x={LX} y="120" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(26,46,74,.40)"}>Épurateur</text>
+        <text x={LX} y="120" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(1)?"#a78bfa":"rgba(26,46,74,.82)"}>Épurateur</text>
         <text x={LX} y="130" textAnchor="end" fontSize="6" fill={act(1)?"rgba(196,181,253,.6)":"rgba(0,80,160,.22)"}>CH₄ {">"} 97%</text>
 
         {/* ── Pipe Épurateur → Compresseur ── */}
         <rect x={cx-4} y="169" width="8" height="15" rx="3" fill={act(2)?"#CC7700":"rgba(var(--c-blue-rgb),.08)"} stroke={act(2)?"#CC7700":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(2)&&<rect x={cx-3} y="169" width="6" height="15" rx="3" fill="none" stroke="rgba(26,46,74,.30)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+        {act(2)&&<rect x={cx-3} y="169" width="6" height="15" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
 
         {/* ── Compresseur ── */}
         <rect x={cx-16} y="180" width="32" height="12" rx="5" fill={act(2)?"#92400e":"rgba(146,64,14,.25)"} stroke={act(2)?"#CC7700":"rgba(217,119,6,.2)"} strokeWidth="1"/>
@@ -4704,30 +4704,30 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         {act(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="none" stroke="var(--c-orange)" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
         {!act(2)&&<text x={cx} y="223" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
         {anim(2)&&<rect x={cx-26} y="188" width="52" height="58" rx="7" fill="var(--c-orange)" opacity=".15"/>}
-        <text x={LX} y="209" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.40)"}>Compresseur</text>
+        <text x={LX} y="209" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(2)?"var(--c-orange)":"rgba(26,46,74,.82)"}>Compresseur</text>
         <text x={LX} y="219" textAnchor="end" fontSize="6" fill={act(2)?"rgba(253,230,138,.6)":"rgba(0,80,160,.22)"}>4 – 67 bar</text>
 
         {/* ── Pipe Compresseur → Poste injection ── */}
         <rect x={cx-4} y="246" width="8" height="16" rx="3" fill={act(3)?"#005EB8":"rgba(var(--c-blue-rgb),.08)"} stroke={act(3)?"#005EB8":"rgba(var(--c-blue-rgb),.15)"} strokeWidth="1"/>
-        {act(3)&&<rect x={cx-3} y="246" width="6" height="16" rx="3" fill="none" stroke="rgba(26,46,74,.30)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
+        {act(3)&&<rect x={cx-3} y="246" width="6" height="16" rx="3" fill="none" stroke="rgba(26,46,74,.75)" strokeWidth="1" strokeDasharray="5 5" strokeDashoffset={flow}/>}
 
         {/* ── Poste d'injection ── */}
         <rect x={cx-32} y="262" width="64" height="60" rx="7" fill="url(#gvInj)" stroke={act(3)?"#005EB8":"rgba(0,153,68,.25)"} strokeWidth="1.5"/>
         <rect x={cx-32} y="262" width="64" height="14" rx="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
         <rect x={cx-32} y="269" width="64" height="7" fill={act(3)?"rgba(22,163,74,.5)":"rgba(22,163,74,.1)"}/>
-        <text x={cx} y="272" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(26,46,74,.40)"}>GRDF</text>
+        <text x={cx} y="272" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1" fill={act(3)?"white":"rgba(26,46,74,.82)"}>GRDF</text>
         <circle cx={cx-12} cy="298" r="11" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
         {act(3)&&<><line x1={cx-12} y1="298" x2={cx-12+Math.cos(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} y2={298+Math.sin(-Math.PI/2+Math.PI*(bufferPct>0?.7:0))*8} stroke="#f87171" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx-12} cy="298" r="2" fill="#f87171"/></>}
-        <text x={cx-12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.40)"}>P</text>
+        <text x={cx-12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>P</text>
         <circle cx={cx+12} cy="298" r="11" fill="rgba(244,247,251,.88)" stroke={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1.5"/>
         {act(3)&&<><line x1={cx+12} y1="298" x2={cx+12+Math.cos(-Math.PI/2+Math.PI*0.82)*8} y2={298+Math.sin(-Math.PI/2+Math.PI*0.82)*8} stroke="#34d399" strokeWidth="1.5" strokeLinecap="round"/><circle cx={cx+12} cy="298" r="2" fill="#34d399"/></>}
-        <text x={cx+12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.40)"}>Q</text>
+        <text x={cx+12} y="313" textAnchor="middle" fontSize="5.5" fill={act(3)?"rgba(255,255,255,.72)":"rgba(26,46,74,.82)"}>Q</text>
         <rect x={cx-28} y="315" width="56" height="9" rx="3" fill="rgba(244,247,251,.94)" stroke={act(3)?"rgba(var(--c-blue-rgb),.4)":"rgba(var(--c-blue-rgb),.1)"} strokeWidth="1"/>
         <text x={cx} y="322" textAnchor="middle" fontSize="6" fontFamily="monospace" fontWeight="600" fill={act(3)?"var(--c-blue-light)":"rgba(var(--c-blue-rgb),.2)"}>{act(3)?"CH₄ 98.2 %":"— — — —"}</text>
         {act(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="none" stroke="var(--c-blue-light)" strokeWidth="1.5" opacity=".35" filter="url(#glow3)"/>}
         {!act(3)&&<text x={cx} y="295" textAnchor="middle" fontSize="14" opacity=".4">🔒</text>}
         {anim(3)&&<rect x={cx-32} y="262" width="64" height="60" rx="7" fill="var(--c-blue-light)" opacity=".15"/>}
-        <text x={LX} y="280" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(26,46,74,.40)"}>Poste d'injection</text>
+        <text x={LX} y="280" textAnchor="end" fontSize="7.5" fontWeight="700" fill={act(3)?"var(--c-blue-light)":"rgba(26,46,74,.82)"}>Poste d'injection</text>
         <text x={LX} y="290" textAnchor="end" fontSize="6" fill={act(3)?"rgba(255,255,255,.62)":"rgba(0,80,160,.22)"}>Odorisation · Comptage</text>
 
         {/* ── GRDF exit : stub vertical + horizontal dans CrossBoundaryPipesOverlay ── */}
@@ -4802,7 +4802,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: "9px", color: "rgba(26,46,74,.52)", textTransform: "uppercase", letterSpacing: ".07em", display:"inline-flex", alignItems:"center", gap:"4px" }}>{injected?<><BankIcon size={11}/> Budget €</>:<><CH4Icon size={11}/> Budget</>}</div>
+            <div style={{ fontSize: "9px", color: "rgba(26,46,74,.74)", textTransform: "uppercase", letterSpacing: ".07em", display:"inline-flex", alignItems:"center", gap:"4px" }}>{injected?<><BankIcon size={11}/> Budget €</>:<><CH4Icon size={11}/> Budget</>}</div>
             <div style={{ fontSize: "22px", fontWeight: 800, color: injected?"var(--c-orange)":"var(--c-blue-light)", letterSpacing: "-.5px" }}>{injected?fmtEuro(wallet):fmt(wallet)}</div>
           </div>
           <div style={{ display: "flex", gap: "3px", background: "rgba(0,80,160,.09)", borderRadius: "10px", padding: "3px" }}>
@@ -4812,7 +4812,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                 <button key={String(q)} onClick={() => setQtyMode(q)} style={{
                   padding: "5px 10px", borderRadius: "8px", border: "none",
                   background: active ? rd.color : "transparent",
-                  color: active ? "white" : "rgba(26,46,74,.58)",
+                  color: active ? "white" : "rgba(26,46,74,.78)",
                   fontSize: "11px", fontWeight: 700, cursor: "pointer",
                   transition: "all .15s", minWidth: "34px"
                 }}>
@@ -4823,7 +4823,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
           </div>
         </div>
         {bmPerHour > 0 && (
-          <div style={{ fontSize: "10px", color: "rgba(26,46,74,.42)", marginTop: "3px" }}>
+          <div style={{ fontSize: "10px", color: "rgba(26,46,74,.82)", marginTop: "3px" }}>
             ⚡ {fmt(bmPerHour)}/h · {region}
           </div>
         )}
@@ -4854,7 +4854,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
               </div>
               <div style={{
                 fontSize: "7.5px", fontWeight: 700, marginTop: "3px",
-                color: step.done ? step.color : "rgba(26,46,74,.30)",
+                color: step.done ? step.color : "rgba(26,46,74,.75)",
                 letterSpacing: ".02em"
               }}>{step.label}</div>
             </div>
@@ -4899,7 +4899,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                   <span style={{ fontSize: "12px" }}>{g.unlocked ? "✅" : "🔒"}</span>
                   <span style={{
                     fontSize: "9px", fontWeight: 700,
-                    color: g.unlocked ? g.color : "rgba(26,46,74,.36)",
+                    color: g.unlocked ? g.color : "rgba(26,46,74,.82)",
                     letterSpacing: ".05em", textTransform: "uppercase"
                   }}>{g.label}</span>
                 </div>
@@ -4958,8 +4958,8 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
 
                 {/* Info col */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: avail ? "var(--c-text)" : "rgba(26,46,74,.36)" }}>{upg.name}</div>
-                  <div style={{ fontSize: "10px", color: "rgba(26,46,74,.50)", marginTop: "1px" }}>{upg.desc}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: avail ? "var(--c-text)" : "rgba(26,46,74,.82)" }}>{upg.name}</div>
+                  <div style={{ fontSize: "10px", color: "rgba(26,46,74,.72)", marginTop: "1px" }}>{upg.desc}</div>
                   {avail && qty > 0 && (() => {
                     const stars = getIntrantStars(qty);
                     const bonusPct = Math.round((getIntrantBonus(qty) - 1) * 100);
@@ -4993,7 +4993,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                             ))}
                           </div>
                           {next != null && (
-                            <span style={{ fontSize: "8px", color: "rgba(26,46,74,.46)", fontWeight: 600 }}>
+                            <span style={{ fontSize: "8px", color: "rgba(26,46,74,.70)", fontWeight: 600 }}>
                               {qty}/{next} → ★{stars + 1} (+{Math.round((STAR_BONUSES[stars] - 1) * 100)}%)
                             </span>
                           )}
@@ -5012,14 +5012,14 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                           <span style={{ color: "#7de8b0", fontWeight: 700 }}>{fmt(m3sCurrent)}/s</span>
                           {m3sDelta > 0 && canAfford && (
                             <>
-                              <span style={{ color: "rgba(26,46,74,.40)" }}>→</span>
+                              <span style={{ color: "rgba(26,46,74,.82)" }}>→</span>
                               <span style={{ color: "var(--c-green-dark)", fontWeight: 800 }}>{fmt(m3sPreview)}/s</span>
                             </>
                           )}
                           {m3sDelta > 0 && !canAfford && (
                             <>
                               <span style={{ color: "rgba(0,80,160,.22)" }}>·</span>
-                              <span style={{ color: "rgba(26,46,74,.52)" }}>+{fmt(m3sDelta)}/s à l'achat</span>
+                              <span style={{ color: "rgba(26,46,74,.74)" }}>+{fmt(m3sDelta)}/s à l'achat</span>
                             </>
                           )}
                         </div>
@@ -5088,7 +5088,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
               {avail && !canAfford && bmPerHour > 0 && wallet < displayCost && (
                 <div style={{
                   padding: "3px 12px 6px", fontSize: "9px",
-                  color: "rgba(26,46,74,.40)", borderTop: "1px solid rgba(0,80,160,.06)"
+                  color: "rgba(26,46,74,.82)", borderTop: "1px solid rgba(0,80,160,.06)"
                 }}>⏱ ~{fmtETA(wallet, displayCost, bmPerHour)}</div>
               )}
 
@@ -5099,9 +5099,9 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                   borderTop: "1px solid rgba(0,80,160,.06)",
                   display: "flex", alignItems: "center", justifyContent: "space-between"
                 }}>
-                  <span style={{ fontSize: "9px", color: "rgba(26,46,74,.36)", fontWeight: 600 }}>💡 En savoir plus</span>
+                  <span style={{ fontSize: "9px", color: "rgba(26,46,74,.82)", fontWeight: 600 }}>💡 En savoir plus</span>
                   <span style={{
-                    fontSize: "10px", color: "rgba(26,46,74,.30)",
+                    fontSize: "10px", color: "rgba(26,46,74,.75)",
                     transform: isExp ? "rotate(180deg)" : "rotate(0deg)",
                     transition: "transform .2s", display: "inline-block"
                   }}>▼</span>
@@ -5120,12 +5120,12 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                       <span style={{ fontSize: "15px" }}>📊</span>
                       <div>
                         <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--c-blue-light)" }}>{upg.realYieldLabel}</div>
-                        <div style={{ fontSize: "8px", color: "rgba(26,46,74,.50)", marginTop: "1px" }}>Rendement réel · source ADEME/GRDF</div>
+                        <div style={{ fontSize: "8px", color: "rgba(26,46,74,.72)", marginTop: "1px" }}>Rendement réel · source ADEME/GRDF</div>
                       </div>
                     </div>
                   </div>
                   <div style={{
-                    fontSize: "10px", color: "rgba(26,46,74,.62)", lineHeight: 1.65,
+                    fontSize: "10px", color: "rgba(26,46,74,.80)", lineHeight: 1.65,
                     padding: "7px 10px", borderRadius: "9px",
                     background: "rgba(0,80,160,.04)", border: "1px solid rgba(0,80,160,.08)"
                   }}>{upg.pedagoTip}</div>
@@ -5141,7 +5141,7 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
                         textAlign: "center"
                       }}>
                         <div style={{ fontSize: "11px", fontWeight: 700, color: s.clr }}>{s.val}</div>
-                        <div style={{ fontSize: "7px", color: "rgba(26,46,74,.40)", marginTop: "1px" }}>{s.lbl}</div>
+                        <div style={{ fontSize: "7px", color: "rgba(26,46,74,.82)", marginTop: "1px" }}>{s.lbl}</div>
                       </div>
                     ))}
                   </div>
@@ -5908,14 +5908,14 @@ function GasMeter({ value, isActive }) {
     <div style={{marginTop:"14px",padding:"10px 14px",borderRadius:"14px",background:"rgba(244,247,251,.92)",border:`1px solid ${isActive?"rgba(var(--c-blue-rgb),.32)":"rgba(var(--c-blue-rgb),.12)"}`,display:"flex",alignItems:"center",gap:"12px",animation:isActive?"meterGlow 2.5s ease infinite":"none",transition:"border-color .5s"}}>
       <div style={{width:"42px",height:"42px",borderRadius:"50%",background:isActive?"radial-gradient(circle at 35% 30%,#D4EEE0,#EEF4FB)":"radial-gradient(circle at 35% 30%,#F0FAF4,#F4F7FB)",border:`2px solid ${isActive?"rgba(var(--c-blue-rgb),.44)":"rgba(var(--c-blue-rgb),.14)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0,boxShadow:isActive?"0 0 12px rgba(var(--c-blue-rgb),.28)":"none",transition:"all .5s"}}>{isActive?"⛽":"💤"}</div>
       <div style={{flex:1}}>
-        <div style={{fontSize:"9px",color:"rgba(26,46,74,.62)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:"5px"}}>Compteur biométhane</div>
+        <div style={{fontSize:"9px",color:"rgba(26,46,74,.80)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:"5px"}}>Compteur biométhane</div>
         <div style={{display:"inline-flex",alignItems:"stretch",background:"#E8F5EE",border:"1.5px solid rgba(var(--c-blue-rgb),.28)",borderRadius:"8px",overflow:"hidden",boxShadow:"inset 0 2px 6px rgba(0,60,120,.12)"}}>
           {[0,1,2,3,4,5].map(i => <RollingDigit key={`i${i}`} index={i} isDecimal={false} />)}
           <div style={{width:"10px",height:`${DIGIT_H}px`,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(var(--c-blue-rgb),.05)",borderRight:"1px solid rgba(var(--c-blue-rgb),.09)"}}><span style={{fontSize:"16px",fontWeight:900,color:"rgba(var(--c-blue-rgb),.6)",fontFamily:"monospace"}}>.</span></div>
           {[0,1].map(i => <RollingDigit key={`d${i}`} index={i} isDecimal={true} />)}
-          <div style={{padding:"0 8px",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(244,247,251,.78)"}}><span style={{fontSize:"9px",fontWeight:700,letterSpacing:".06em",color:"rgba(26,46,74,.58)",textTransform:"uppercase"}}>m³</span></div>
+          <div style={{padding:"0 8px",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(244,247,251,.78)"}}><span style={{fontSize:"9px",fontWeight:700,letterSpacing:".06em",color:"rgba(26,46,74,.78)",textTransform:"uppercase"}}>m³</span></div>
         </div>
-        <div style={{marginTop:"4px",fontSize:"9px",color:isActive?"rgba(26,46,74,.62)":"rgba(26,46,74,.40)",display:"flex",alignItems:"center",gap:"5px"}}>
+        <div style={{marginTop:"4px",fontSize:"9px",color:isActive?"rgba(26,46,74,.80)":"rgba(26,46,74,.82)",display:"flex",alignItems:"center",gap:"5px"}}>
           {isActive&&<span style={{display:"inline-block",width:"5px",height:"5px",borderRadius:"50%",background:"var(--c-blue)",animation:"chargePulse 1s ease infinite"}}/>}
           {isActive?"Production en cours — déversez pour alimenter":"Digesteur vide — déversez des intrants"}
         </div>
@@ -5956,27 +5956,27 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
           <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.82)"}}>
             ⛽ Valorisation GNV
           </div>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>
             Gaz naturel véhicule · deuxième filière de valorisation
           </div>
         </div>
         <div style={{textAlign:"right"}}>
           <div style={{fontSize:"15px",fontWeight:800,color:"var(--c-green)"}}>{fmt(gnvBm)}</div>
-          <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)"}}>m³ GNV vendus</div>
+          <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)"}}>m³ GNV vendus</div>
         </div>
       </div>
 
       {/* Pas encore de station */}
       {gnvStations === 0 && (
         <div style={{padding:"14px 16px"}}>
-          <div style={{fontSize:"11px",color:"rgba(26,46,74,.65)",lineHeight:1.6,marginBottom:"10px"}}>
+          <div style={{fontSize:"11px",color:"rgba(26,46,74,.82)",lineHeight:1.6,marginBottom:"10px"}}>
             💡 Le GNV permet de vendre votre biométhane directement aux véhicules (voitures, bus, camions).
             C'est une alternative à l'injection réseau avec un impact pédago fort.
           </div>
           <button onClick={onBuyStation} disabled={!canBuyStation} style={{
             width:"100%",padding:"12px",borderRadius:"12px",border:"none",
             background:canBuyStation?"linear-gradient(135deg,#007A3A,#00A850)":"rgba(0,80,160,.09)",
-            color:canBuyStation?"white":"rgba(26,46,74,.36)",
+            color:canBuyStation?"white":"rgba(26,46,74,.82)",
             fontWeight:800,fontSize:"13px",cursor:canBuyStation?"pointer":"not-allowed",
             boxShadow:canBuyStation?"0 4px 18px rgba(34,168,106,.4)":"none",
             transition:"all .3s"}}>
@@ -5999,7 +5999,7 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
                 background:i<gnvStations?"rgba(74,200,120,.18)":"rgba(0,80,160,.06)",
                 border:`1px solid ${i<gnvStations?"rgba(74,200,120,.4)":"rgba(0,80,160,.12)"}`}}>
                 <div style={{fontSize:"16px"}}>{i<gnvStations?"⛽":"🔒"}</div>
-                <div style={{fontSize:"10px",color:i<gnvStations?"var(--c-green)":"rgba(26,46,74,.40)",marginTop:"2px",fontWeight:600}}>
+                <div style={{fontSize:"10px",color:i<gnvStations?"var(--c-green)":"rgba(26,46,74,.82)",marginTop:"2px",fontWeight:600}}>
                   Station {i+1}
                 </div>
               </div>
@@ -6010,7 +6010,7 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
           <div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:"8px",alignItems:"center"}}>
               <span style={{fontSize:"11px",fontWeight:700,color:"rgba(26,46,74,.72)"}}>🔀 Répartition production</span>
-              <span style={{fontSize:"10px",color:"rgba(26,46,74,.58)"}}>glisser pour ajuster</span>
+              <span style={{fontSize:"10px",color:"rgba(26,46,74,.78)"}}>glisser pour ajuster</span>
             </div>
             <input
               type="range" min="0" max="100" value={gnvSplit}
@@ -6020,14 +6020,14 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
             <div style={{display:"flex",justifyContent:"space-between",marginTop:"8px",gap:"8px"}}>
               <div style={{flex:1,padding:"8px",borderRadius:"10px",
                 background:"rgba(var(--c-blue-rgb),.12)",border:"1px solid rgba(var(--c-blue-rgb),.25)",textAlign:"center"}}>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.5)"}}>🔌 Réseau GRDF</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.72)"}}>🔌 Réseau GRDF</div>
                 <div style={{fontSize:"16px",fontWeight:800,color:"var(--c-blue)",marginTop:"2px"}}>{100-gnvSplit}%</div>
                 <div style={{fontSize:"9px",color:"rgba(var(--c-blue-rgb),.7)",marginTop:"1px"}}>{fmt(netPerHour)}/h</div>
               </div>
-              <div style={{display:"flex",alignItems:"center",color:"rgba(26,46,74,.40)",fontSize:"16px"}}>⇄</div>
+              <div style={{display:"flex",alignItems:"center",color:"rgba(26,46,74,.82)",fontSize:"16px"}}>⇄</div>
               <div style={{flex:1,padding:"8px",borderRadius:"10px",
                 background:"rgba(74,200,120,.12)",border:"1px solid rgba(74,200,120,.25)",textAlign:"center"}}>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.5)"}}>⛽ GNV</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.72)"}}>⛽ GNV</div>
                 <div style={{fontSize:"16px",fontWeight:800,color:"var(--c-green)",marginTop:"2px"}}>{gnvSplit}%</div>
                 <div style={{fontSize:"9px",color:"rgba(74,200,120,.7)",marginTop:"1px"}}>{fmt(gnvPerHour)}/h</div>
               </div>
@@ -6039,7 +6039,7 @@ function GnvSection({ gnvStations, gnvSplit, setGnvSplit, gnvBm, euros, bmPerHou
             <button onClick={onBuyStation} disabled={!canBuyStation} style={{
               width:"100%",padding:"10px",borderRadius:"11px",border:"none",
               background:canBuyStation?"linear-gradient(135deg,#007A3A,#00A850)":"rgba(0,80,160,.08)",
-              color:canBuyStation?"white":"rgba(26,46,74,.36)",
+              color:canBuyStation?"white":"rgba(26,46,74,.82)",
               fontWeight:700,fontSize:"12px",cursor:canBuyStation?"pointer":"not-allowed",
               boxShadow:canBuyStation?"0 3px 14px rgba(34,168,106,.38)":"none",transition:"all .3s"}}>
               {canBuyStation
@@ -6084,7 +6084,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
         <div style={{fontSize:"18px"}}>🚛</div>
         <div>
           <div style={{fontSize:"13px",fontWeight:800,color:"var(--c-orange)",textTransform:"uppercase",letterSpacing:".04em"}}>Flotte de tracteurs</div>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.5)"}}>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.72)"}}>
             {tractorCount} tracteur{tractorCount>1?"s":""} actif{tractorCount>1?"s":""}
             {tractorSpeedBoost?" · Route goudronnée ⚡":""}
           </div>
@@ -6127,18 +6127,18 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                       position:"absolute",bottom:-4,right:-4,
                       fontSize:"10px",fontWeight:900,padding:"1px 4px",borderRadius:"5px",
                       background:hasGnv?"#00A850":"#CC2222",
-                      color:"white",border:"1px solid rgba(26,46,74,.28)",
+                      color:"white",border:"1px solid rgba(26,46,74,.75)",
                     }}>{hasGnv?"GNV":"DIE"}</div>
                   )}
                 </div>
 
                 {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:"13px",fontWeight:700,color:owned?"var(--c-text)":"rgba(26,46,74,.52)"}}>
+                  <div style={{fontSize:"13px",fontWeight:700,color:owned?"var(--c-text)":"rgba(26,46,74,.74)"}}>
                     {label}
                     {owned && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-green)"}}>✅</span>}
                   </div>
-                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.58)",marginTop:"1px"}}>{desc}</div>
+                  <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)",marginTop:"1px"}}>{desc}</div>
                   {owned && (
                     <div style={{display:"flex",gap:"4px",marginTop:"4px",flexWrap:"wrap"}}>
                       {hasTrailer && <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"5px",fontWeight:700}}>🔧 Remorque</span>}
@@ -6152,13 +6152,13 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                   <button onClick={(e)=>{e.stopPropagation();buyFn&&buyFn();}} disabled={!canBuyTractor} style={{
                     padding:"8px 12px",borderRadius:"9px",border:"none",flexShrink:0,
                     background:canBuyTractor?"linear-gradient(135deg,#007A3A,#00A850)":"rgba(0,80,160,.08)",
-                    color:canBuyTractor?"white":"rgba(26,46,74,.33)",
+                    color:canBuyTractor?"white":"rgba(26,46,74,.60)",
                     fontWeight:700,fontSize:"11px",cursor:canBuyTractor?"pointer":"not-allowed",whiteSpace:"nowrap",
                   }}>
                     {canBuyTractor?fmtEuro(cost):`manque ${fmtEuro(Math.max(0,cost-euros))}`}
                   </button>
                 ) : (
-                  <div style={{fontSize:"16px",color:"rgba(26,46,74,.40)",padding:"4px",flexShrink:0}}>
+                  <div style={{fontSize:"16px",color:"rgba(26,46,74,.82)",padding:"4px",flexShrink:0}}>
                     {isExp?"▲":"▼"}
                   </div>
                 )}
@@ -6180,7 +6180,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                       <div style={{fontSize:"11px",fontWeight:700,color:hasTrailer?"var(--c-green)":"#E6EDF3"}}>
                         Remorque {hasTrailer&&"✅"}
                       </div>
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.58)",marginTop:"1px"}}>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",marginTop:"1px"}}>
                         {hasTrailer?"+50 % capacité active":TRACTOR_UPGRADES.trailer.desc}
                       </div>
                     </div>
@@ -6188,7 +6188,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                       <button onClick={()=>onBuyTrailer(idx)} disabled={!canBuyTrailer} style={{
                         padding:"6px 10px",borderRadius:"7px",border:"none",flexShrink:0,
                         background:canBuyTrailer?"linear-gradient(135deg,#004A9A,#2268a8)":"rgba(0,80,160,.06)",
-                        color:canBuyTrailer?"white":"rgba(26,46,74,.33)",
+                        color:canBuyTrailer?"white":"rgba(26,46,74,.60)",
                         fontWeight:700,fontSize:"10px",cursor:canBuyTrailer?"pointer":"not-allowed",whiteSpace:"nowrap",
                       }}>
                         {canBuyTrailer?fmtEuro(trailerCost):`manque ${fmtEuro(Math.max(0,trailerCost-euros))}`}
@@ -6202,10 +6202,10 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                     border:`1px solid ${hasGnv?"rgba(34,168,106,.35)":gnvLocked?"rgba(0,80,160,.10)":"rgba(34,168,106,.25)"}`}}>
                     <span style={{fontSize:"18px",flexShrink:0,opacity:gnvLocked?.4:1}}>🌿</span>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:"11px",fontWeight:700,color:hasGnv?"var(--c-green)":gnvLocked?"rgba(26,46,74,.40)":"#E6EDF3"}}>
+                      <div style={{fontSize:"11px",fontWeight:700,color:hasGnv?"var(--c-green)":gnvLocked?"rgba(26,46,74,.82)":"#E6EDF3"}}>
                         {hasGnv?"Converti GNV ✅":"Conversion GNV"}
                       </div>
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.52)",marginTop:"1px"}}>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.74)",marginTop:"1px"}}>
                         {hasGnv?"+15 % de remplissage des intrants · zéro émission · boucle vertueuse 🔄":
                          gnvLocked?"🔒 Nécessite 1 station GNV d'abord":
                          TRACTOR_UPGRADES.gnvUnit.desc}
@@ -6215,7 +6215,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
                       <button onClick={()=>onBuyTractorGnvUnit(idx)} disabled={!canBuyGnv} style={{
                         padding:"6px 10px",borderRadius:"7px",border:"none",flexShrink:0,
                         background:canBuyGnv?"linear-gradient(135deg,#007A3A,#00A850)":"rgba(0,80,160,.06)",
-                        color:canBuyGnv?"white":"rgba(26,46,74,.33)",
+                        color:canBuyGnv?"white":"rgba(26,46,74,.60)",
                         fontWeight:700,fontSize:"10px",cursor:canBuyGnv?"pointer":"not-allowed",whiteSpace:"nowrap",
                       }}>
                         {canBuyGnv?fmtEuro(gnvUnitCost):`manque ${fmtEuro(Math.max(0,gnvUnitCost-euros))}`}
@@ -6238,13 +6238,13 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
           <div style={{fontSize:"12px",fontWeight:700,color:tractorSpeedBoost?"var(--c-green)":"#E6EDF3"}}>
             Route goudronnée {tractorSpeedBoost&&"✅"}
           </div>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.5)",marginTop:"2px"}}>{TRACTOR_UPGRADES.speedBoost.desc}</div>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.72)",marginTop:"2px"}}>{TRACTOR_UPGRADES.speedBoost.desc}</div>
         </div>
         {!tractorSpeedBoost && (
           <button onClick={onBuySpeedBoost} disabled={euros<TRACTOR_UPGRADES.speedBoost.cost} style={{
             padding:"7px 12px",borderRadius:"8px",border:"none",flexShrink:0,
             background:euros>=TRACTOR_UPGRADES.speedBoost.cost?"linear-gradient(135deg,#007A3A,#00A850)":"rgba(0,80,160,.08)",
-            color:euros>=TRACTOR_UPGRADES.speedBoost.cost?"white":"rgba(26,46,74,.36)",
+            color:euros>=TRACTOR_UPGRADES.speedBoost.cost?"white":"rgba(26,46,74,.82)",
             fontWeight:700,fontSize:"11px",cursor:euros>=TRACTOR_UPGRADES.speedBoost.cost?"pointer":"not-allowed",whiteSpace:"nowrap",
           }}>
             {euros>=TRACTOR_UPGRADES.speedBoost.cost?fmtEuro(TRACTOR_UPGRADES.speedBoost.cost):`manque ${fmtEuro(Math.max(0,TRACTOR_UPGRADES.speedBoost.cost-euros))}`}
@@ -6252,7 +6252,7 @@ function TractorFleetSection({ tractorCount, tractorSpeedBoost, tractorTrailers,
         )}
       </div>
 
-      <div style={{fontSize:"10px",color:"rgba(26,46,74,.50)",marginTop:"8px",textAlign:"center",lineHeight:1.4}}>
+      <div style={{fontSize:"10px",color:"rgba(26,46,74,.72)",marginTop:"8px",textAlign:"center",lineHeight:1.4}}>
         📌 Épinglez une zone sur la carte pour y prioriser les tracteurs
       </div>
     </div>
@@ -6612,7 +6612,7 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
             )}
             <text x="0" y="24" textAnchor="middle" fontSize="12">⛽</text>
             <text x="0" y="33" textAnchor="middle" fontSize="5" fontWeight="700"
-              fill={active ? "var(--c-green)" : "rgba(26,46,74,.28)"}>
+              fill={active ? "var(--c-green)" : "rgba(26,46,74,.75)"}>
               {active ? `S${i+1}` : '🔒'}
             </text>
             {/* Raccordement station → réseau GRDF */}
@@ -7042,12 +7042,12 @@ function GnvNetworkView({ gnvStations, gnvSplit, gnvBm, bmPerHour, tractorGnvArr
       <div style={{flexShrink:0, height:"26px", display:"flex", gap:"8px", alignItems:"center",
         justifyContent:"center", padding:"0 12px",
         background:"rgba(232,240,251,.9)", borderTop:"1px solid rgba(0,80,160,.14)"}}>
-        <span style={{fontSize:"10px", color:"rgba(26,46,74,.52)"}}>
+        <span style={{fontSize:"10px", color:"rgba(26,46,74,.74)"}}>
           ⛽ GNV : <strong style={{color:"var(--c-green)"}}>{fmt(gnvBm)}</strong> m³
         </span>
         <span style={{fontSize:"10px", color:"rgba(0,80,160,.20)"}}>·</span>
-        <span style={{fontSize:"10px", color:"rgba(26,46,74,.52)"}}>
-          Stations : <strong style={{color: gnvStations > 0 ? "var(--c-green)" : "rgba(26,46,74,.40)"}}>{gnvStations}/3</strong>
+        <span style={{fontSize:"10px", color:"rgba(26,46,74,.74)"}}>
+          Stations : <strong style={{color: gnvStations > 0 ? "var(--c-green)" : "rgba(26,46,74,.82)"}}>{gnvStations}/3</strong>
         </span>
         {gnvConverted > 0 && (
           <>
@@ -7080,7 +7080,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
           <div style={{fontSize:"12px", fontWeight:700, color:"rgba(26,46,74,.82)", display:"flex", alignItems:"center", gap:"6px"}}>
             <MiniDigesterIcon size={14}/> Agrandissement du site
           </div>
-          <div style={{fontSize:"10px", color:"rgba(26,46,74,.46)", marginTop:"2px"}}>
+          <div style={{fontSize:"10px", color:"rgba(26,46,74,.70)", marginTop:"2px"}}>
             Digesteurs supplémentaires · capacité ×{digesteurs} actuellement
           </div>
         </div>
@@ -7116,13 +7116,13 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
                 </div>
                 <div style={{
                   fontSize:"9px", fontWeight:700, marginTop:"4px",
-                  color: active ? "var(--c-blue-light)" : "rgba(26,46,74,.33)"
+                  color: active ? "var(--c-blue-light)" : "rgba(26,46,74,.60)"
                 }}>
                   Digesteur {n}
                 </div>
                 <div style={{
                   fontSize:"10px", marginTop:"2px",
-                  color: active ? "rgba(var(--c-blue-rgb),.7)" : "rgba(26,46,74,.28)"
+                  color: active ? "rgba(var(--c-blue-rgb),.7)" : "rgba(26,46,74,.75)"
                 }}>
                   {active ? (isCurrent && digesteurs < 3 ? "🟢 actif" : "✅ actif") : cost ? fmtEuro(cost) : ""}
                 </div>
@@ -7158,7 +7158,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
             <div key={s.label} style={{flex:1, textAlign:"center"}}>
               <div style={{fontSize:"14px"}}>{s.icon}</div>
               <div style={{fontSize:"12px", fontWeight:800, color:"var(--c-blue-light)", marginTop:"2px"}}>{s.val}</div>
-              <div style={{fontSize:"10px", color:"rgba(26,46,74,.52)", marginTop:"1px"}}>{s.label}</div>
+              <div style={{fontSize:"10px", color:"rgba(26,46,74,.74)", marginTop:"1px"}}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -7170,7 +7170,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
             background: canBuy
               ? "linear-gradient(135deg,#004A9A,var(--c-blue-dark))"
               : "rgba(0,80,160,.08)",
-            color: canBuy ? "white" : "rgba(26,46,74,.36)",
+            color: canBuy ? "white" : "rgba(26,46,74,.82)",
             fontWeight:800, fontSize:"13px",
             cursor: canBuy ? "pointer" : "not-allowed",
             boxShadow: canBuy ? "0 4px 18px rgba(42,125,187,.45)" : "none",
@@ -7185,7 +7185,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
                 {fmtEuro(DIGESTEUR_COSTS[digesteurs - 1])}
               </span>
             </div>
-            <div style={{fontSize:"10px", color: canBuy ? "rgba(255,255,255,.55)" : "rgba(26,46,74,.33)", marginTop:"3px"}}>
+            <div style={{fontSize:"10px", color: canBuy ? "rgba(255,255,255,.55)" : "rgba(26,46,74,.60)", marginTop:"3px"}}>
               {canBuy
                 ? `Production × ${digesteurs + 1} — capacité charge ${fmt(CHARGE_MAX * (digesteurs + 1))}`
                 : `Manque ${fmtEuro(Math.max(0, DIGESTEUR_COSTS[digesteurs - 1] - euros))}`}
@@ -7205,7 +7205,7 @@ function AgrandissementSection({ digesteurs, euros, bmPerHour, chargePct, charge
         <div style={{
           padding:"8px 10px", borderRadius:"9px",
           background:"rgba(0,80,160,.05)", border:"1px solid rgba(0,80,160,.10)",
-          fontSize:"10px", color:"rgba(26,46,74,.58)", lineHeight:1.6
+          fontSize:"10px", color:"rgba(26,46,74,.78)", lineHeight:1.6
         }}>
           💡 En France, les installations de biométhane varient de quelques centaines à plusieurs milliers de m³/h.
           L'agrandissement progressif d'un site existant est souvent plus rentable qu'un nouveau raccordement.
@@ -7289,18 +7289,18 @@ function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabe
             <text y={-15} textAnchor="middle" fontSize="6.5" fill="var(--c-red)" fontWeight={800} letterSpacing=".4">⚠ PANNE · {panneTimeStr}</text>
             {/* Coût : info principale, gros et clair */}
             <text y={2} textAnchor="middle" fontSize="11"
-              fill={relaunchAffordable ? "var(--c-yellow)" : "rgba(26,46,74,.58)"}
+              fill={relaunchAffordable ? "var(--c-yellow)" : "rgba(26,46,74,.78)"}
               fontWeight={900}>
               {canPayLabel}
             </text>
             {/* Bouton RELANCER : seul élément qui pulse (signale qu'on peut cliquer) */}
             <rect x={-32} y={9} width={64} height={14} rx={4}
               fill={relaunchAffordable ? "var(--c-orange)" : "rgba(0,80,160,.09)"}
-              stroke="rgba(26,46,74,.28)"
+              stroke="rgba(26,46,74,.75)"
               strokeWidth=".8"
               style={relaunchAffordable ? {animation:'satPulse 1.6s ease-in-out infinite'} : {}}/>
             <text y={19} textAnchor="middle" fontSize="7"
-              fill={relaunchAffordable ? "#EEF4FB" : "rgba(26,46,74,.52)"}
+              fill={relaunchAffordable ? "#EEF4FB" : "rgba(26,46,74,.74)"}
               fontWeight={900} letterSpacing=".4">
               🔧 RELANCER
             </text>
@@ -7959,7 +7959,7 @@ function DigesteurScene({
               {/* v25.15 — jauge CNGauge en position absolute a gauche du bac sprite (anti-decalage pipes) */}
               <div data-tut="bac-zone" style={{flex:"0 0 78px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px", position:"relative"}}>
               <CNGauge composition={stockComposition} />
-                <div style={{fontSize:"10px", color:"rgba(26,46,74,.65)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
+                <div style={{fontSize:"10px", color:"rgba(26,46,74,.82)", textTransform:"uppercase", letterSpacing:".05em", textAlign:"center"}}>
                   Bac d'intrants
                 </div>
                 <div
@@ -8090,15 +8090,15 @@ function DigesteurScene({
                         <div style={{padding:"8px 12px", background:"rgba(var(--c-yellow-rgb),.05)", borderBottom:"1px solid rgba(var(--c-yellow-rgb),.1)", flexShrink:0}}>
                           <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"6px", textAlign:"center"}}>
                             <div>
-                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.52)", textTransform:"uppercase", letterSpacing:".04em"}}>Masse</div>
+                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.74)", textTransform:"uppercase", letterSpacing:".04em"}}>Masse</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-blue-light)"}}>{fmtT(totalMass)}</div>
                             </div>
                             <div>
-                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.52)", textTransform:"uppercase", letterSpacing:".04em"}}>Rendement</div>
+                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.74)", textTransform:"uppercase", letterSpacing:".04em"}}>Rendement</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-yellow)"}}>{Math.round(yieldMoy)} m³/t</div>
                             </div>
                             <div>
-                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.52)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
+                              <div style={{fontSize:"10px", color:"rgba(26,46,74,.74)", textTransform:"uppercase", letterSpacing:".04em"}}>Production</div>
                               <div style={{fontSize:"13px", fontWeight:800, color:"var(--c-green)"}}>{fmt(totalGas)}</div>
                             </div>
                           </div>
@@ -8112,7 +8112,7 @@ function DigesteurScene({
                         const totalMass = massFromComposition(stockComposition);
                         if (totalMass < 0.001) {
                           return (
-                            <div style={{fontSize:"11px", color:"rgba(26,46,74,.52)", padding:"16px 0", textAlign:"center"}}>
+                            <div style={{fontSize:"11px", color:"rgba(26,46,74,.74)", padding:"16px 0", textAlign:"center"}}>
                               Le BAC est vide. Achète des intrants et laisse les tracteurs travailler.
                             </div>
                           );
@@ -8137,7 +8137,7 @@ function DigesteurScene({
                                 borderRadius:"2px", transition:"width .5s"
                               }}/>
                             </div>
-                            <div style={{display:"flex", justifyContent:"space-between", fontSize:"10px", color:"rgba(26,46,74,.58)"}}>
+                            <div style={{display:"flex", justifyContent:"space-between", fontSize:"10px", color:"rgba(26,46,74,.78)"}}>
                               <span>{fmtT(it.mass)} · {it.upg.realYield} m³/t</span>
                               <span style={{color:"var(--c-green)", fontWeight:600}}>+{fmt(it.contribGas)}</span>
                             </div>
@@ -8149,7 +8149,7 @@ function DigesteurScene({
                     {/* Footer pédago compact */}
                     <div style={{
                       padding:"6px 12px 8px", borderTop:"1px solid rgba(0,80,160,.09)",
-                      fontSize:"9px", color:"rgba(26,46,74,.5)", lineHeight:1.4, flexShrink:0
+                      fontSize:"9px", color:"rgba(26,46,74,.72)", lineHeight:1.4, flexShrink:0
                     }}>
                       🎓 <strong style={{color:"var(--c-orange)"}}>Effet cocktail</strong> : la co-digestion d'intrants complémentaires optimise le rendement biométhane.
                     </div>
@@ -8174,7 +8174,7 @@ function DigesteurScene({
                 transformOrigin:"center bottom",
                 transition:"transform 1s cubic-bezier(.22,.68,0,1.2)",
               }}>
-                <div style={{fontSize:"10px", color:"rgba(26,46,74,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>
+                <div style={{fontSize:"10px", color:"rgba(26,46,74,.75)", textTransform:"uppercase", letterSpacing:".05em"}}>
                   Digesteur{digesteurs>1?"s":""} ×{digesteurs}
                 </div>
                 {/* v25.1.21 — Collecteur biogaz (au-dessus des digesteurs).
@@ -8209,20 +8209,20 @@ function DigesteurScene({
                     border:`1px solid ${isDigesting?"rgba(var(--c-blue-rgb),.32)":"rgba(0,80,160,.14)"}`,
                     borderRadius:"9px", padding:"5px 8px", textAlign:"center", transition:"all .5s"
                   }}>
-                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.55)", textTransform:"uppercase", letterSpacing:".05em"}}>Production totale</div>
+                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.75)", textTransform:"uppercase", letterSpacing:".05em"}}>Production totale</div>
                     <div style={{
                       fontSize:"13px", fontWeight:800,
-                      color: isDigesting?"var(--c-blue-light)":"rgba(26,46,74,.40)",
+                      color: isDigesting?"var(--c-blue-light)":"rgba(26,46,74,.82)",
                       marginTop:"1px",
                       animation: isDigesting?"chargePulse 2s ease infinite":"none"
                     }}>
                       {isDigesting ? fmt(bmPerHour) : "—"}
                     </div>
-                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.46)"}}>par heure</div>
+                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.70)"}}>par heure</div>
                   </div>
                   <div style={{padding:"0 2px"}}>
                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:"2px"}}>
-                      <span style={{fontSize:"9px", color:"rgba(26,46,74,.46)"}}>Charge ({digesteurs} digesteur{digesteurs>1?"s":""})</span>
+                      <span style={{fontSize:"9px", color:"rgba(26,46,74,.70)"}}>Charge ({digesteurs} digesteur{digesteurs>1?"s":""})</span>
                       <span style={{fontSize:"9px", color:"var(--c-blue-light)", fontWeight:700}}>{Math.round(chargePct*100)}%</span>
                     </div>
                     <div style={{height:"4px", borderRadius:"2px", background:"rgba(var(--c-blue-rgb),.12)", overflow:"hidden"}}>
@@ -8247,8 +8247,8 @@ function DigesteurScene({
                 <div style={{height:"100%", display:"flex", alignItems:"center", justifyContent:"center"}}>
                   <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
                     <div style={{fontSize:"20px", marginBottom:"4px"}}>⛽</div>
-                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.5)"}}>Station GNV</div>
-                    <div style={{fontSize:"9px", color:"rgba(26,46,74,.42)", marginTop:"2px"}}>Disponible après raccordement</div>
+                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.72)"}}>Station GNV</div>
+                    <div style={{fontSize:"9px", color:"rgba(26,46,74,.82)", marginTop:"2px"}}>Disponible après raccordement</div>
                   </div>
                 </div>
               ) : null}
@@ -8265,7 +8265,7 @@ function DigesteurScene({
             {/* ─── TOP : Parcelles d'approvisionnement (350px) ─── */}
             <div style={{height:"350px", position:"relative", flexShrink:0}}>
             {/* Les bandes latérales sont désormais dans le SVG monde (chemins x=400 et x=800) */}
-            <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(26,46,74,.55)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
+            <div style={{position:"absolute", top:38, left:12, fontSize:"10px", color:"rgba(26,46,74,.75)", textTransform:"uppercase", letterSpacing:".05em", zIndex:5}}>
               Approvisionnement · {CITY_ZONES.filter(z => (owned[z.upgradeId]||0)>0).length}/7 zones · v25.1
             </div>
             {/* SVG local vue 2 : UNIQUEMENT les zones — zIndex:2 < SVG monde (zIndex:3) */}
@@ -8319,8 +8319,8 @@ function DigesteurScene({
                   background:"rgba(240,246,252,.7)"}}>
                   <div style={{textAlign:"center", padding:"12px", opacity:.42}}>
                     <div style={{fontSize:"20px", marginBottom:"4px"}}>🔒</div>
-                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.5)"}}>Réseau aval GRDF</div>
-                    <div style={{fontSize:"9px", color:"rgba(26,46,74,.42)", marginTop:"2px"}}>Disponible après raccordement</div>
+                    <div style={{fontSize:"10px", color:"rgba(26,46,74,.72)"}}>Réseau aval GRDF</div>
+                    <div style={{fontSize:"9px", color:"rgba(26,46,74,.82)", marginTop:"2px"}}>Disponible après raccordement</div>
                   </div>
                 </div>
               )}
@@ -8541,7 +8541,7 @@ function DigesteurScene({
               style={{
                 width: cityView === i ? 20 : 7, height: 7,
                 borderRadius: cityView === i ? 4 : 999,
-                background: cityView === i ? "var(--c-blue)" : "rgba(26,46,74,.30)",
+                background: cityView === i ? "var(--c-blue)" : "rgba(26,46,74,.75)",
                 transition:"all .25s",
                 cursor:"pointer",
                 pointerEvents:"auto",
@@ -8698,7 +8698,7 @@ function SingleDigesteur({ index, total, bubbles, chargePct, isDigesting, bmPerH
           <div style={{
             position:"absolute", top:"10%", left:"12%",
             width:"18%", height:"62%",
-            background:"rgba(26,46,74,.30)",
+            background:"rgba(26,46,74,.75)",
             borderRadius:"50%", filter:"blur(4px)",
           }}/>
           {/* Sangles */}
@@ -8859,7 +8859,7 @@ function RankingTab({
   const rtColors = {
     connected:    { bg:"rgba(34,197,94,.2)",  dot:"#22c55e", label:"Live"          },
     connecting:   { bg:"rgba(234,179,8,.15)", dot:"#eab308", label:"Connexion…"    },
-    disconnected: { bg:"rgba(0,80,160,.09)", dot:"rgba(26,46,74,.33)", label:"Hors-ligne" },
+    disconnected: { bg:"rgba(0,80,160,.09)", dot:"rgba(26,46,74,.60)", label:"Hors-ligne" },
     error:        { bg:"rgba(239,68,68,.15)", dot:"#ef4444", label:"Erreur réseau" },
   };
   const rt = rtColors[rtStatus] || rtColors.disconnected;
@@ -8893,12 +8893,12 @@ function RankingTab({
               </div>
               <div>
                 <div style={{fontSize:"15px",fontWeight:800,color:"var(--c-text)"}}>{username}</div>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.58)"}}>{region}</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.78)"}}>{region}</div>
               </div>
             </div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:"22px",fontWeight:900,color:injected?"var(--c-blue)":"rgba(26,46,74,.40)",letterSpacing:"-.5px"}}>
+            <div style={{fontSize:"22px",fontWeight:900,color:injected?"var(--c-blue)":"rgba(26,46,74,.82)",letterSpacing:"-.5px"}}>
               {injected ? fmt(totalScore) : "—"}
             </div>
             <div style={{display:"flex",gap:"8px",justifyContent:"flex-end",marginTop:"4px"}}>
@@ -8927,16 +8927,16 @@ function RankingTab({
               boxShadow:rtStatus==="connected"?`0 0 8px ${rt.dot}`:"none",
               animation:rtStatus==="connected"?"chargePulse 2s ease infinite":rtStatus==="connecting"?"shimmer 1.5s ease infinite":"none"
             }}/>
-            <span style={{fontSize:"10px",fontWeight:600,color:rtStatus==="connected"?"#22c55e":"rgba(26,46,74,.5)"}}>
+            <span style={{fontSize:"10px",fontWeight:600,color:rtStatus==="connected"?"#22c55e":"rgba(26,46,74,.72)"}}>
               {rt.label}
             </span>
             {timeSince !== null && timeSince < 120 && rtStatus === "connected" && (
-              <span style={{fontSize:"9px",color:"rgba(26,46,74,.40)"}}>· maj {timeSince < 5 ? "à l'instant" : `il y a ${timeSince}s`}</span>
+              <span style={{fontSize:"9px",color:"rgba(26,46,74,.82)"}}>· maj {timeSince < 5 ? "à l'instant" : `il y a ${timeSince}s`}</span>
             )}
           </div>
           <button onClick={() => { onRefreshLb(); onRefreshRegional(); }} disabled={lbLoading||regionalLoading} style={{
             background:"none",border:"1px solid rgba(0,80,160,.16)",borderRadius:"6px",
-            padding:"3px 10px",color:"rgba(26,46,74,.5)",fontSize:"10px",fontWeight:600,
+            padding:"3px 10px",color:"rgba(26,46,74,.72)",fontSize:"10px",fontWeight:600,
             cursor:lbLoading?"not-allowed":"pointer",opacity:lbLoading?.5:1
           }}>
             {lbLoading ? "⏳" : "↻ Refresh"}
@@ -8950,7 +8950,7 @@ function RankingTab({
         {[["mine","🏆 Mon classement"],["regions","🗺️ Ma région"]].map(([id,lbl]) => (
           <button key={id} onClick={() => setRankTab(id)} style={{
             flex:1,padding:"11px",border:"none",background:"transparent",
-            color:rankTab===id?"var(--c-blue)":"rgba(26,46,74,.46)",
+            color:rankTab===id?"var(--c-blue)":"rgba(26,46,74,.70)",
             fontSize:"12px",fontWeight:rankTab===id?700:400,
             borderBottom:rankTab===id?"2px solid var(--c-blue)":"2px solid transparent",
             cursor:"pointer",transition:"all .3s"
@@ -8970,7 +8970,7 @@ function RankingTab({
               flex:1,padding:"8px 6px",borderRadius:"10px",
               background:myRankMode===id?"rgba(var(--c-blue-rgb),.2)":"rgba(0,80,160,.05)",
               border:`1px solid ${myRankMode===id?"rgba(var(--c-blue-rgb),.45)":"rgba(0,80,160,.09)"}`,
-              color:myRankMode===id?"var(--c-blue)":"rgba(26,46,74,.5)",
+              color:myRankMode===id?"var(--c-blue)":"rgba(26,46,74,.72)",
               fontSize:"10px",fontWeight:myRankMode===id?700:500,
               cursor:"pointer",transition:"all .3s"
             }}>{lbl}</button>
@@ -8986,7 +8986,7 @@ function RankingTab({
               flex:1,padding:"5px 8px",borderRadius:"8px",
               background:cumulativeView===id?"rgba(var(--c-yellow-rgb),.12)":"rgba(0,80,160,.03)",
               border:`1px solid ${cumulativeView===id?"rgba(var(--c-yellow-rgb),.35)":"rgba(0,80,160,.08)"}`,
-              color:cumulativeView===id?"var(--c-yellow)":"rgba(26,46,74,.52)",
+              color:cumulativeView===id?"var(--c-yellow)":"rgba(26,46,74,.74)",
               fontSize:"9px",fontWeight:cumulativeView===id?700:500,
               cursor:"pointer",transition:"all .3s"
             }}>{lbl}</button>
@@ -9002,7 +9002,7 @@ function RankingTab({
               flex:1,padding:"8px 10px",borderRadius:"10px",
               background:myRankTab===id?"rgba(var(--c-blue-rgb),.15)":"rgba(0,80,160,.05)",
               border:`1px solid ${myRankTab===id?"rgba(var(--c-blue-rgb),.4)":"rgba(0,80,160,.09)"}`,
-              color:myRankTab===id?"var(--c-blue)":"rgba(26,46,74,.5)",
+              color:myRankTab===id?"var(--c-blue)":"rgba(26,46,74,.72)",
               fontSize:"11px",fontWeight:myRankTab===id?700:500,
               cursor:"pointer",transition:"all .3s"
             }}>{lbl}</button>
@@ -9013,14 +9013,14 @@ function RankingTab({
       {/* ══ v25.14 — VUE PERFORMANCE (m³ injectés par jour, moyenne 7j) ══ */}
       {rankTab === "mine" && myRankMode === "performance" && (
         <div style={{flex:1,padding:"12px 14px 30px"}}>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginBottom:"10px",lineHeight:1.5}}>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginBottom:"10px",lineHeight:1.5}}>
             Classement par <b style={{color:"var(--c-blue-light)"}}>production moyenne sur 7 jours glissants</b>.
             Récompense les joueurs actifs récemment, indépendamment de l'ancienneté du compte.
           </div>
           {lbModeLoading ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px"}}>⏳ Chargement…</div>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>⏳ Chargement…</div>
           ) : lbPerf.length === 0 ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px",lineHeight:1.5}}>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px",lineHeight:1.5}}>
               Aucune donnée pour l'instant.<br/>
               <span style={{fontSize:"9px"}}>Le classement Performance nécessite au moins 24h de jeu pour produire les premières mesures.</span>
             </div>
@@ -9035,18 +9035,18 @@ function RankingTab({
                     background:isMe?"rgba(var(--c-blue-rgb),.12)":"rgba(0,80,160,.04)",
                     border:`1px solid ${isMe?"rgba(var(--c-blue-rgb),.4)":"rgba(0,80,160,.08)"}`
                   }}>
-                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.5)"}}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.72)"}}>
                       {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-yellow)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.52)"}}>{entry.region}</div>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-blue)"}}>{fmt(perDay)}</div>
-                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)"}}>m³/jour</div>
+                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³/jour</div>
                     </div>
                   </div>
                 );
@@ -9059,14 +9059,14 @@ function RankingTab({
       {/* ══ v25.14 — VUE MAÎTRISE (yield CH₄/t du stock actuel) ══ */}
       {rankTab === "mine" && myRankMode === "mastery" && (
         <div style={{flex:1,padding:"12px 14px 30px"}}>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginBottom:"10px",lineHeight:1.5}}>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginBottom:"10px",lineHeight:1.5}}>
             Classement par <b style={{color:"var(--c-green)"}}>rendement m³ CH₄/t</b> du mix d'intrants actuel.
             Indépendant de la taille de l'installation : un petit joueur avec une bonne recette peut dominer.
           </div>
           {lbModeLoading ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px"}}>⏳ Chargement…</div>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>⏳ Chargement…</div>
           ) : lbMastery.length === 0 ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px"}}>Aucune donnée.</div>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>Aucune donnée.</div>
           ) : (
             <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
               {lbMastery.slice(0, 50).map((entry, i) => {
@@ -9078,18 +9078,18 @@ function RankingTab({
                     background:isMe?"rgba(74,200,120,.12)":"rgba(0,80,160,.04)",
                     border:`1px solid ${isMe?"rgba(74,200,120,.4)":"rgba(0,80,160,.08)"}`
                   }}>
-                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.5)"}}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.72)"}}>
                       {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-green)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.52)"}}>{entry.region}</div>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-green)"}}>{yieldVal.toFixed(1)}</div>
-                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)"}}>m³ CH₄/t</div>
+                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³ CH₄/t</div>
                     </div>
                   </div>
                 );
@@ -9102,14 +9102,14 @@ function RankingTab({
       {/* ══ v25.14 — VUE CUMUL SAISON (production depuis season_started_at) ══ */}
       {rankTab === "mine" && myRankMode === "cumulative" && cumulativeView === "season" && (
         <div style={{flex:1,padding:"12px 14px 30px"}}>
-          <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginBottom:"10px",lineHeight:1.5}}>
+          <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginBottom:"10px",lineHeight:1.5}}>
             Classement par <b style={{color:"var(--c-yellow)"}}>m³ produits depuis le début de la saison</b>.
             Tous les joueurs partent à 0 au début de la saison — équitable pour les nouveaux arrivants.
           </div>
           {lbModeLoading ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px"}}>⏳ Chargement…</div>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>⏳ Chargement…</div>
           ) : lbSeason.length === 0 ? (
-            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.52)",fontSize:"11px"}}>Aucune donnée.</div>
+            <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>Aucune donnée.</div>
           ) : (
             <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
               {lbSeason.slice(0, 50).map((entry, i) => {
@@ -9121,18 +9121,18 @@ function RankingTab({
                     background:isMe?"rgba(var(--c-yellow-rgb),.12)":"rgba(0,80,160,.04)",
                     border:`1px solid ${isMe?"rgba(var(--c-yellow-rgb),.4)":"rgba(0,80,160,.08)"}`
                   }}>
-                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.5)"}}>
+                    <div style={{width:"28px",fontSize:"11px",fontWeight:700,color:i<3?"var(--c-yellow)":"rgba(26,46,74,.72)"}}>
                       {i<3?["🥇","🥈","🥉"][i]:`#${i+1}`}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-yellow)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
                       </div>
-                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.52)"}}>{entry.region}</div>
+                      <div style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>{entry.region}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-yellow)"}}>{fmt(seasonScore)}</div>
-                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)"}}>m³ saison</div>
+                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³ saison</div>
                     </div>
                   </div>
                 );
@@ -9245,7 +9245,7 @@ function RankingTab({
                     border:`1.5px solid ${rank<=3?["var(--c-yellow)","#C0C0C0","#CD7F32"][rank-1]+"60":"rgba(0,80,160,.14)"}`,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:"11px",fontWeight:900,
-                    color:rank<=3?["var(--c-yellow)","#C0C0C0","#CD7F32"][rank-1]:"rgba(26,46,74,.58)",
+                    color:rank<=3?["var(--c-yellow)","#C0C0C0","#CD7F32"][rank-1]:"rgba(26,46,74,.78)",
                     zIndex:1
                   }}>
                     {rank <= 3 ? MEDALS[rank-1] : rank}
@@ -9324,12 +9324,12 @@ function RankingTab({
           </div>
 
           {leaderboard.length === 0 && !lbLoading && (
-            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.46)",fontSize:"13px"}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.70)",fontSize:"13px"}}>
               Aucun joueur enregistré pour le moment.
             </div>
           )}
           {lbLoading && leaderboard.length === 0 && (
-            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.46)",fontSize:"12px",animation:"shimmer 1.5s ease infinite"}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.70)",fontSize:"12px",animation:"shimmer 1.5s ease infinite"}}>
               ⏳ Chargement du classement…
             </div>
           )}
@@ -9342,11 +9342,11 @@ function RankingTab({
           }}>
             <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
               <div style={{width:"14px",height:"4px",borderRadius:"2px",background:"var(--c-blue)"}}/>
-              <span style={{fontSize:"9px",color:"rgba(26,46,74,.52)"}}>Réseau GRDF</span>
+              <span style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>Réseau GRDF</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
               <div style={{width:"14px",height:"4px",borderRadius:"2px",background:"var(--c-green)"}}/>
-              <span style={{fontSize:"9px",color:"rgba(26,46,74,.52)"}}>GNV</span>
+              <span style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>GNV</span>
             </div>
           </div>
         </div>
@@ -9356,7 +9356,7 @@ function RankingTab({
       {rankTab === "mine" && myRankMode === "cumulative" && cumulativeView === "lifetime" && myRankTab === "regional" && (
         <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
-            <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.5)",letterSpacing:".06em",textTransform:"uppercase"}}>
+            <div style={{fontSize:"12px",fontWeight:700,color:"rgba(26,46,74,.72)",letterSpacing:".06em",textTransform:"uppercase"}}>
               Classement · {region}
             </div>
             <button onClick={onRefreshRegionalLb} disabled={regionalLbLoading} style={{
@@ -9366,12 +9366,12 @@ function RankingTab({
           </div>
 
           {regionalLb.length === 0 && !regionalLbLoading && (
-            <div style={{textAlign:"center",padding:"40px 0",color:"rgba(26,46,74,.33)",fontSize:"13px"}}>
+            <div style={{textAlign:"center",padding:"40px 0",color:"rgba(26,46,74,.60)",fontSize:"13px"}}>
               Aucun joueur dans votre région pour l'instant.
             </div>
           )}
           {regionalLbLoading && regionalLb.length === 0 && (
-            <div style={{textAlign:"center",padding:"40px 0",color:"rgba(26,46,74,.33)",fontSize:"13px"}}>⏳ Chargement…</div>
+            <div style={{textAlign:"center",padding:"40px 0",color:"rgba(26,46,74,.60)",fontSize:"13px"}}>⏳ Chargement…</div>
           )}
 
           <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
@@ -9386,7 +9386,7 @@ function RankingTab({
                   border:`1px solid ${isMe?"rgba(var(--c-blue-rgb),.4)":"rgba(0,80,160,.09)"}`,
                   position:"relative",
                 }}>
-                  <div style={{width:"28px",textAlign:"center",fontSize:medal?"18px":"12px",fontWeight:700,color:isMe?"var(--c-blue)":"rgba(26,46,74,.40)",flexShrink:0}}>
+                  <div style={{width:"28px",textAlign:"center",fontSize:medal?"18px":"12px",fontWeight:700,color:isMe?"var(--c-blue)":"rgba(26,46,74,.82)",flexShrink:0}}>
                     {medal || `#${entry.rank}`}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -9395,13 +9395,13 @@ function RankingTab({
                       {isMe && <span style={{fontSize:"9px",background:"rgba(var(--c-blue-rgb),.25)",color:"var(--c-blue)",padding:"1px 6px",borderRadius:"8px",fontWeight:700,letterSpacing:".04em"}}>VOUS</span>}
                       {entry.connected && <span style={{fontSize:"9px",color:"#22c55e"}}>● GRDF</span>}
                     </div>
-                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>
+                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>
                       {entry.digesteurs > 1 ? `${entry.digesteurs} digesteurs` : "1 digesteur"}
                     </div>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
                     <div style={{fontSize:"14px",fontWeight:700,color:isMe?"var(--c-blue)":"rgba(26,46,74,.75)"}}>
-                      {(entry.score/1000).toFixed(1)}<span style={{fontSize:"10px",fontWeight:400,color:"rgba(26,46,74,.52)"}}> km³</span>
+                      {(entry.score/1000).toFixed(1)}<span style={{fontSize:"10px",fontWeight:400,color:"rgba(26,46,74,.74)"}}> km³</span>
                     </div>
                     {entry.scoreGnv > 0 && (
                       <div style={{fontSize:"9px",color:"rgba(var(--c-orange-rgb),.6)",marginTop:"1px"}}>
@@ -9455,7 +9455,7 @@ function RankingTab({
                           }}>{rs.region}</span>
                           {isMyR && <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 5px",borderRadius:"6px",fontWeight:700}}>MA RÉGION</span>}
                         </div>
-                        <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginBottom:"8px"}}>
+                        <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginBottom:"8px"}}>
                           {rg?.label || rs.region}
                         </div>
 
@@ -9465,7 +9465,7 @@ function RankingTab({
                             <div style={{fontSize:"18px",fontWeight:900,color:rg?.light||"var(--c-blue-light)"}}>
                               {rs.sites}
                             </div>
-                            <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginTop:"1px"}}>
+                            <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginTop:"1px"}}>
                               site{rs.sites>1?"s":""} raccordé{rs.sites>1?"s":""}
                             </div>
                           </div>
@@ -9474,7 +9474,7 @@ function RankingTab({
                             <div style={{fontSize:"18px",fontWeight:900,color:"var(--c-text)"}}>
                               {fmt(rs.volume)}
                             </div>
-                            <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginTop:"1px"}}>
+                            <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginTop:"1px"}}>
                               volume total injecté
                             </div>
                           </div>
@@ -9510,7 +9510,7 @@ function RankingTab({
                       if (regionPlayers.length === 0) return null;
                       return (
                         <div style={{marginTop:"10px",paddingTop:"8px",borderTop:"1px solid rgba(0,80,160,.09)",position:"relative",zIndex:1}}>
-                          <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"6px"}}>Joueurs · {regionPlayers.length}</div>
+                          <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"6px"}}>Joueurs · {regionPlayers.length}</div>
                           <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
                             {regionPlayers.map((p, pi) => {
                               const isMe = p.name === username;
@@ -9521,8 +9521,8 @@ function RankingTab({
                                   background:isMe?"rgba(var(--c-blue-rgb),.1)":"rgba(0,80,160,.03)",
                                   border:isMe?"1px solid rgba(var(--c-blue-rgb),.25)":"1px solid transparent",
                                 }}>
-                                  <span style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.46)",width:"16px",textAlign:"center"}}>{pi+1}</span>
-                                  <span style={{fontSize:"11px",fontWeight:isMe?800:500,color:isMe?"var(--c-text)":"rgba(26,46,74,.65)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
+                                  <span style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.70)",width:"16px",textAlign:"center"}}>{pi+1}</span>
+                                  <span style={{fontSize:"11px",fontWeight:isMe?800:500,color:isMe?"var(--c-text)":"rgba(26,46,74,.82)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
                                   {isMe && <span style={{fontSize:"9px",background:"rgba(var(--c-blue-rgb),.2)",color:"var(--c-blue-light)",padding:"1px 4px",borderRadius:"4px",fontWeight:700,flexShrink:0}}>MOI</span>}
                                   {p.connected ? (
                                     <span style={{fontSize:"10px",fontWeight:700,color:rg?.light||"var(--c-blue-light)",flexShrink:0}}>{fmt(p.score)}</span>
@@ -9548,11 +9548,11 @@ function RankingTab({
               })}
             </div>
           ) : regionalLoading ? (
-            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.46)",fontSize:"12px",animation:"shimmer 1.5s ease infinite"}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.70)",fontSize:"12px",animation:"shimmer 1.5s ease infinite"}}>
               ⏳ Chargement des stats régionales…
             </div>
           ) : (
-            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.46)",fontSize:"13px"}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"rgba(26,46,74,.70)",fontSize:"13px"}}>
               Aucune donnée régionale disponible.
             </div>
           )}
@@ -9561,7 +9561,7 @@ function RankingTab({
           <div style={{
             marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
             background:"rgba(0,80,160,.05)",border:"1px solid rgba(0,80,160,.09)",
-            fontSize:"10px",color:"rgba(26,46,74,.58)",lineHeight:1.6
+            fontSize:"10px",color:"rgba(26,46,74,.78)",lineHeight:1.6
           }}>
             💡 En France, GRDF opère 6 grandes directions régionales. Chaque site raccordé contribue au volume total de sa région.
             L'objectif national est d'atteindre 10% de gaz renouvelable dans le réseau d'ici 2030.
@@ -9577,7 +9577,7 @@ function RankingTab({
         <div style={{flex:1,padding:"12px 14px 30px",animation:"riseIn .3s ease"}}>
 
           {/* Certificats réalistes */}
-          <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
+          <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
           <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
             {[
               { id:"go",     icon:"📜", name:"Garantie d'Origine (GO)",  desc:"Chaque MWh injecté génère 1 GO",             unlocked: injected && totalScore >= 100,     detail: injected && totalScore>=100 ? `${Math.floor(totalScore/100)} GO émises` : injected ? `${fmt(totalScore)} / 100 m³` : "Raccordement requis", color:"var(--c-blue)" },
@@ -9599,9 +9599,9 @@ function RankingTab({
                     boxShadow:cert.unlocked?`0 0 12px ${cert.color}35`:"none"
                   }}>{cert.unlocked?cert.icon:"🔒"}</div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:"13px",fontWeight:800,color:cert.unlocked?"var(--c-text)":"rgba(26,46,74,.40)"}}>{cert.name}</div>
-                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginTop:"2px"}}>{cert.desc}</div>
-                    {cert.detail && <div style={{fontSize:"10px",fontWeight:700,color:cert.unlocked?cert.color:"rgba(26,46,74,.33)",marginTop:"4px"}}>{cert.detail}</div>}
+                    <div style={{fontSize:"13px",fontWeight:800,color:cert.unlocked?"var(--c-text)":"rgba(26,46,74,.82)"}}>{cert.name}</div>
+                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginTop:"2px"}}>{cert.desc}</div>
+                    {cert.detail && <div style={{fontSize:"10px",fontWeight:700,color:cert.unlocked?cert.color:"rgba(26,46,74,.60)",marginTop:"4px"}}>{cert.detail}</div>}
                   </div>
                   {cert.unlocked && <span style={{fontSize:"11px",fontWeight:700,color:cert.color,padding:"3px 10px",borderRadius:"20px",background:cert.color+"18",flexShrink:0}}>✅</span>}
                 </div>
@@ -9610,7 +9610,7 @@ function RankingTab({
           </div>
 
           {/* Milestones de production */}
-          <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
+          <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
           <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"20px"}}>
             {[
               { icon:"🥉", name:"Premier MWh injecté",       threshold:100,      medal:"bronze" },
@@ -9632,13 +9632,13 @@ function RankingTab({
                   <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:done?0:"6px"}}>
                     <span style={{fontSize:"18px",filter:done?"none":"grayscale(100%) opacity(0.4)"}}>{ms.icon}</span>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.46)"}}>{ms.name}</div>
-                      {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.40)",marginTop:"1px"}}>{ms.sub}</div>}
+                      <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.70)"}}>{ms.name}</div>
+                      {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.82)",marginTop:"1px"}}>{ms.sub}</div>}
                     </div>
                     {done ? (
                       <span style={{fontSize:"10px",fontWeight:700,color:c,padding:"2px 8px",borderRadius:"10px",background:c+"18"}}>✅</span>
                     ) : (
-                      <span style={{fontSize:"10px",color:"rgba(26,46,74,.40)"}}>{pct.toFixed(0)}%</span>
+                      <span style={{fontSize:"10px",color:"rgba(26,46,74,.82)"}}>{pct.toFixed(0)}%</span>
                     )}
                   </div>
                   {!done && (
@@ -9669,8 +9669,8 @@ function RankingTab({
                 opacity:b.done?1:.55,transition:"all .4s"
               }}>
                 <div style={{fontSize:"24px",filter:b.done?"drop-shadow(0 0 8px "+b.color+"80)":"grayscale(100%) opacity(0.35)",marginBottom:"6px"}}>{b.icon}</div>
-                <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.46)"}}>{b.name}</div>
-                <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>{b.desc}</div>
+                <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.70)"}}>{b.name}</div>
+                <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{b.desc}</div>
                 {b.done ? (
                   <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
                 ) : b.pct != null ? (
@@ -9678,7 +9678,7 @@ function RankingTab({
                     <div style={{height:"3px",borderRadius:"2px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:"2px",width:`${b.pct}%`,background:`linear-gradient(90deg,${b.color}55,${b.color})`,transition:"width .5s"}}/>
                     </div>
-                    {b.detail && <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
+                    {b.detail && <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
                   </div>
                 ) : null}
                 {/* Mini-tampon statique en coin pour badges débloqués */}
@@ -9697,7 +9697,7 @@ function RankingTab({
               </div>
             );
 
-            const sectionTitleStyle = {fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"};
+            const sectionTitleStyle = {fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"};
 
             return (
               <>
@@ -9723,7 +9723,7 @@ function RankingTab({
           <div style={{
             marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
             background:"rgba(0,80,160,.05)",border:"1px solid rgba(0,80,160,.09)",
-            fontSize:"10px",color:"rgba(26,46,74,.58)",lineHeight:1.6
+            fontSize:"10px",color:"rgba(26,46,74,.78)",lineHeight:1.6
           }}>
             💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
             de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
@@ -9744,7 +9744,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
 
       {/* Certificats réalistes */}
       <div data-tut="rewards-certs">
-      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
+      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>📜 Certificats officiels</div>
       <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"20px"}}>
         {[
           { id:"go",     icon:"📜", name:"Garantie d'Origine (GO)",  desc:"Chaque MWh injecté génère 1 GO",             unlocked: injected && totalScore >= 100,     detail: injected && totalScore>=100 ? `${Math.floor(totalScore/100)} GO émises` : injected ? `${fmt(totalScore)} / 100 m³` : "Raccordement requis", color:"var(--c-blue)" },
@@ -9766,9 +9766,9 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                 boxShadow:cert.unlocked?`0 0 12px ${cert.color}35`:"none"
               }}>{cert.unlocked?cert.icon:"🔒"}</div>
               <div style={{flex:1}}>
-                <div style={{fontSize:"13px",fontWeight:800,color:cert.unlocked?"var(--c-text)":"rgba(26,46,74,.40)"}}>{cert.name}</div>
-                <div style={{fontSize:"10px",color:"rgba(26,46,74,.52)",marginTop:"2px"}}>{cert.desc}</div>
-                {cert.detail && <div style={{fontSize:"10px",fontWeight:700,color:cert.unlocked?cert.color:"rgba(26,46,74,.33)",marginTop:"4px"}}>{cert.detail}</div>}
+                <div style={{fontSize:"13px",fontWeight:800,color:cert.unlocked?"var(--c-text)":"rgba(26,46,74,.82)"}}>{cert.name}</div>
+                <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginTop:"2px"}}>{cert.desc}</div>
+                {cert.detail && <div style={{fontSize:"10px",fontWeight:700,color:cert.unlocked?cert.color:"rgba(26,46,74,.60)",marginTop:"4px"}}>{cert.detail}</div>}
               </div>
               {cert.unlocked && <span style={{fontSize:"11px",fontWeight:700,color:cert.color,padding:"3px 10px",borderRadius:"20px",background:cert.color+"18",flexShrink:0}}>✅</span>}
             </div>
@@ -9780,7 +9780,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
 
       {/* Milestones de production */}
       <div data-tut="rewards-milestones">
-      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
+      <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"}}>🏆 Milestones de production</div>
       <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"20px"}}>
         {[
           { icon:"🥉", name:"Premier MWh injecté",       threshold:100,      medal:"bronze" },
@@ -9802,13 +9802,13 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
               <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:done?0:"6px"}}>
                 <span style={{fontSize:"18px",filter:done?"none":"grayscale(100%) opacity(0.4)"}}>{ms.icon}</span>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.46)"}}>{ms.name}</div>
-                  {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.40)",marginTop:"1px"}}>{ms.sub}</div>}
+                  <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.70)"}}>{ms.name}</div>
+                  {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.82)",marginTop:"1px"}}>{ms.sub}</div>}
                 </div>
                 {done ? (
                   <span style={{fontSize:"10px",fontWeight:700,color:c,padding:"2px 8px",borderRadius:"10px",background:c+"18"}}>✅</span>
                 ) : (
-                  <span style={{fontSize:"10px",color:"rgba(26,46,74,.40)"}}>{pct.toFixed(0)}%</span>
+                  <span style={{fontSize:"10px",color:"rgba(26,46,74,.82)"}}>{pct.toFixed(0)}%</span>
                 )}
               </div>
               {!done && (
@@ -9840,8 +9840,8 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
             opacity:b.done?1:.55,transition:"all .4s"
           }}>
             <div style={{fontSize:"24px",filter:b.done?"drop-shadow(0 0 8px "+b.color+"80)":"grayscale(100%) opacity(0.35)",marginBottom:"6px"}}>{b.icon}</div>
-            <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.46)"}}>{b.name}</div>
-            <div style={{fontSize:"9px",color:"rgba(26,46,74,.46)",marginTop:"2px"}}>{b.desc}</div>
+            <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.70)"}}>{b.name}</div>
+            <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{b.desc}</div>
             {b.done ? (
               <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
             ) : b.pct != null ? (
@@ -9849,7 +9849,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                 <div style={{height:"3px",borderRadius:"2px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
                   <div style={{height:"100%",borderRadius:"2px",width:`${b.pct}%`,background:`linear-gradient(90deg,${b.color}55,${b.color})`,transition:"width .5s"}}/>
                 </div>
-                {b.detail && <div style={{fontSize:"10px",color:"rgba(26,46,74,.46)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
+                {b.detail && <div style={{fontSize:"10px",color:"rgba(26,46,74,.70)",marginTop:"3px",fontWeight:600}}>{b.detail}</div>}
               </div>
             ) : null}
             {b.done && (
@@ -9867,7 +9867,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
           </div>
         );
 
-        const sectionTitleStyle = {fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.5)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"};
+        const sectionTitleStyle = {fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"10px"};
 
         return (
           <>
@@ -9900,7 +9900,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                     <span style={{ fontSize: "20px" }}>{u.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--c-text)" }}>{u.name}</div>
-                      <div style={{ fontSize: "9px", color: "rgba(26,46,74,.52)" }}>{qty} acheté{qty > 1 ? "s" : ""}</div>
+                      <div style={{ fontSize: "9px", color: "rgba(26,46,74,.74)" }}>{qty} acheté{qty > 1 ? "s" : ""}</div>
                     </div>
                     <div style={{ display: "flex", gap: "1px" }}>
                       {[0,1,2,3,4].map(si => (
@@ -9920,13 +9920,13 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                         border: `1px solid ${b.done ? c+"55" : "rgba(0,80,160,.09)"}`,
                         opacity: b.done ? 1 : 0.5,
                       }}>
-                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "var(--c-yellow)" : "rgba(26,46,74,.40)" }}>
+                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "var(--c-yellow)" : "rgba(26,46,74,.82)" }}>
                           {"★".repeat(b.starLevel)}
                         </div>
-                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(26,46,74,.40)", fontWeight: 600, marginTop: "1px" }}>
+                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(26,46,74,.82)", fontWeight: 600, marginTop: "1px" }}>
                           +{Math.round((STAR_BONUSES[b.starLevel-1]-1)*100)}%
                         </div>
-                        <div style={{ fontSize: "7px", color: "rgba(26,46,74,.46)", marginTop: "1px" }}>
+                        <div style={{ fontSize: "7px", color: "rgba(26,46,74,.70)", marginTop: "1px" }}>
                           {STAR_THRESHOLDS[b.starLevel-1]}
                         </div>
                       </div>
@@ -9943,7 +9943,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
       <div style={{
         marginTop:"16px",padding:"10px 14px",borderRadius:"12px",
         background:"rgba(0,80,160,.05)",border:"1px solid rgba(0,80,160,.09)",
-        fontSize:"10px",color:"rgba(26,46,74,.58)",lineHeight:1.6
+        fontSize:"10px",color:"rgba(26,46,74,.78)",lineHeight:1.6
       }}>
         💡 Les Garanties d'Origine (GO) et les Certificats de Production de Biogaz (CPB) sont de vrais mécanismes
         de la filière biométhane en France. Chaque certificat représente 1 MWh de biogaz injecté dans le réseau.
