@@ -4870,12 +4870,12 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
         </text>
         <text x={cx+27} y="19" textAnchor="middle" fontSize="9" fontWeight="900"
           fill={act(0)?"rgba(0,230,90,.8)":"rgba(26,46,74,.18)"}>CH₄</text>
-        {/* Tuyau de liaison capsule → cuve tampon (longueur = yOffset − 14) */}
-        <rect x={cx-4} y="29" width="8" height={yOffset-14} rx="3"
-          fill={act(0)?"rgba(0,168,80,.38)":"rgba(0,80,160,.06)"}/>
-        {act(0)&&<rect x={cx-3} y="29" width="6" height={yOffset-14} rx="3"
-          fill="none" stroke="rgba(255,255,255,.38)" strokeWidth=".7"
-          strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
+        {/* Tuyau de liaison capsule → cuve tampon (aboutit au sommet visuel de l'ellipse) */}
+        <rect x={cx-5} y="29" width="10" height={yOffset-21} rx="3"
+          fill={act(0)?"rgba(0,168,80,.6)":"rgba(0,80,160,.08)"}/>
+        {act(0)&&<rect x={cx-4} y="29" width="8" height={yOffset-21} rx="3"
+          fill="none" stroke="rgba(255,255,255,.45)" strokeWidth=".8"
+          strokeDasharray="5 4" strokeDashoffset={flow}/>}
 
         <g transform={`translate(0,${yOffset})`}>
 
@@ -4992,6 +4992,12 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           {act(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="none" stroke="rgba(96,165,250,.45)" strokeWidth="2" filter="url(#glow3)"/>}
           {!act(3)&&<text x={cx} y="382" textAnchor="middle" fontSize="18" opacity=".28">🔒</text>}
           {anim(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="var(--c-blue-light)" opacity=".15"/>}
+          {/* ── Épine de sortie – tracée AVANT les labels pour passer derrière ── */}
+          <rect x={cx-3} y="408" width="6" height="37" rx="2"
+            fill={act(3)?"rgba(0,94,184,.32)":"rgba(0,80,160,.06)"}/>
+          {act(3)&&<rect x={cx-2} y="408" width="4" height="37" rx="2"
+            fill="none" stroke="rgba(255,255,255,.3)" strokeWidth=".5"
+            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
           {act(3)&&<>
             <rect x={cx-18} y="410" width="36" height="10" rx="5" fill="rgba(0,94,184,.18)" stroke="rgba(96,165,250,.3)" strokeWidth=".8"/>
             <text x={cx} y="417.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(96,165,250,.85)">● INJECTÉ</text>
@@ -5000,7 +5006,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <text x={cx} y={act(3)?437:433} textAnchor="middle" fontSize="6.5" fill={act(3)?"rgba(147,197,253,.55)":"rgba(0,80,160,.20)"}>Odorisation · Comptage</text>
 
           {/* ══ SORTIE RÉSEAU GRDF ══ */}
-          {/* Tuyau de sortie */}
+          {/* Tuyau de sortie (raccordé à l'épine ci-dessus) */}
           <rect x={cx-4} y="441" width="8" height="16" rx="3"
             fill={act(3)?"rgba(0,94,184,.48)":"rgba(0,80,160,.07)"}/>
           {act(3)&&<rect x={cx-3} y="441" width="6" height="16" rx="3"
