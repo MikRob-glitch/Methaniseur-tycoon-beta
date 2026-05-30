@@ -4837,23 +4837,47 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
   };
 
   return (
-    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
-      <svg viewBox="0 0 160 350" style={{width:"auto",height:"100%",display:"block",overflow:"visible"}}>
+    <div style={{width:"100%",height:"100%",display:"flex",alignItems:"flex-start",justifyContent:"center",overflow:"visible"}}>
+      <svg viewBox="0 0 160 590" style={{width:"auto",height:"100%",display:"block",overflow:"visible"}}>
         <defs>
           <linearGradient id="gvTank"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#00AADD" stopOpacity={act(0)?1:.18}/><stop offset="100%" stopColor="#0c4a6e" stopOpacity={act(0)?1:.10}/></linearGradient>
           <linearGradient id="gvLiq"    x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="rgba(56,189,248,.55)"/><stop offset="100%" stopColor="rgba(14,165,233,.88)"/></linearGradient>
           <linearGradient id="gvFilter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#7c3aed" stopOpacity={act(1)?1:.18}/><stop offset="100%" stopColor="#2e1065" stopOpacity={act(1)?1:.10}/></linearGradient>
           <linearGradient id="gvComp"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#d97706" stopOpacity={act(2)?1:.18}/><stop offset="100%" stopColor="#431407" stopOpacity={act(2)?1:.10}/></linearGradient>
           <linearGradient id="gvInj"    x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#005EB8" stopOpacity={act(3)?1:.18}/><stop offset="100%" stopColor="#1e3a5f" stopOpacity={act(3)?1:.10}/></linearGradient>
-          <filter id="glow3" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="gvEntry"  x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#00A850" stopOpacity={act(0)?.9:.25}/><stop offset="100%" stopColor="#005028" stopOpacity={act(0)?.6:.12}/></linearGradient>
+          <filter id="glow3"    x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="glowGrn"  x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id="dropshadow"><feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="rgba(0,0,0,.18)"/></filter>
           <clipPath id="vTankClip"><rect x={cx-27} y="15" width="54" height="57" rx="3"/></clipPath>
         </defs>
 
-        <g transform={`translate(0,${yOffset})`}>
+        {/* ── Guide vertical central (toute hauteur) ── */}
+        <rect x={cx-5} y="0" width="10" height="590" rx="5" fill="rgba(0,94,184,.03)" stroke="rgba(0,94,184,.06)" strokeWidth=".8"/>
 
-          {/* ── Guide vertical central ── */}
-          <rect x={cx-5} y="0" width="10" height="330" rx="5" fill="rgba(0,94,184,.04)" stroke="rgba(0,94,184,.07)" strokeWidth=".8"/>
+        {/* ══ ENTRÉE BIOGAZ (position absolue, avant le g-transform) ══ */}
+        {/* Capsule source */}
+        <rect x={cx-38} y="3" width="76" height="26" rx="13"
+          fill={act(0)?"url(#gvEntry)":"rgba(0,80,160,.05)"}
+          stroke={act(0)?"rgba(0,168,80,.55)":"rgba(0,80,160,.15)"} strokeWidth="1.2"/>
+        {act(0)&&<rect x={cx-38} y="3" width="76" height="26" rx="13"
+          fill="none" stroke="rgba(0,255,120,.3)" strokeWidth="1.5" filter="url(#glowGrn)"/>}
+        <text x={cx-9} y="13.5" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1"
+          fill={act(0)?"rgba(0,255,130,.95)":"rgba(26,46,74,.32)"}>BIOGAZ</text>
+        <text x={cx-9} y="23.5" textAnchor="middle" fontSize="6.5"
+          fill={act(0)?"rgba(144,238,164,.78)":"rgba(26,46,74,.22)"}>
+          {digesteurs} digesteur{digesteurs>1?"s":""}
+        </text>
+        <text x={cx+27} y="19" textAnchor="middle" fontSize="9" fontWeight="900"
+          fill={act(0)?"rgba(0,230,90,.8)":"rgba(26,46,74,.18)"}>CH₄</text>
+        {/* Tuyau de liaison capsule → cuve tampon (longueur = yOffset − 14) */}
+        <rect x={cx-4} y="29" width="8" height={yOffset-14} rx="3"
+          fill={act(0)?"rgba(0,168,80,.38)":"rgba(0,80,160,.06)"}/>
+        {act(0)&&<rect x={cx-3} y="29" width="6" height={yOffset-14} rx="3"
+          fill="none" stroke="rgba(255,255,255,.38)" strokeWidth=".7"
+          strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
+
+        <g transform={`translate(0,${yOffset})`}>
 
           {/* ══ CUVE TAMPON ══ */}
           {/* Highlight reflet */}
@@ -4974,6 +4998,27 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           </>}
           <text x={cx} y={act(3)?427:423} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(3)?"rgba(96,165,250,.9)":"rgba(26,46,74,.68)"}>Poste d'injection</text>
           <text x={cx} y={act(3)?437:433} textAnchor="middle" fontSize="6.5" fill={act(3)?"rgba(147,197,253,.55)":"rgba(0,80,160,.20)"}>Odorisation · Comptage</text>
+
+          {/* ══ SORTIE RÉSEAU GRDF ══ */}
+          {/* Tuyau de sortie */}
+          <rect x={cx-4} y="441" width="8" height="16" rx="3"
+            fill={act(3)?"rgba(0,94,184,.48)":"rgba(0,80,160,.07)"}/>
+          {act(3)&&<rect x={cx-3} y="441" width="6" height="16" rx="3"
+            fill="none" stroke="rgba(255,255,255,.38)" strokeWidth=".7"
+            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
+          {/* Flèche vers le réseau */}
+          <polygon points={`${cx-8},457 ${cx+8},457 ${cx},466`}
+            fill={act(3)?"rgba(0,94,184,.62)":"rgba(0,80,160,.10)"}/>
+          {/* Capsule Réseau GRDF */}
+          <rect x={cx-40} y="468" width="80" height="22" rx="11"
+            fill={act(3)?"rgba(0,94,184,.10)":"rgba(0,80,160,.04)"}
+            stroke={act(3)?"rgba(0,94,184,.42)":"rgba(0,80,160,.14)"} strokeWidth="1.2"/>
+          {act(3)&&<rect x={cx-40} y="468" width="80" height="22" rx="11"
+            fill="none" stroke="rgba(96,165,250,.25)" strokeWidth="1.5" filter="url(#glow3)"/>}
+          <text x={cx} y="479.5" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing=".6"
+            fill={act(3)?"rgba(0,94,184,.88)":"rgba(26,46,74,.28)"}>Réseau GRDF</text>
+          <text x={cx} y="487" textAnchor="middle" fontSize="6"
+            fill={act(3)?"rgba(0,168,80,.7)":"rgba(26,46,74,.20)"}>↓ injection gaz naturel</text>
 
         </g>
       </svg>
@@ -8172,7 +8217,7 @@ function DigesteurScene({
           {/* ════════ VUE 0 : CHAÎNE D'INJECTION ════════ */}
           <div style={{flex:"0 0 33.33%", position:"relative", minHeight:"600px", minWidth:0, overflow:"hidden", display:"flex", flexDirection:"column", background:"rgba(244,247,251,.82)"}}>
             {/* ─── CHAÎNE : hauteur fixe 350px ─── */}
-            <div style={{height:"350px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
+            <div style={{height:"590px", flexShrink:0, display:"flex", alignItems:"stretch", justifyContent:"center", position:"relative"}}>
               <PipelineGraphicVertical injected={injected} epurateurOk={epurateurOk} compresseurOk={compresseurOk} unlockAnim={unlockAnim} bufferPct={bufferPct} buffer={buffer} digesteurs={digesteurs}/>
             </div>
           </div>
