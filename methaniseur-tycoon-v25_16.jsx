@@ -4733,10 +4733,10 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
 
   const yOffset = digesteurs===1 ? 28 : digesteurs===2 ? 52 : 80;
 
-  const pipeX    = vw - 70;   // aligne sur cx=90 du SVG Vue0 (right-aligned 160px)
+  const pipeX    = Math.round(vw / 2);  // aligne sur cx=80 du SVG Vue0 (centré, 160px wide)
 
   // Biogaz : digesteurs (Vue1) → cuve tampon (Vue0) — traverse la frontière
-  const biogazY    = 3 + yOffset;
+  const biogazY    = 8 + yOffset;  // sommet visuel de l'ellipse cuve tampon
   const digesteurZoneScale = digesteurs===1?1:digesteurs===2?0.97:0.93;
   const UNIT_W_D   = digesteurs===1?88:digesteurs===2?74:60;
   const GAP_D      = digesteurs===3?4:8;
@@ -4748,7 +4748,8 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   // GRDF aval : connecteur L depuis poste injection → tuyau GRDF du SVG monde
   // SVG monde : GRDF_PIPE_Y=375, rendu height=600px pour viewBox 480px → yScale=1.25
   // V0_V1=400 en SVG monde → scene x=vw ; V0_V1+10 → scene x=410*vw/400
-  const grdfWorldY  = Math.round(375 * 600 / 480);  // 469 px (scene y du tuyau GRDF monde)
+  const injPostBottom = 407 + yOffset;              // bas du corps Poste injection (SVG 1:1 scale)
+  const grdfWorldY  = Math.max(Math.round(375 * 600 / 480), injPostBottom + 40);  // toujours sous le poste
   const grdfWorldX  = Math.round(410 * vw / 400);   // scene x du début du pipe GRDF monde
 
   const grdfOn = injected;
@@ -4796,8 +4797,8 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
 
         {/* ── GRDF AVAL : connecteur L — poste injection ↓ → tuyau GRDF SVG monde ── */}
-        {/* Vertical : cx (vw-70), depuis sortie poste injection (y=322+yOffset) jusqu'à GRDF_PIPE_Y scène */}
-        <rect x={pipeX-4} y={322+yOffset} width={8} height={grdfWorldY-(322+yOffset)} rx={3}
+        {/* Vertical : depuis bas corps poste injection (injPostBottom) jusqu'à GRDF_PIPE_Y scène */}
+        <rect x={pipeX-4} y={injPostBottom} width={8} height={grdfWorldY-injPostBottom} rx={3}
           fill={grdfOn?"rgba(42,125,187,.5)":"rgba(var(--c-blue-rgb),.08)"}
           stroke={grdfOn?"rgba(var(--c-blue-rgb),.45)":"rgba(var(--c-blue-rgb),.15)"}
           strokeWidth="1"/>
@@ -4806,7 +4807,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           fill={grdfOn?"rgba(42,125,187,.5)":"rgba(var(--c-blue-rgb),.08)"}
           stroke={grdfOn?"rgba(var(--c-blue-rgb),.45)":"rgba(var(--c-blue-rgb),.15)"}
           strokeWidth="1"/>
-        <text x={pipeX+4} y={322+yOffset-3} textAnchor="start" fontSize="5.5" fontWeight="800"
+        <text x={pipeX+4} y={injPostBottom-3} textAnchor="start" fontSize="5.5" fontWeight="800"
           fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval ↓</text>
 
       </svg>
