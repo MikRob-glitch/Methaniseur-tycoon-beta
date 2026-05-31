@@ -4364,40 +4364,6 @@ function Game({ username, region, maia }) {
             </div>
           )}
 
-          {/* ── CHAÎNE D'INJECTION — après raccordement ── */}
-          {injected&&(
-            <div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"14px",background:"linear-gradient(135deg,rgba(0,94,184,.05),rgba(0,168,80,.05))",border:"1px solid rgba(0,94,184,.16)"}}>
-              <div style={{fontSize:"10px",fontWeight:700,color:"rgba(26,46,74,.65)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:"9px"}}>🔌 Chaîne d'injection active</div>
-              <div style={{display:"flex",alignItems:"center",gap:"3px",overflowX:"auto",paddingBottom:"2px"}}>
-                {[
-                  {icon:"🐄",label:"Intrants",      color:"var(--c-blue)"},
-                  null,
-                  {icon:"🗑️",label:"Bac",          color:"var(--c-blue)"},
-                  null,
-                  {icon:"⚙️",label:`Digesteur ×${digesteurs}`, color:"var(--c-blue)"},
-                  null,
-                  {icon:"🧪",label:"Épurateur",    color:"#a78bfa"},
-                  null,
-                  {icon:"🔩",label:"Compresseur",  color:"var(--c-orange)"},
-                  null,
-                  {icon:"🏗️",label:"Réseau GRDF",  color:"var(--c-blue)"},
-                ].map((s,i)=>s===null
-                  ? <div key={i} style={{fontSize:"9px",color:"rgba(var(--c-blue-rgb),.35)",flexShrink:0,fontWeight:700}}>›</div>
-                  : <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"2px",padding:"5px 7px",borderRadius:"8px",background:`rgba(var(--c-blue-rgb),.05)`,border:`1px solid ${s.color}28`,flexShrink:0,minWidth:"44px"}}>
-                      <span style={{fontSize:"13px"}}>{s.icon}</span>
-                      <span style={{fontSize:"8px",fontWeight:700,color:s.color,whiteSpace:"nowrap",textAlign:"center"}}>{s.label}</span>
-                    </div>
-                )}
-              </div>
-              {bmPerHour>0&&(
-                <div style={{marginTop:"9px",display:"flex",gap:"6px",flexWrap:"wrap"}}>
-                  <span style={{fontSize:"10px",background:"rgba(var(--c-blue-rgb),.07)",border:"1px solid rgba(var(--c-blue-rgb),.15)",borderRadius:"7px",padding:"3px 9px",color:"var(--c-blue-light)",fontWeight:700}}>⚡ +{fmt(bmPerHour)}/h</span>
-                  <span style={{fontSize:"10px",background:"rgba(var(--c-green-rgb),.07)",border:"1px solid rgba(var(--c-green-rgb),.18)",borderRadius:"7px",padding:"3px 9px",color:"var(--c-green)",fontWeight:700}}>💰 +{fmtEuro(bmPerHour)}/h</span>
-                  <span style={{fontSize:"10px",background:"rgba(26,46,74,.04)",border:"1px solid rgba(26,46,74,.10)",borderRadius:"7px",padding:"3px 9px",color:reliability<50?"#dc2626":reliability<80?"var(--c-orange)":"var(--c-green)",fontWeight:700}}>📊 {Math.round(reliability)}% fiabilité</span>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* ── SECTION GNV ── */}
           {injected&&(
