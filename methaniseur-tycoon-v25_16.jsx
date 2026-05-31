@@ -4748,8 +4748,8 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   // GRDF aval : connecteur L depuis poste injection → tuyau GRDF du SVG monde
   // SVG monde : GRDF_PIPE_Y=375, rendu height=600px pour viewBox 480px → yScale=1.25
   // V0_V1=400 en SVG monde → scene x=vw ; V0_V1+10 → scene x=410*vw/400
-  const injPostBottom = 407 + yOffset;              // bas du corps Poste injection (SVG 1:1 scale)
-  const grdfWorldY  = Math.max(Math.round(375 * 600 / 480), injPostBottom + 40);  // toujours sous le poste
+  const grdfMidY    = 377 + yOffset;                // mi-corps Poste injection (g-y=377, raccordement flanc droit)
+  const grdfWorldY  = grdfMidY;
   const grdfWorldX  = Math.round(410 * vw / 400);   // scene x du début du pipe GRDF monde
 
   const grdfOn = injected;
