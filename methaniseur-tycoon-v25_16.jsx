@@ -4736,7 +4736,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   const pipeX    = Math.round(vw / 2);  // aligne sur cx=80 du SVG Vue0 (centré, 160px wide)
 
   // Biogaz : digesteurs (Vue1) → cuve tampon (Vue0) — traverse la frontière
-  const biogazY    = 35 + yOffset; // centre du port d'entrée BIOGAZ côté droit de la cuve (g-y=35)
+  const biogazY    = 3 + yOffset;  // niveau collecteur biogaz (calibré pour les sorties digesteurs)
   const digesteurZoneScale = digesteurs===1?1:digesteurs===2?0.97:0.93;
   const UNIT_W_D   = digesteurs===1?88:digesteurs===2?74:60;
   const GAP_D      = digesteurs===3?4:8;
