@@ -4772,7 +4772,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
             <stop offset="0%"   stopColor={isDigesting?"rgba(102,238,136,0)":"rgba(200,220,240,0)"}/>
             <stop offset="100%" stopColor={isDigesting?"rgba(102,238,136,.55)":"rgba(200,220,240,.45)"}/>
           </linearGradient>
-          {/* Gradient GRDF : transparent côté poste → coloré côté Vue1 */}
+          {/* Gradient GRDF : transparent côté poste → coloré côté Vue1 (raccordement flanc droit) */}
           <linearGradient id="cbGrdfGrad" gradientUnits="userSpaceOnUse"
             x1={postRightX} y1="0" x2={vw} y2="0">
             <stop offset="0%"   stopColor={grdfOn?"rgba(42,125,187,0)":"rgba(200,220,240,0)"}/>
@@ -4811,20 +4811,15 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           fill={isDigesting?"rgba(102,238,136,.95)":"rgba(var(--c-blue-rgb),.6)"}
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
 
-        {/* ── GRDF AVAL : tuyau L — poste injection → réseau GRDF monde ──
-            Vertical court sous le poste (Vue0), horizontal allant vers Vue1.
+        {/* ── GRDF AVAL : raccordé directement au flanc droit du poste injection ──
+            Horizontal depuis bord droit du poste (postRightX) vers Vue1.
             Gradient : transparent côté poste → coloré côté Vue1. */}
-        {/* Vertical court */}
-        <rect x={pipeX-3} y={injPostBottom} width={6} height={grdfWorldY-injPostBottom} rx={2}
-          fill={grdfOn?"rgba(42,125,187,.35)":"rgba(var(--c-blue-rgb),.07)"}
-          stroke={grdfOn?"rgba(var(--c-blue-rgb),.3)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
-        {/* Horizontal avec gradient */}
-        <rect x={postRightX} y={grdfWorldY-2} width={grdfWorldX-postRightX} height={5} rx={2}
+        <rect x={postRightX} y={grdfMidY-2} width={grdfWorldX-postRightX} height={5} rx={2}
           fill="url(#cbGrdfGrad)"
           stroke={grdfOn?"rgba(var(--c-blue-rgb),.25)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
-        {/* Label GRDF (affiché dans Vue1 uniquement — hors viewport Vue0) */}
-        <text x={vw+5} y={injPostBottom-3} textAnchor="start" fontSize="5.5" fontWeight="800"
-          fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval ↓</text>
+        {/* Label GRDF (Vue1 uniquement — hors viewport Vue0) */}
+        <text x={vw+5} y={grdfMidY-4} textAnchor="start" fontSize="5.5" fontWeight="800"
+          fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval →</text>
 
       </svg>
     </div>
