@@ -4736,7 +4736,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   const pipeX    = Math.round(vw / 2);  // aligne sur cx=80 du SVG Vue0 (centré, 160px wide)
 
   // Biogaz : digesteurs (Vue1) → cuve tampon (Vue0) — traverse la frontière
-  const biogazY    = 8 + yOffset;  // sommet visuel de l'ellipse cuve tampon
+  const biogazY    = 35 + yOffset; // centre du port d'entrée BIOGAZ côté droit de la cuve (g-y=35)
   const digesteurZoneScale = digesteurs===1?1:digesteurs===2?0.97:0.93;
   const UNIT_W_D   = digesteurs===1?88:digesteurs===2?74:60;
   const GAP_D      = digesteurs===3?4:8;
@@ -4759,7 +4759,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
   );
 
   // Bord droit du composant dans la scène (pour démarrer les tuyaux horizontaux)
-  const cuveRightX     = pipeX + 28;  // rx=27 de la cuve tampon
+  const cuveRightX     = pipeX + 27;  // rx=27 exact du corps de la cuve tampon
   const postRightX     = pipeX + 33;  // rx=32 du poste injection
 
   return (
@@ -4862,37 +4862,13 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <linearGradient id="gvFilter" x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#7c3aed" stopOpacity={act(1)?1:.18}/><stop offset="100%" stopColor="#2e1065" stopOpacity={act(1)?1:.10}/></linearGradient>
           <linearGradient id="gvComp"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#d97706" stopOpacity={act(2)?1:.18}/><stop offset="100%" stopColor="#431407" stopOpacity={act(2)?1:.10}/></linearGradient>
           <linearGradient id="gvInj"    x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#005EB8" stopOpacity={act(3)?1:.18}/><stop offset="100%" stopColor="#1e3a5f" stopOpacity={act(3)?1:.10}/></linearGradient>
-          <linearGradient id="gvEntry"  x1="0" y1="0" x2="0" y2="1"><stop offset="0%"   stopColor="#00A850" stopOpacity={act(0)?.9:.25}/><stop offset="100%" stopColor="#005028" stopOpacity={act(0)?.6:.12}/></linearGradient>
           <filter id="glow3"    x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <filter id="glowGrn"  x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <filter id="dropshadow"><feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="rgba(0,0,0,.18)"/></filter>
           <clipPath id="vTankClip"><rect x={cx-27} y="15" width="54" height="57" rx="3"/></clipPath>
         </defs>
 
-        {/* ── Guide vertical central (toute hauteur) ── */}
-        <rect x={cx-5} y="0" width="10" height="590" rx="5" fill="rgba(0,94,184,.03)" stroke="rgba(0,94,184,.06)" strokeWidth=".8"/>
-
-        {/* ══ ENTRÉE BIOGAZ (position absolue, avant le g-transform) ══ */}
-        {/* Capsule source */}
-        <rect x={cx-38} y="3" width="76" height="26" rx="13"
-          fill={act(0)?"url(#gvEntry)":"rgba(0,80,160,.05)"}
-          stroke={act(0)?"rgba(0,168,80,.55)":"rgba(0,80,160,.15)"} strokeWidth="1.2"/>
-        {act(0)&&<rect x={cx-38} y="3" width="76" height="26" rx="13"
-          fill="none" stroke="rgba(0,255,120,.3)" strokeWidth="1.5" filter="url(#glowGrn)"/>}
-        <text x={cx-9} y="13.5" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing="1"
-          fill={act(0)?"rgba(0,255,130,.95)":"rgba(26,46,74,.32)"}>BIOGAZ</text>
-        <text x={cx-9} y="23.5" textAnchor="middle" fontSize="6.5"
-          fill={act(0)?"rgba(144,238,164,.78)":"rgba(26,46,74,.22)"}>
-          {digesteurs} digesteur{digesteurs>1?"s":""}
-        </text>
-        <text x={cx+27} y="19" textAnchor="middle" fontSize="9" fontWeight="900"
-          fill={act(0)?"rgba(0,230,90,.8)":"rgba(26,46,74,.18)"}>CH₄</text>
-        {/* Tuyau de liaison capsule → cuve tampon (aboutit au sommet visuel de l'ellipse) */}
-        <rect x={cx-5} y="29" width="10" height={yOffset-21} rx="3"
-          fill={act(0)?"rgba(0,168,80,.6)":"rgba(0,80,160,.08)"}/>
-        {act(0)&&<rect x={cx-4} y="29" width="8" height={yOffset-21} rx="3"
-          fill="none" stroke="rgba(255,255,255,.45)" strokeWidth=".8"
-          strokeDasharray="5 4" strokeDashoffset={flow}/>}
+        {/* ── Guide vertical central (depuis le niveau de la cuve) ── */}
+        <rect x={cx-5} y={yOffset} width="10" height={590-yOffset} rx="5" fill="rgba(0,94,184,.03)" stroke="rgba(0,94,184,.06)" strokeWidth=".8"/>
 
         <g transform={`translate(0,${yOffset})`}>
 
@@ -4910,6 +4886,23 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <ellipse cx={cx} cy="72" rx="27" ry="7" fill={act(0)?"#0c4a6e":"rgba(12,74,110,.16)"} stroke={act(0)?"rgba(0,152,204,.45)":"rgba(74,188,223,.14)"} strokeWidth="1.5"/>
           {/* Glow actif */}
           {act(0)&&<rect x={cx-27} y="15" width="54" height="57" rx="5" fill="none" stroke="rgba(0,229,255,.45)" strokeWidth="2" filter="url(#glow3)"/>}
+          {/* ── Port d'entrée BIOGAZ — flanc droit de la cuve ── */}
+          {/* Nozzle horizontal côté droit (g-y=30 à 40, center g-y=35) */}
+          <rect x={cx+27} y={30} width="16" height="10" rx="4"
+            fill={act(0)?"rgba(0,168,80,.65)":"rgba(74,188,223,.18)"}
+            stroke={act(0)?"rgba(0,200,80,.7)":"rgba(74,188,223,.24)"} strokeWidth="1.2"/>
+          {act(0)&&<rect x={cx+28} y={31} width="14" height="8" rx="3"
+            fill="none" stroke="rgba(255,255,255,.42)" strokeWidth=".7"
+            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
+          {/* Petite flèche → indiquant le sens d'entrée */}
+          <polygon points={`${cx+27},33 ${cx+27},37 ${cx+29},35`}
+            fill={act(0)?"rgba(0,255,120,.65)":"rgba(74,188,223,.2)"}/>
+          {/* Label BIOGAZ à droite du nozzle */}
+          <text x={cx+46} y="33" textAnchor="start" fontSize="5.5" fontWeight="900" letterSpacing=".5"
+            fill={act(0)?"rgba(0,200,80,.88)":"rgba(26,46,74,.28)"}>BIOGAZ</text>
+          <text x={cx+46} y="40" textAnchor="start" fontSize="5"
+            fill={act(0)?"rgba(0,200,80,.6)":"rgba(26,46,74,.2)"}>{digesteurs} dig.</text>
+
           {/* Texte interne */}
           <text x={cx} y="44" textAnchor="middle" fontSize="11" fontWeight="900" fill={act(0)?"#e0f2fe":"rgba(224,242,254,.15)"}>{Math.round(bufferPct*100)}%</text>
           <text x={cx} y="57" textAnchor="middle" fontSize="6.5" fontWeight="600" fill={act(0)?"rgba(186,230,253,.8)":"rgba(186,230,253,.12)"}>{Math.floor(buffer)} m³</text>
