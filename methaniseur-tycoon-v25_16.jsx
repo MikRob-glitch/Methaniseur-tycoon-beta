@@ -4760,7 +4760,6 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
 
   // Bord droit du composant dans la scène (pour démarrer les tuyaux horizontaux)
   const cuveRightX     = pipeX + 27;  // rx=27 exact du corps de la cuve tampon
-  const postRightX     = pipeX + 33;  // rx=32 du poste injection
 
   return (
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
@@ -4772,12 +4771,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
             <stop offset="0%"   stopColor={isDigesting?"rgba(102,238,136,.65)":"rgba(200,220,240,.5)"}/>
             <stop offset="100%" stopColor={isDigesting?"rgba(102,238,136,0)":"rgba(200,220,240,0)"}/>
           </linearGradient>
-          {/* Gradient GRDF : coloré côté poste → transparent vers Vue1 */}
-          <linearGradient id="cbGrdfGrad" gradientUnits="userSpaceOnUse"
-            x1={postRightX} y1="0" x2={vw} y2="0">
-            <stop offset="0%"   stopColor={grdfOn?"rgba(42,125,187,.6)":"rgba(200,220,240,.45)"}/>
-            <stop offset="100%" stopColor={grdfOn?"rgba(42,125,187,0)":"rgba(200,220,240,0)"}/>
-          </linearGradient>
+
         </defs>
 
         {/* ── BIOGAZ : branches verticales (sortie haute digesteurs → collecteur) ── */}
@@ -4811,12 +4805,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           fill={isDigesting?"rgba(102,238,136,.95)":"rgba(var(--c-blue-rgb),.6)"}
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
 
-        {/* ── GRDF AVAL : raccordé directement au flanc droit du poste injection ──
-            Horizontal depuis bord droit du poste (postRightX) vers Vue1.
-            Gradient : transparent côté poste → coloré côté Vue1. */}
-        <rect x={postRightX} y={grdfMidY-2} width={grdfWorldX-postRightX} height={5} rx={2}
-          fill="url(#cbGrdfGrad)"
-          stroke={grdfOn?"rgba(var(--c-blue-rgb),.25)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
+        {/* GRDF aval : géré par l'extension du tuyau monde dans GnvVehicleWorld */}
 
 
       </svg>
@@ -6795,7 +6784,7 @@ function MiniCarSprite({ type, facing }) {
 // Route en C : arrivée (R→L route haute) → arrêt station → glisse jusqu'au coude
 // (GNV_S[0]) → descente verticale → départ (L→R route basse).
 // Inclut aussi le rendu des stations GNV et du pipe GRDF animé.
-function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
+function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef, digesteurs=1 }) {
   const [vehicles, setVehicles] = useState([]);
   const timerRef = useRef(null);
   const hasActive = gnvStations > 0 && gnvSplit > 0;
@@ -6880,21 +6869,36 @@ function GnvVehicleWorld({ gnvStations, gnvSplit, tractorAtGnvStationRef }) {
         );
       })}
 
-      {/* ── Pipe GRDF — bulles de gaz R→L quand injection active ── */}
-      <rect x={V0_V1+10} y={GRDF_PIPE_Y} width={W-V0_V1-20} height="4" rx="2"
-        fill="rgba(var(--c-blue-rgb),.15)" stroke="rgba(var(--c-blue-rgb),.4)" strokeWidth="1"/>
-      <text x={V0_V1+15} y={GRDF_PIPE_Y+12} fontSize="5"
-        fill="rgba(var(--c-blue-rgb),.55)" fontWeight="700">← Injection réseau GRDF</text>
-      {[0,1,2,3,4,5].map(i => (
-        <circle key={i} cy={GRDF_PIPE_Y+2} r="1.8" fill="rgba(200,230,255,.9)">
-          <animate attributeName="cx"
-            from={V0_V1+10} to={W-10}
-            dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
-          <animate attributeName="opacity"
-            values="0;0.9;0.9;0" keyTimes="0;0.05;0.95;1"
-            dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
-        </circle>
-      ))}
+      {/* ── Pipe GRDF — étendu depuis le flanc droit du poste injection (Vue0) vers Vue1 ── */}
+      {(()=>{
+        const yOff = digesteurs===1?28:digesteurs===2?52:80;
+        // Bas du poste injection en coords monde SVG (scale 480/600)
+        const postBotY = Math.round((407+yOff)*0.8);
+        // Départ horizontal ≈ flanc droit du poste (V0_V1-170 ≈ x=230 = centre Vue0 + ~30)
+        const pipeStartX = V0_V1 - 170;
+        return (<>
+          {/* Connecteur vertical : bas du poste → niveau tuyau (uniquement si tuyau sous le poste) */}
+          {postBotY < GRDF_PIPE_Y && (
+            <rect x={pipeStartX-2} y={postBotY} width={5} height={GRDF_PIPE_Y-postBotY} rx={2}
+              fill="rgba(var(--c-blue-rgb),.25)" stroke="rgba(var(--c-blue-rgb),.35)" strokeWidth="1"/>
+          )}
+          {/* Tuyau horizontal : flanc droit poste → fin du réseau */}
+          <rect x={pipeStartX} y={GRDF_PIPE_Y} width={W-pipeStartX-20} height="4" rx="2"
+            fill="rgba(var(--c-blue-rgb),.15)" stroke="rgba(var(--c-blue-rgb),.4)" strokeWidth="1"/>
+          <text x={pipeStartX+5} y={GRDF_PIPE_Y+12} fontSize="5"
+            fill="rgba(var(--c-blue-rgb),.55)" fontWeight="700">← Injection réseau GRDF</text>
+          {[0,1,2,3,4,5].map(i => (
+            <circle key={i} cy={GRDF_PIPE_Y+2} r="1.8" fill="rgba(200,230,255,.9)">
+              <animate attributeName="cx"
+                from={pipeStartX} to={W-10}
+                dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
+              <animate attributeName="opacity"
+                values="0;0.9;0.9;0" keyTimes="0;0.05;0.95;1"
+                dur="5s" begin={`${-(i*0.83).toFixed(2)}s`} repeatCount="indefinite"/>
+            </circle>
+          ))}
+        </>);
+      })()}
 
       {/* ── Véhicules : route en C ── */}
       {vehicles.map(v => {
@@ -8749,7 +8753,7 @@ function DigesteurScene({
                   })()}
 
                   {/* ── VÉHICULES LAMBDA (circuit bas Vue 1+Vue 2) ── */}
-                  {injected && <GnvVehicleWorld gnvStations={gnvStations} gnvSplit={gnvSplit} tractorAtGnvStationRef={tractorAtGnvStationRef}/>}
+                  {injected && <GnvVehicleWorld gnvStations={gnvStations} gnvSplit={gnvSplit} tractorAtGnvStationRef={tractorAtGnvStationRef} digesteurs={digesteurs}/>}
                 </>
               );
             })()}
