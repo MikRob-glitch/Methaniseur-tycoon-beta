@@ -4766,17 +4766,17 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
       <svg style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",display:"block",overflow:"visible"}}>
         <defs>
-          {/* Gradient biogaz : transparent côté cuve → coloré côté Vue1 */}
+          {/* Gradient biogaz : coloré côté cuve → transparent vers Vue1 */}
           <linearGradient id="cbBioGrad" gradientUnits="userSpaceOnUse"
             x1={cuveRightX} y1="0" x2={vw} y2="0">
-            <stop offset="0%"   stopColor={isDigesting?"rgba(102,238,136,0)":"rgba(200,220,240,0)"}/>
-            <stop offset="100%" stopColor={isDigesting?"rgba(102,238,136,.55)":"rgba(200,220,240,.45)"}/>
+            <stop offset="0%"   stopColor={isDigesting?"rgba(102,238,136,.65)":"rgba(200,220,240,.5)"}/>
+            <stop offset="100%" stopColor={isDigesting?"rgba(102,238,136,0)":"rgba(200,220,240,0)"}/>
           </linearGradient>
-          {/* Gradient GRDF : transparent côté poste → coloré côté Vue1 (raccordement flanc droit) */}
+          {/* Gradient GRDF : coloré côté poste → transparent vers Vue1 */}
           <linearGradient id="cbGrdfGrad" gradientUnits="userSpaceOnUse"
             x1={postRightX} y1="0" x2={vw} y2="0">
-            <stop offset="0%"   stopColor={grdfOn?"rgba(42,125,187,0)":"rgba(200,220,240,0)"}/>
-            <stop offset="100%" stopColor={grdfOn?"rgba(42,125,187,.55)":"rgba(200,220,240,.35)"}/>
+            <stop offset="0%"   stopColor={grdfOn?"rgba(42,125,187,.6)":"rgba(200,220,240,.45)"}/>
+            <stop offset="100%" stopColor={grdfOn?"rgba(42,125,187,0)":"rgba(200,220,240,0)"}/>
           </linearGradient>
         </defs>
 
@@ -4978,12 +4978,6 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           {act(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="none" stroke="rgba(96,165,250,.45)" strokeWidth="2" filter="url(#glow3)"/>}
           {!act(3)&&<text x={cx} y="382" textAnchor="middle" fontSize="18" opacity=".28">🔒</text>}
           {anim(3)&&<rect x={cx-32} y="347" width="64" height="60" rx="8" fill="var(--c-blue-light)" opacity=".15"/>}
-          {/* ── Épine de sortie – tracée AVANT les labels pour passer derrière ── */}
-          <rect x={cx-3} y="408" width="6" height="37" rx="2"
-            fill={act(3)?"rgba(0,94,184,.32)":"rgba(0,80,160,.06)"}/>
-          {act(3)&&<rect x={cx-2} y="408" width="4" height="37" rx="2"
-            fill="none" stroke="rgba(255,255,255,.3)" strokeWidth=".5"
-            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
           {act(3)&&<>
             <rect x={cx-18} y="410" width="36" height="10" rx="5" fill="rgba(0,94,184,.18)" stroke="rgba(96,165,250,.3)" strokeWidth=".8"/>
             <text x={cx} y="417.5" textAnchor="middle" fontSize="6" fontWeight="700" fill="rgba(96,165,250,.85)">● INJECTÉ</text>
