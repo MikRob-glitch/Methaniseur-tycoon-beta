@@ -4817,9 +4817,7 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
         <rect x={postRightX} y={grdfMidY-2} width={grdfWorldX-postRightX} height={5} rx={2}
           fill="url(#cbGrdfGrad)"
           stroke={grdfOn?"rgba(var(--c-blue-rgb),.25)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
-        {/* Label GRDF (Vue1 uniquement — hors viewport Vue0) */}
-        <text x={vw+5} y={grdfMidY-4} textAnchor="start" fontSize="5.5" fontWeight="800"
-          fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval →</text>
+
 
       </svg>
     </div>
@@ -4993,26 +4991,7 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <text x={cx} y={act(3)?427:423} textAnchor="middle" fontSize="9" fontWeight="800" fill={act(3)?"rgba(96,165,250,.9)":"rgba(26,46,74,.68)"}>Poste d'injection</text>
           <text x={cx} y={act(3)?437:433} textAnchor="middle" fontSize="6.5" fill={act(3)?"rgba(147,197,253,.55)":"rgba(0,80,160,.20)"}>Odorisation · Comptage</text>
 
-          {/* ══ SORTIE RÉSEAU GRDF ══ */}
-          {/* Tuyau de sortie (raccordé à l'épine ci-dessus) */}
-          <rect x={cx-4} y="441" width="8" height="16" rx="3"
-            fill={act(3)?"rgba(0,94,184,.48)":"rgba(0,80,160,.07)"}/>
-          {act(3)&&<rect x={cx-3} y="441" width="6" height="16" rx="3"
-            fill="none" stroke="rgba(255,255,255,.38)" strokeWidth=".7"
-            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
-          {/* Flèche vers le réseau */}
-          <polygon points={`${cx-8},457 ${cx+8},457 ${cx},466`}
-            fill={act(3)?"rgba(0,94,184,.62)":"rgba(0,80,160,.10)"}/>
-          {/* Capsule Réseau GRDF */}
-          <rect x={cx-40} y="468" width="80" height="22" rx="11"
-            fill={act(3)?"rgba(0,94,184,.10)":"rgba(0,80,160,.04)"}
-            stroke={act(3)?"rgba(0,94,184,.42)":"rgba(0,80,160,.14)"} strokeWidth="1.2"/>
-          {act(3)&&<rect x={cx-40} y="468" width="80" height="22" rx="11"
-            fill="none" stroke="rgba(96,165,250,.25)" strokeWidth="1.5" filter="url(#glow3)"/>}
-          <text x={cx} y="479.5" textAnchor="middle" fontSize="8" fontWeight="900" letterSpacing=".6"
-            fill={act(3)?"rgba(0,94,184,.88)":"rgba(26,46,74,.28)"}>Réseau GRDF</text>
-          <text x={cx} y="487" textAnchor="middle" fontSize="6"
-            fill={act(3)?"rgba(0,168,80,.7)":"rgba(26,46,74,.20)"}>↓ injection gaz naturel</text>
+
 
         </g>
       </svg>
