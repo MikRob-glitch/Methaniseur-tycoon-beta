@@ -4789,18 +4789,26 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
           );
         })}
 
-        {/* ── Tuyau horizontal biogaz : cuve tampon ← digesteurs ──
-            Gradient : transparent à gauche (côté cuve) → coloré à droite (côté Vue1).
-            La partie Vue1+ (x > vw) conserve la couleur pleine. */}
+        {/* ── Tuyau horizontal biogaz : digesteurs → flanc droit de la cuve ── */}
         <rect x={cuveRightX} y={biogazY} width={biogazEndX-cuveRightX} height={6} rx={3}
           fill="url(#cbBioGrad)"
           stroke={isDigesting?"rgba(102,238,136,.3)":"rgba(var(--c-blue-rgb),.18)"} strokeWidth="1"/>
-        {/* Flow animé (visible surtout côté Vue1) */}
+        {/* Flow animé */}
         <line x1={biogazEndX} y1={biogazY+3} x2={cuveRightX} y2={biogazY+3}
           stroke={isDigesting?"rgba(102,238,136,.5)":"rgba(102,238,136,0)"} strokeWidth="3"
           strokeDasharray="10 8" strokeLinecap="round"
           style={{animation: isDigesting ? "gasFlow 1s linear infinite" : "none"}}/>
-        {/* Label biogaz (affiché dans Vue1 uniquement) */}
+        {/* ── Coude vertical : collecteur → flanc droit de la cuve tampon ──
+            De biogazY (niveau collecteur) descend 27px dans le corps de la cuve.
+            biogazY=3+yOffset, cuve body=15+yOffset→72+yOffset → bien dans la cuve */}
+        <rect x={cuveRightX-3} y={biogazY} width={6} height={27} rx={2}
+          fill={isDigesting?"rgba(102,238,136,.6)":"rgba(200,220,240,.45)"}
+          stroke={isDigesting?"rgba(102,238,136,.5)":"rgba(var(--c-blue-rgb),.2)"} strokeWidth="1"/>
+        {isDigesting&&<rect x={cuveRightX-2} y={biogazY+1} width={4} height={25} rx={2}
+          fill="none" stroke="rgba(255,255,255,.35)" strokeWidth=".6"
+          strokeDasharray="4 3.5"
+          style={{animation:"gasFlow .8s linear infinite"}}/>}
+        {/* Label biogaz (Vue1 uniquement) */}
         <text x={vw+10} y={biogazY-4} textAnchor="start" fontSize="8"
           fill={isDigesting?"rgba(102,238,136,.95)":"rgba(var(--c-blue-rgb),.6)"}
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
