@@ -4758,13 +4758,29 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}/>
   );
 
+  // Bord droit du composant dans la scène (pour démarrer les tuyaux horizontaux)
+  const cuveRightX     = pipeX + 28;  // rx=27 de la cuve tampon
+  const postRightX     = pipeX + 33;  // rx=32 du poste injection
+
   return (
     <div ref={divRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}>
       <svg style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",display:"block",overflow:"visible"}}>
+        <defs>
+          {/* Gradient biogaz : transparent côté cuve → coloré côté Vue1 */}
+          <linearGradient id="cbBioGrad" gradientUnits="userSpaceOnUse"
+            x1={cuveRightX} y1="0" x2={vw} y2="0">
+            <stop offset="0%"   stopColor={isDigesting?"rgba(102,238,136,0)":"rgba(200,220,240,0)"}/>
+            <stop offset="100%" stopColor={isDigesting?"rgba(102,238,136,.55)":"rgba(200,220,240,.45)"}/>
+          </linearGradient>
+          {/* Gradient GRDF : transparent côté poste → coloré côté Vue1 */}
+          <linearGradient id="cbGrdfGrad" gradientUnits="userSpaceOnUse"
+            x1={postRightX} y1="0" x2={vw} y2="0">
+            <stop offset="0%"   stopColor={grdfOn?"rgba(42,125,187,0)":"rgba(200,220,240,0)"}/>
+            <stop offset="100%" stopColor={grdfOn?"rgba(42,125,187,.55)":"rgba(200,220,240,.35)"}/>
+          </linearGradient>
+        </defs>
 
         {/* ── BIOGAZ : branches verticales (sortie haute digesteurs → collecteur) ── */}
-        {/* Dessinées EN PREMIER pour que le tube horizontal les coiffe proprement */}
-        {/* branchBot = biogazY + 32*scale : correspond au top de la rangée de digesteurs en scène */}
         {Array.from({length:digesteurs}, (_,i) => {
           const bx = colCenter + (i*(UNIT_W_D+GAP_D) + UNIT_W_D/2 - totalW_D/2) * digesteurZoneScale;
           const branchBot = biogazY + 32*digesteurZoneScale + 2;
@@ -4778,36 +4794,36 @@ function CrossBoundaryPipesOverlay({ digesteurs, buffer, injected, isDigesting }
             </React.Fragment>
           );
         })}
-        {/* Coude vertical : jonction cuve tampon */}
-        <rect x={pipeX-4} y={biogazY} width={8} height={14} rx={2}
-          fill={isDigesting?"#C8DCF0":"rgba(var(--c-blue-rgb),.08)"}
-          stroke={isDigesting?"rgba(var(--c-blue-rgb),.42)":"rgba(var(--c-blue-rgb),.2)"}
-          strokeWidth="1.5"/>
-        {/* Tuyau horizontal : cuve tampon ← digesteurs (coiffe les tops de branches) */}
-        <rect x={pipeX} y={biogazY} width={biogazEndX-pipeX} height={8} rx={4}
-          fill={isDigesting?"#C8DCF0":"rgba(var(--c-blue-rgb),.08)"}
-          stroke={isDigesting?"rgba(var(--c-blue-rgb),.42)":"rgba(var(--c-blue-rgb),.2)"}
-          strokeWidth="1.5"/>
-        <line x1={biogazEndX} y1={biogazY+4} x2={pipeX} y2={biogazY+4}
-          stroke="rgba(102,238,136,.6)" strokeWidth="4"
+
+        {/* ── Tuyau horizontal biogaz : cuve tampon ← digesteurs ──
+            Gradient : transparent à gauche (côté cuve) → coloré à droite (côté Vue1).
+            La partie Vue1+ (x > vw) conserve la couleur pleine. */}
+        <rect x={cuveRightX} y={biogazY} width={biogazEndX-cuveRightX} height={6} rx={3}
+          fill="url(#cbBioGrad)"
+          stroke={isDigesting?"rgba(102,238,136,.3)":"rgba(var(--c-blue-rgb),.18)"} strokeWidth="1"/>
+        {/* Flow animé (visible surtout côté Vue1) */}
+        <line x1={biogazEndX} y1={biogazY+3} x2={cuveRightX} y2={biogazY+3}
+          stroke={isDigesting?"rgba(102,238,136,.5)":"rgba(102,238,136,0)"} strokeWidth="3"
           strokeDasharray="10 8" strokeLinecap="round"
           style={{animation: isDigesting ? "gasFlow 1s linear infinite" : "none"}}/>
+        {/* Label biogaz (affiché dans Vue1 uniquement) */}
         <text x={vw+10} y={biogazY-4} textAnchor="start" fontSize="8"
           fill={isDigesting?"rgba(102,238,136,.95)":"rgba(var(--c-blue-rgb),.6)"}
           fontWeight="700" letterSpacing=".3">Biogaz ◀ cuve</text>
 
-        {/* ── GRDF AVAL : connecteur L — poste injection ↓ → tuyau GRDF SVG monde ── */}
-        {/* Vertical : depuis bas corps poste injection (injPostBottom) jusqu'à GRDF_PIPE_Y scène */}
-        <rect x={pipeX-4} y={injPostBottom} width={8} height={grdfWorldY-injPostBottom} rx={3}
-          fill={grdfOn?"rgba(42,125,187,.5)":"rgba(var(--c-blue-rgb),.08)"}
-          stroke={grdfOn?"rgba(var(--c-blue-rgb),.45)":"rgba(var(--c-blue-rgb),.15)"}
-          strokeWidth="1"/>
-        {/* Horizontal bas : rejoint le début du tuyau GRDF dans le SVG monde (V0_V1+10) */}
-        <rect x={pipeX-4} y={grdfWorldY} width={grdfWorldX-(pipeX-4)} height={5} rx={2}
-          fill={grdfOn?"rgba(42,125,187,.5)":"rgba(var(--c-blue-rgb),.08)"}
-          stroke={grdfOn?"rgba(var(--c-blue-rgb),.45)":"rgba(var(--c-blue-rgb),.15)"}
-          strokeWidth="1"/>
-        <text x={pipeX+4} y={injPostBottom-3} textAnchor="start" fontSize="5.5" fontWeight="800"
+        {/* ── GRDF AVAL : tuyau L — poste injection → réseau GRDF monde ──
+            Vertical court sous le poste (Vue0), horizontal allant vers Vue1.
+            Gradient : transparent côté poste → coloré côté Vue1. */}
+        {/* Vertical court */}
+        <rect x={pipeX-3} y={injPostBottom} width={6} height={grdfWorldY-injPostBottom} rx={2}
+          fill={grdfOn?"rgba(42,125,187,.35)":"rgba(var(--c-blue-rgb),.07)"}
+          stroke={grdfOn?"rgba(var(--c-blue-rgb),.3)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
+        {/* Horizontal avec gradient */}
+        <rect x={postRightX} y={grdfWorldY-2} width={grdfWorldX-postRightX} height={5} rx={2}
+          fill="url(#cbGrdfGrad)"
+          stroke={grdfOn?"rgba(var(--c-blue-rgb),.25)":"rgba(var(--c-blue-rgb),.10)"} strokeWidth=".8"/>
+        {/* Label GRDF (affiché dans Vue1 uniquement — hors viewport Vue0) */}
+        <text x={vw+5} y={injPostBottom-3} textAnchor="start" fontSize="5.5" fontWeight="800"
           fill={grdfOn?"var(--c-blue-light)":"rgba(26,46,74,.60)"}>Réseau GRDF aval ↓</text>
 
       </svg>
