@@ -4886,23 +4886,6 @@ function PipelineGraphicVertical({ injected, epurateurOk, compresseurOk, unlockA
           <ellipse cx={cx} cy="72" rx="27" ry="7" fill={act(0)?"#0c4a6e":"rgba(12,74,110,.16)"} stroke={act(0)?"rgba(0,152,204,.45)":"rgba(74,188,223,.14)"} strokeWidth="1.5"/>
           {/* Glow actif */}
           {act(0)&&<rect x={cx-27} y="15" width="54" height="57" rx="5" fill="none" stroke="rgba(0,229,255,.45)" strokeWidth="2" filter="url(#glow3)"/>}
-          {/* ── Port d'entrée BIOGAZ — flanc droit de la cuve ── */}
-          {/* Nozzle horizontal côté droit (g-y=30 à 40, center g-y=35) */}
-          <rect x={cx+27} y={30} width="16" height="10" rx="4"
-            fill={act(0)?"rgba(0,168,80,.65)":"rgba(74,188,223,.18)"}
-            stroke={act(0)?"rgba(0,200,80,.7)":"rgba(74,188,223,.24)"} strokeWidth="1.2"/>
-          {act(0)&&<rect x={cx+28} y={31} width="14" height="8" rx="3"
-            fill="none" stroke="rgba(255,255,255,.42)" strokeWidth=".7"
-            strokeDasharray="4 3.5" strokeDashoffset={flow}/>}
-          {/* Petite flèche → indiquant le sens d'entrée */}
-          <polygon points={`${cx+27},33 ${cx+27},37 ${cx+29},35`}
-            fill={act(0)?"rgba(0,255,120,.65)":"rgba(74,188,223,.2)"}/>
-          {/* Label BIOGAZ à droite du nozzle */}
-          <text x={cx+46} y="33" textAnchor="start" fontSize="5.5" fontWeight="900" letterSpacing=".5"
-            fill={act(0)?"rgba(0,200,80,.88)":"rgba(26,46,74,.28)"}>BIOGAZ</text>
-          <text x={cx+46} y="40" textAnchor="start" fontSize="5"
-            fill={act(0)?"rgba(0,200,80,.6)":"rgba(26,46,74,.2)"}>{digesteurs} dig.</text>
-
           {/* Texte interne */}
           <text x={cx} y="44" textAnchor="middle" fontSize="11" fontWeight="900" fill={act(0)?"#e0f2fe":"rgba(224,242,254,.15)"}>{Math.round(bufferPct*100)}%</text>
           <text x={cx} y="57" textAnchor="middle" fontSize="6.5" fontWeight="600" fill={act(0)?"rgba(186,230,253,.8)":"rgba(186,230,253,.12)"}>{Math.floor(buffer)} m³</text>
