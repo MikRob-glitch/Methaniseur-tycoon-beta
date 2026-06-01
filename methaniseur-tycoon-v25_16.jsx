@@ -1200,7 +1200,7 @@ function App() {
   const doLogin = async () => {
     const m = maia.trim().toUpperCase();
     const p = password;
-    if (m.length < 2 || p.length < 1) { setAuthError("Identifiant MAIA et mot de passe requis."); return; }
+    if (m.length < 2 || p.length < 1) { setAuthError("Pseudo et mot de passe requis."); return; }
     setAuthLoading(true); setAuthError("");
     try {
       const hash = await hashPassword(p);
@@ -1227,7 +1227,7 @@ function App() {
     const m = maia.trim().toUpperCase();
     const dn = displayName.trim();
     const p  = password;
-    if (m.length < 2)  { setAuthError("Identifiant MAIA invalide."); return; }
+    if (m.length < 2)  { setAuthError("Pseudo invalide."); return; }
     if (dn.length < 2) { setAuthError("Prénom & initiale requis (ex : Marie D.)."); return; }
     if (p.length < 6)  { setAuthError("Mot de passe trop court (6 caractères min)."); return; }
     if (p !== confirmPw) { setAuthError("Les mots de passe ne correspondent pas."); return; }
@@ -1235,7 +1235,7 @@ function App() {
     try {
       const existing = await supabaseCheckMaia(m);
       if (existing) {
-        setAuthError("Ce MAIA est déjà enregistré. Connectez-vous.");
+        setAuthError("Ce pseudo est déjà enregistré. Connectez-vous.");
         setAuthLoading(false); return;
       }
       const hash = await hashPassword(p);
@@ -1298,8 +1298,8 @@ function App() {
             ))}
           </div>
 
-          {/* ── Champ MAIA ── */}
-          <div style={{...AUTH_LABEL}}>Identifiant MAIA</div>
+          {/* ── Champ pseudo ── */}
+          <div style={{...AUTH_LABEL}}>Pseudo</div>
           <input
             value={maia} onChange={e=>{ setMaia(e.target.value.toUpperCase()); setAuthError(""); }}
             onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
@@ -4066,7 +4066,7 @@ function Game({ username, region, maia }) {
                   textTransform:"uppercase", letterSpacing:".08em", fontWeight:600,
                   borderBottom:"1px solid rgba(0,80,160,.09)", marginBottom:"4px",
                 }}>
-                  {username} · MAIA {maia || "—"}
+                  {username} · {maia || "—"}
                 </div>
                 <button
                   onClick={() => { setShowUserMenu(false); handleLogout(); }}
