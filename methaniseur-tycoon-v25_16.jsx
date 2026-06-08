@@ -176,6 +176,15 @@ const supabaseRegisterAgent = async (maia, passwordHash, username, region) => {
   return { ok: true };
 };
 
+// Change le mot de passe du joueur authentifié (vérifie l'ancien MDP côté serveur).
+// Après succès, la session est invalidée → il faut se reconnecter.
+const supabaseChangePassword = async (oldPw, newPw) => {
+  const token = getSessionToken();
+  if (!token) return { ok: false, error: "not_logged_in" };
+  const [oldHash, newHash] = await Promise.all([hashPassword(oldPw), hashPassword(newPw)]);
+  return _callPlayersApi({ action: "change_password", session_token: token, old_password_hash: oldHash, new_password_hash: newHash });
+};
+
 // Upsert joueur — V25.13 : tout passe par l'Edge Function /save (validation serveur).
 //   score-only et full state fusionnés en un seul appel (l'Edge Function whitelist les colonnes).
 const _supabaseSave = (payload) => {
@@ -1759,6 +1768,88 @@ function StampSvg({ size = 170 }) {
 }
 
 // ─── OVERLAY DÉBLOCAGE ───────────────────────────────────────────────────────
+// ─── PROFILE MODAL — changement de mot de passe ─────────────────────────────
+function ProfileModal({ maia, username, region, onClose, onPasswordChanged }) {
+  const [oldPw,    setOldPw]    = React.useState("");
+  const [newPw,    setNewPw]    = React.useState("");
+  const [confirmPw,setConfirmPw]= React.useState("");
+  const [loading,  setLoading]  = React.useState(false);
+  const [msg,      setMsg]      = React.useState(null); // {type:"ok"|"err", text}
+  const [showPw,   setShowPw]   = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!oldPw || !newPw || !confirmPw) { setMsg({type:"err",text:"Tous les champs sont requis."}); return; }
+    if (newPw.length < 6)               { setMsg({type:"err",text:"Le nouveau mot de passe doit faire au moins 6 caractères."}); return; }
+    if (newPw !== confirmPw)            { setMsg({type:"err",text:"Les mots de passe ne correspondent pas."}); return; }
+    if (oldPw === newPw)                { setMsg({type:"err",text:"Le nouveau mot de passe doit être différent de l'ancien."}); return; }
+    setLoading(true); setMsg(null);
+    const res = await supabaseChangePassword(oldPw, newPw);
+    setLoading(false);
+    if (res.ok) {
+      setMsg({type:"ok",text:"Mot de passe mis à jour ! Reconnecte-toi avec ton nouveau mot de passe."});
+      setTimeout(() => { onPasswordChanged(); }, 2200);
+    } else {
+      const errMap = { wrong_password:"Mot de passe actuel incorrect.", same_password:"Le nouveau mot de passe est identique à l'ancien.", session_expired:"Session expirée, reconnecte-toi.", invalid_token:"Session invalide." };
+      setMsg({type:"err",text:errMap[res.error] || ("Erreur : " + (res.error || "inconnue"))});
+    }
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.55)",backdropFilter:"blur(4px)"}} onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:"20px",padding:"28px 24px",width:"min(95vw,380px)",boxShadow:"0 24px 64px rgba(0,0,0,.35)",animation:"badgeCardIn .35s cubic-bezier(.34,1.56,.64,1)"}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"20px"}}>
+          <div style={{width:"44px",height:"44px",borderRadius:"14px",background:"rgba(0,94,184,.10)",border:"1px solid rgba(0,94,184,.22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexShrink:0}}>👤</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:"16px",fontWeight:800,color:"var(--c-text)"}}>{username}</div>
+            <div style={{fontSize:"11px",color:"rgba(26,46,74,.62)",marginTop:"1px"}}>MAIA : {maia} · {region}</div>
+          </div>
+          <button onClick={onClose} style={{width:"28px",height:"28px",borderRadius:"50%",background:"rgba(0,80,160,.09)",border:"none",cursor:"pointer",fontSize:"16px",color:"rgba(26,46,74,.6)",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+        </div>
+
+        {/* Changement MDP */}
+        <div style={{fontSize:"11px",fontWeight:700,color:"rgba(26,46,74,.72)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:"12px"}}>🔑 Changer le mot de passe</div>
+        {[
+          [oldPw,    setOldPw,    "Mot de passe actuel"],
+          [newPw,    setNewPw,    "Nouveau mot de passe (6 car. min)"],
+          [confirmPw,setConfirmPw,"Confirmer le nouveau mot de passe"],
+        ].map(([val, set, placeholder], i) => (
+          <div key={i} style={{position:"relative",marginBottom:"10px"}}>
+            <input
+              type={showPw?"text":"password"}
+              value={val} onChange={e=>{set(e.target.value);setMsg(null);}}
+              placeholder={placeholder}
+              style={{width:"100%",boxSizing:"border-box",padding:"11px 40px 11px 14px",borderRadius:"10px",border:"1.5px solid rgba(0,80,160,.25)",fontSize:"13px",color:"var(--c-text)",background:"#f8fafc",outline:"none",fontFamily:"inherit"}}
+            />
+            {i === 0 && (
+              <button onClick={()=>setShowPw(p=>!p)} style={{position:"absolute",right:"10px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"16px",color:"rgba(26,46,74,.5)"}}>
+                {showPw?"🙈":"👁️"}
+              </button>
+            )}
+          </div>
+        ))}
+
+        {msg && (
+          <div style={{padding:"9px 12px",borderRadius:"9px",marginBottom:"12px",fontSize:"12px",fontWeight:600,
+            background:msg.type==="ok"?"rgba(0,168,80,.10)":"rgba(229,62,62,.09)",
+            color:msg.type==="ok"?"#007a38":"#c53030",
+            border:`1px solid ${msg.type==="ok"?"rgba(0,168,80,.25)":"rgba(229,62,62,.22)"}`}}>
+            {msg.type==="ok"?"✅ ":"⚠️ "}{msg.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{width:"100%",padding:"13px",borderRadius:"12px",background:loading?"rgba(0,94,184,.5)":"var(--c-blue)",border:"none",color:"#fff",fontSize:"14px",fontWeight:700,cursor:loading?"default":"pointer",transition:"background .2s",fontFamily:"inherit"}}
+        >
+          {loading?"Mise à jour…":"Mettre à jour le mot de passe"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BadgeUnlockOverlay({ badge, onClose }) {
   if (!badge) return null;
   const catLabel = badge.category === "maitrise" ? "Maîtrise" : badge.category === "diversite" ? "Diversité" : "Progression";
@@ -2257,6 +2348,7 @@ function Game({ username, region, maia }) {
   // ── BADGES : détection des transitions locked→unlocked ───────────────────
   const [badgeQueue,   setBadgeQueue]   = useState([]);
   const [badgeAnim,    setBadgeAnim]    = useState(null);
+  const [profileOpen,  setProfileOpen]  = useState(false);
   const prevBadgeDoneRef = useRef(null); // null = 1er run (pas de célébration au chargement)
 
   // ── CLOUD LOAD on mount ──────────────────────────────────────────────────
@@ -3751,6 +3843,15 @@ function Game({ username, region, maia }) {
         </div>
       )}
 
+      {/* Modal profil */}
+      {profileOpen && (
+        <ProfileModal
+          maia={maia} username={username} region={region}
+          onClose={() => setProfileOpen(false)}
+          onPasswordChanged={() => { setProfileOpen(false); handleLogout(); }}
+        />
+      )}
+
       {/* Overlay : badge débloqué avec tampon VALIDÉ */}
       <BadgeUnlockOverlay badge={badgeAnim} onClose={() => setBadgeAnim(null)} />
 
@@ -4068,6 +4169,22 @@ function Game({ username, region, maia }) {
                 }}>
                   {username} · {maia || "—"}
                 </div>
+                <button
+                  onClick={() => { setShowUserMenu(false); setProfileOpen(true); }}
+                  style={{
+                    width:"100%", padding:"10px 12px", borderRadius:"8px",
+                    background:"transparent", border:"none",
+                    color:"var(--c-text)", fontSize:"13px", fontWeight:600,
+                    textAlign:"left", cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:"10px",
+                    fontFamily:"inherit",
+                    transition:"background .15s",
+                  }}
+                  className="hov-primary"
+                >
+                  <span style={{fontSize:"15px"}}>👤</span>
+                  <span>Mon profil</span>
+                </button>
                 <button
                   onClick={() => { setShowUserMenu(false); handleLogout(); }}
                   style={{

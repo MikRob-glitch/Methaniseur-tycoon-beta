@@ -1,21 +1,20 @@
-// v25.15.3 — Edge Function players-api
-// FIX : leaderboard "performance" — fallback sur le snapshot le plus ancien
-//       + diviseur = jours réellement écoulés (clamp 1..7). Corrige le 0
-//       systématique pendant la 1ère semaine et pour tout nouveau joueur.
-// v25.15.2 : protection euros contre écrasement par save client non-synchronisé.
+// v25.18 — Edge Function players-api
+// change_password    : user authentifié change son propre MDP (session_token + old/new hash)
+// admin_reset_password : admin réinitialise le MDP d'un user (ADMIN_SECRET_KEY + maia + new hash)
 //
-// v25.14   : leaderboards multi-axes (perf/mastery/cumulative_season/lifetime) + snapshots
-// v25.13.2 : clamp monotone tous champs durables (digesteurs, owned, switches, etc)
-// v25.13.1 : clamp scores au max(old, new)
-// v25.13.0 : Edge Function initiale
+// v25.15.3 — FIX leaderboard "performance" fallback snapshot le plus ancien
+// v25.15.2 — protection euros anti-écrasement
+// v25.14   — leaderboards multi-axes + snapshots
+// v25.13.x — Edge Function initiale
 //
 // Déployée en prod via Supabase MCP deploy_edge_function (version 5).
 // Voir le fichier ci-dessous pour l'implémentation complète — synchronisée avec ce qui tourne en prod.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ADMIN_SECRET  = Deno.env.get("ADMIN_SECRET_KEY") ?? "";
 const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
 const SESSION_TTL_MS    = 24 * 60 * 60 * 1000;
@@ -49,12 +48,14 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return j({ error: "invalid_json" }, 400); }
   try {
     switch (body.action) {
-      case "login":       return await handleLogin(body);
-      case "register":    return await handleRegister(body);
-      case "save":        return await handleSave(body);
-      case "logout":      return await handleLogout(body);
-      case "leaderboard": return await handleLeaderboard(body);
-      default:            return j({ error: "unknown_action" }, 400);
+      case "login":                  return await handleLogin(body);
+      case "register":               return await handleRegister(body);
+      case "save":                   return await handleSave(body);
+      case "logout":                 return await handleLogout(body);
+      case "leaderboard":            return await handleLeaderboard(body);
+      case "change_password":        return await handleChangePassword(body);
+      case "admin_reset_password":   return await handleAdminResetPassword(body);
+      default:                       return j({ error: "unknown_action" }, 400);
     }
   } catch (err) {
     console.error("[players-api]", err);
@@ -239,6 +240,58 @@ async function handleLogout({ session_token }: any) {
   return j({ ok: true });
 }
 
+// ── Changement de mot de passe (user authentifié) ──────────────────────────
+async function handleChangePassword({ session_token, old_password_hash, new_password_hash }: any) {
+  if (typeof session_token !== "string" || !UUID_RX.test(session_token))
+    return j({ error: "invalid_token" }, 401);
+  if (typeof old_password_hash !== "string" || !HASH_RX.test(old_password_hash))
+    return j({ error: "invalid_old_hash" }, 400);
+  if (typeof new_password_hash !== "string" || !HASH_RX.test(new_password_hash))
+    return j({ error: "invalid_new_hash" }, 400);
+  if (old_password_hash === new_password_hash)
+    return j({ error: "same_password" }, 400);
+
+  const { data: player } = await sb.from("players")
+    .select("maia, password_hash, session_expires_at")
+    .eq("session_token", session_token).maybeSingle();
+
+  if (!player) return j({ error: "invalid_token" }, 401);
+  if (!player.session_expires_at || new Date(player.session_expires_at).getTime() < Date.now())
+    return j({ error: "session_expired" }, 401);
+  if (player.password_hash !== old_password_hash)
+    return j({ error: "wrong_password" }, 401);
+
+  // Invalide la session courante pour forcer un re-login avec le nouveau MDP
+  const { error } = await sb.from("players")
+    .update({ password_hash: new_password_hash, session_token: null, session_expires_at: null })
+    .eq("maia", player.maia);
+  if (error) return j({ error: "update_failed", detail: error.message }, 500);
+
+  return j({ ok: true });
+}
+
+// ── Reset admin (ADMIN_SECRET_KEY requis) ──────────────────────────────────
+async function handleAdminResetPassword({ admin_key, maia, new_password_hash }: any) {
+  if (!ADMIN_SECRET || admin_key !== ADMIN_SECRET)
+    return j({ error: "unauthorized" }, 403);
+  if (typeof maia !== "string" || !MAIA_RX.test(maia))
+    return j({ error: "invalid_maia" }, 400);
+  if (typeof new_password_hash !== "string" || !HASH_RX.test(new_password_hash))
+    return j({ error: "invalid_new_hash" }, 400);
+
+  const { data: player } = await sb.from("players").select("maia").eq("maia", maia).maybeSingle();
+  if (!player) return j({ error: "player_not_found" }, 404);
+
+  // Réinitialise MDP + invalide toutes sessions actives
+  const { error } = await sb.from("players")
+    .update({ password_hash: new_password_hash, session_token: null, session_expires_at: null })
+    .eq("maia", maia);
+  if (error) return j({ error: "update_failed", detail: error.message }, 500);
+
+  console.log("[Admin] reset_password for", maia);
+  return j({ ok: true, maia });
+}
+
 async function handleLeaderboard({ mode, region, limit }: any) {
   const max = Math.min(num(limit, 50), 200);
   const validModes = new Set(["performance", "mastery", "cumulative_season", "cumulative_lifetime"]);
@@ -264,52 +317,4 @@ async function handleLeaderboard({ mode, region, limit }: any) {
     const { data, error } = await q;
     if (error) return j({ error: "query_failed", detail: error.message }, 500);
     const scored = (data || []).map((r: any) => {
-      const seasonNet = Math.max(0, (Number(r.score_network) || 0) - (Number(r.season_start_score_network) || 0));
-      const seasonGnv = Math.max(0, (Number(r.score_gnv)     || 0) - (Number(r.season_start_score_gnv)     || 0));
-      return { ...r, season_network: seasonNet, season_gnv: seasonGnv, season_score: seasonNet + seasonGnv * GNV_BONUS };
-    });
-    scored.sort((a, b) => b.season_score - a.season_score);
-    return j({ ok: true, mode, results: scored.slice(0, max) });
-  }
-  if (mode === "performance") {
-    const nowMs     = Date.now();
-    const dayMs     = 24 * 60 * 60 * 1000;
-    const targetIso = new Date(nowMs - PERF_WINDOW_DAYS * dayMs).toISOString();
-    let q = sb.from("players").select("maia, username, region, score_network, score_gnv, current_yield, is_connected, digesteurs, epurateur, compresseur, euros").limit(500);
-    if (filterRegion) q = q.eq("region", filterRegion);
-    const { data: players, error } = await q;
-    if (error) return j({ error: "query_failed", detail: error.message }, 500);
-    const results: any[] = [];
-    for (const p of (players || [])) {
-      // Baseline = snapshot le plus recent datant d'AU MOINS 7 jours.
-      let { data: snap } = await sb.from("players_snapshots")
-        .select("score_network, score_gnv, snapshot_at")
-        .eq("maia", p.maia).lte("snapshot_at", targetIso)
-        .order("snapshot_at", { ascending: false }).limit(1).maybeSingle();
-      // Fallback : aucun snapshot >=7j (1ere semaine, nouveau joueur) -> on prend
-      // le snapshot le PLUS ANCIEN dispo et on divise par les jours reels ecoules.
-      if (!snap) {
-        const { data: oldest } = await sb.from("players_snapshots")
-          .select("score_network, score_gnv, snapshot_at")
-          .eq("maia", p.maia)
-          .order("snapshot_at", { ascending: true }).limit(1).maybeSingle();
-        snap = oldest ?? null;
-      }
-      if (!snap) {
-        // Aucun historique -> progression non mesurable.
-        results.push({ ...p, perf_network_per_day: 0, perf_gnv_per_day: 0, perf_score: 0 });
-        continue;
-      }
-      const elapsedDays = (nowMs - new Date(snap.snapshot_at).getTime()) / dayMs;
-      const divisor     = Math.min(Math.max(elapsedDays, 1), PERF_WINDOW_DAYS);
-      const oldNet  = Number(snap.score_network ?? 0);
-      const oldGnv  = Number(snap.score_gnv     ?? 0);
-      const perfNet = Math.max(0, (Number(p.score_network) || 0) - oldNet) / divisor;
-      const perfGnv = Math.max(0, (Number(p.score_gnv)     || 0) - oldGnv) / divisor;
-      results.push({ ...p, perf_network_per_day: perfNet, perf_gnv_per_day: perfGnv, perf_score: perfNet + perfGnv * GNV_BONUS });
-    }
-    results.sort((a, b) => b.perf_score - a.perf_score);
-    return j({ ok: true, mode, results: results.slice(0, max) });
-  }
-  return j({ error: "unknown_mode" }, 400);
-}
+      const seasonNet = Math.max(0, (Number(r.score_ne
