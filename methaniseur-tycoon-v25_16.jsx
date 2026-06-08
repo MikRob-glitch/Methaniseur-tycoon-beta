@@ -9866,11 +9866,11 @@ function RankingTab({
                   <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:done?0:"6px"}}>
                     <span style={{fontSize:"18px",filter:done?"none":"grayscale(100%) opacity(0.4)"}}>{ms.icon}</span>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.70)"}}>{ms.name}</div>
+                      <div style={{fontSize:"12px",fontWeight:700,color:done?"var(--c-text)":"rgba(26,46,74,.65)"}}>{ms.name}</div>
                       {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.82)",marginTop:"1px"}}>{ms.sub}</div>}
                     </div>
                     {done ? (
-                      <span style={{fontSize:"10px",fontWeight:700,color:c,padding:"2px 8px",borderRadius:"10px",background:c+"18"}}>✅</span>
+                      <span style={{fontSize:"10px",fontWeight:700,color:"#fff",padding:"2px 8px",borderRadius:"10px",background:c}}>✅</span>
                     ) : (
                       <span style={{fontSize:"10px",color:"rgba(26,46,74,.82)"}}>{pct.toFixed(0)}%</span>
                     )}
@@ -9903,10 +9903,10 @@ function RankingTab({
                 opacity:b.done?1:.55,transition:"all .4s"
               }}>
                 <div style={{fontSize:"24px",filter:b.done?"drop-shadow(0 0 8px "+b.color+"80)":"grayscale(100%) opacity(0.35)",marginBottom:"6px"}}>{b.icon}</div>
-                <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.70)"}}>{b.name}</div>
-                <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{b.desc}</div>
+                <div style={{fontSize:"11px",fontWeight:800,color:"var(--c-text)"}}>{b.name}</div>
+                <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",marginTop:"2px"}}>{b.desc}</div>
                 {b.done ? (
-                  <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
+                  <div style={{fontSize:"10px",fontWeight:700,color:"#fff",marginTop:"4px",background:b.color,padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
                 ) : b.pct != null ? (
                   <div style={{marginTop:"6px"}}>
                     <div style={{height:"3px",borderRadius:"2px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
@@ -10036,11 +10036,11 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
               <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:done?0:"6px"}}>
                 <span style={{fontSize:"18px",filter:done?"none":"grayscale(100%) opacity(0.4)"}}>{ms.icon}</span>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:"12px",fontWeight:700,color:done?c:"rgba(26,46,74,.70)"}}>{ms.name}</div>
+                  <div style={{fontSize:"12px",fontWeight:700,color:done?"var(--c-text)":"rgba(26,46,74,.65)"}}>{ms.name}</div>
                   {ms.sub && <div style={{fontSize:"9px",color:"rgba(26,46,74,.82)",marginTop:"1px"}}>{ms.sub}</div>}
                 </div>
                 {done ? (
-                  <span style={{fontSize:"10px",fontWeight:700,color:c,padding:"2px 8px",borderRadius:"10px",background:c+"18"}}>✅</span>
+                  <span style={{fontSize:"10px",fontWeight:700,color:"#fff",padding:"2px 8px",borderRadius:"10px",background:c}}>✅</span>
                 ) : (
                   <span style={{fontSize:"10px",color:"rgba(26,46,74,.82)"}}>{pct.toFixed(0)}%</span>
                 )}
@@ -10074,10 +10074,10 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
             opacity:b.done?1:.55,transition:"all .4s"
           }}>
             <div style={{fontSize:"24px",filter:b.done?"drop-shadow(0 0 8px "+b.color+"80)":"grayscale(100%) opacity(0.35)",marginBottom:"6px"}}>{b.icon}</div>
-            <div style={{fontSize:"11px",fontWeight:800,color:b.done?b.color:"rgba(26,46,74,.70)"}}>{b.name}</div>
-            <div style={{fontSize:"9px",color:"rgba(26,46,74,.70)",marginTop:"2px"}}>{b.desc}</div>
+            <div style={{fontSize:"11px",fontWeight:800,color:"var(--c-text)"}}>{b.name}</div>
+            <div style={{fontSize:"9px",color:"rgba(26,46,74,.78)",marginTop:"2px"}}>{b.desc}</div>
             {b.done ? (
-              <div style={{fontSize:"10px",fontWeight:700,color:b.color,marginTop:"4px",background:b.color+"18",padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
+              <div style={{fontSize:"10px",fontWeight:700,color:"#fff",marginTop:"4px",background:b.color,padding:"2px 8px",borderRadius:"8px",display:"inline-block"}}>DÉBLOQUÉ</div>
             ) : b.pct != null ? (
               <div style={{marginTop:"6px"}}>
                 <div style={{height:"3px",borderRadius:"2px",background:"rgba(0,80,160,.09)",overflow:"hidden"}}>
@@ -10140,7 +10140,7 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                       {[0,1,2,3,4].map(si => (
                         <span key={si} style={{
                           fontSize: "12px",
-                          color: si < starsEarned ? "var(--c-yellow)" : "rgba(0,80,160,.20)",
+                          color: si < starsEarned ? "#B8860B" : "rgba(0,80,160,.20)",
                           filter: si < starsEarned ? "drop-shadow(0 0 4px rgba(var(--c-yellow-rgb),.7))" : "none"
                         }}>★</span>
                       ))}
@@ -10154,10 +10154,10 @@ function RewardsTab({ injected, totalScore, digesteurs, owned, gnvStations, trac
                         border: `1px solid ${b.done ? c+"55" : "rgba(0,80,160,.09)"}`,
                         opacity: b.done ? 1 : 0.5,
                       }}>
-                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "var(--c-yellow)" : "rgba(26,46,74,.82)" }}>
+                        <div style={{ fontSize: "9px", fontWeight: 700, color: b.done ? "#B8860B" : "rgba(26,46,74,.40)" }}>
                           {"★".repeat(b.starLevel)}
                         </div>
-                        <div style={{ fontSize: "8px", color: b.done ? c : "rgba(26,46,74,.82)", fontWeight: 600, marginTop: "1px" }}>
+                        <div style={{ fontSize: "8px", color: b.done ? "var(--c-text)" : "rgba(26,46,74,.55)", fontWeight: 600, marginTop: "1px" }}>
                           +{Math.round((STAR_BONUSES[b.starLevel-1]-1)*100)}%
                         </div>
                         <div style={{ fontSize: "7px", color: "rgba(26,46,74,.70)", marginTop: "1px" }}>
