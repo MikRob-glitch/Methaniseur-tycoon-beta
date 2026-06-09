@@ -851,29 +851,29 @@ const AUTH_LABEL = {
 const TUTORIAL_STEPS = [
   {
     id: 'welcome',
-    title: '🌱 Bienvenue dans Méthaniseur Tycoon !',
-    body: 'Tu vas construire une unité de méthanisation pour produire du biométhane et l\'injecter dans le réseau GRDF. La France vise 10 % de gaz vert d\'ici 2030 — et tu vas y contribuer !',
+    title: 'Bienvenue dans Méthaniseur Tycoon',
+    body: 'Construis une unité de méthanisation, produis du biométhane et injecte-le dans le réseau GRDF. La France vise 10 % de gaz vert en 2030 — tu vas y contribuer.',
     target: null,
     trigger: gs => !gs.seenTutos.has('welcome'),
   },
   {
     id: 'tab-achats',
-    title: '⬆️ Commence par les Achats',
-    body: 'L\'onglet "Achats" est ton point de départ. Tu y achètes des sources d\'intrants — les matières organiques qui alimentent ton digesteur.',
+    title: 'Commence par les Achats',
+    body: 'Cet onglet est ton point de départ. Tu y achètes des sources de matières organiques — les intrants qui alimentent ton digesteur.',
     target: '[data-tut="tab-upgrades"]',
     trigger: gs => !gs.seenTutos.has('tab-achats') && gs.seenTutos.has('welcome'),
   },
   {
     id: 'buy-lisier',
-    title: '🐄 Achète ton premier intrant !',
-    body: 'Le Lisier bovin est l\'intrant de base. Il coûte 5 m³ de biométhane — tu en as déjà 10 m³ pour démarrer. Clique sur le bouton bleu avec le coût en m³ pour lancer la collecte !',
+    title: '🐄 Achète ton premier intrant',
+    body: 'Le Lisier bovin est le premier intrant. Tu as 10 m³ pour démarrer — clique sur le bouton bleu pour lancer la collecte.',
     target: '[data-tut="shop-item-0"]',
     trigger: gs => !gs.seenTutos.has('buy-lisier') && gs.tab === 'upgrades' && gs.seenTutos.has('tab-achats'),
   },
   {
     id: 'bac-intrants',
-    title: '🗑️ Le BAC d\'intrants',
-    body: 'Les tracteurs déposent les matières ici. Le BAC affiche son remplissage et son rendement (m³/t). Appuie sur l\'icône ℹ️ (en haut à droite du bac) pour voir la composition détaillée de ton mix — chaque combinaison d\'intrants a un rendement différent.',
+    title: 'Bac à intrants',
+    body: 'Les tracteurs déposent les matières ici. Clique sur ℹ️ pour voir la composition du mix — chaque combinaison de matières a un rendement différent.',
     target: '[data-tut="bac-zone"]',
     forceTab: 'game',
     forceView: 1,
@@ -881,8 +881,8 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'gisements-intro',
-    title: '🗺️ Tes gisements locaux',
-    body: 'Swipe ➡️ pour voir la carte de tes sources. Chaque bâtiment est un gisement local où tes tracteurs collectent en boucle. Plus tu achètes de quantités, plus le flux est élevé.',
+    title: 'Tes gisements locaux',
+    body: 'Swipe pour voir la carte de tes sources. Chaque bâtiment est un gisement où tes tracteurs collectent en boucle. Plus tu achètes de quantités, plus le flux est élevé.',
     target: '[data-tut="city-map"]',
     forceTab: 'game',
     forceView: 2,
@@ -890,8 +890,8 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'zone-fill-pin',
-    title: '📊 Jauge de gisement & priorité',
-    body: 'La barre verticale à droite de chaque bâtiment = le stock local du gisement. Quand elle pulse en rouge, il sature : les tracteurs ne peuvent plus charger, déverse vite ! Le 📌 épingle une zone — tes tracteurs s\'y rendent en priorité.',
+    title: 'Jauge & priorité',
+    body: 'La barre verticale = stock local du gisement. En rouge = saturation, les tracteurs ne peuvent plus charger. Le 📌 envoie ta flotte en priorité sur cette zone.',
     target: null,
     forceTab: 'game',
     forceView: 2,
@@ -900,32 +900,16 @@ const TUTORIAL_STEPS = [
   {
     id: 'zone-panne',
     title: '⚠️ Pannes & fiabilité',
-    body: 'Un gisement saturé trop longtemps tombe en ⚠️ PANNE. Tu dois payer pour le relancer. Chaque panne fait baisser ta fiabilité (%) — visible en haut. En dessous de 95 %, ton rendement chute. Déverse régulièrement pour l\'éviter !',
+    body: 'Un gisement saturé trop longtemps tombe en panne. Chaque panne réduit ta fiabilité — en dessous de 95 %, le rendement chute. Déverse régulièrement pour éviter ça.',
     target: null,
     forceTab: 'game',
     forceView: 2,
     trigger: gs => !gs.seenTutos.has('zone-panne') && gs.seenTutos.has('zone-fill-pin'),
   },
   {
-    id: 'rewards-hint',
-    title: '🎖️ L\'onglet Récompenses',
-    body: 'Ta progression est tracée dès maintenant dans l\'onglet Récompenses. Tu y trouveras : 📜 Certificats officiels (GO, CPB, Qualimétha) à débloquer après raccordement, 🏆 Milestones de production et des badges de progression. Garde-le en tête !',
-    target: '[data-tut="rewards-certs"]',
-    forceTab: 'rewards',
-    trigger: gs => !gs.seenTutos.has('rewards-hint') && (gs.seenTutos.has('zone-panne') || gs.ownedCount >= 1),
-  },
-  {
-    id: 'rewards-milestones',
-    title: '🏆 Milestones & badges',
-    body: 'Les milestones mesurent ton impact réel : foyers alimentés en gaz vert, MWh injectés, couverture régionale. Les badges gamifiés récompensent ta progression : diversité d\'intrants, étoiles de quantité, automatisation. Tout s\'accumule au fil du jeu.',
-    target: '[data-tut="rewards-milestones"]',
-    forceTab: 'rewards',
-    trigger: gs => !gs.seenTutos.has('rewards-milestones') && gs.seenTutos.has('rewards-hint'),
-  },
-  {
     id: 'pour-button',
-    title: '⬇️ Déverse dans le digesteur !',
-    body: 'Le bac a des intrants. Clique sur "⬇️ Déverser" pour les envoyer dans le digesteur. La digestion anaérobie démarre et produit du biogaz — qui s\'accumule dans la cuve tampon.',
+    title: 'Déverse dans le digesteur',
+    body: 'Clique sur Déverser pour envoyer les intrants dans le digesteur. La digestion anaérobie démarre et produit du biogaz vers la cuve tampon.',
     target: '[data-tut="pour-button"]',
     forceTab: 'game',
     forceView: 1,
@@ -933,8 +917,8 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'cn-ratio',
-    title: '⚗️ Le ratio C/N — ton levier de rendement',
-    body: 'Cette jauge mesure l\'équilibre Carbone/Azote de ton mix. Le sweet spot est autour de 25. Achète différents intrants (lisier + fumier + CIVE…) pour t\'en approcher — chaque point gagné augmente ta production de biométhane.',
+    title: 'Le ratio C/N — ton levier de rendement',
+    body: 'Cette jauge mesure la balance Carbone/Azote de ton mix. Le sweet spot est ~25 — diversifie les intrants pour atteindre cet équilibre et maximiser la production.',
     target: '[data-tut="cn-gauge"]',
     forceTab: 'game',
     forceView: 1,
@@ -942,8 +926,8 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'currency-intro',
-    title: '💧 La monnaie de la phase 1 : le m³',
-    body: 'Avant le raccordement, tout se paie en m³ de biométhane accumulés dans ta cuve tampon : intrants, équipements, tout. Après le raccordement, GRDF rachète chaque m³ injecté au prix du marché — ta monnaie bascule définitivement vers l\'euro.',
+    title: 'La monnaie de la phase 1 : le m³',
+    body: 'Avant le raccordement, tout se paie en m³ accumulés dans la cuve tampon. Après, GRDF rachète chaque m³ injecté au prix du marché — la monnaie bascule définitivement en euros.',
     target: '[data-tut="buffer-zone"]',
     forceTab: 'game',
     forceView: 1,
@@ -951,8 +935,8 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'chain-goal',
-    title: '🎯 Objectif : te raccorder au réseau GRDF',
-    body: 'Tu dois débloquer 3 équipements dans l\'ordre. Chacun débloque aussi de nouveaux intrants plus productifs : 🧪 Épurateur (10 000 m³) → 🔩 Compresseur (40 000 m³) → 🏗️ Raccordement GRDF (80 000 m³). C\'est la fin de la phase 1.',
+    title: 'Objectif : raccordement GRDF',
+    body: 'Débloque 3 équipements dans cet ordre : 🧪 Épurateur (10 000 m³) → 🔩 Compresseur (40 000 m³) → 🏗️ Raccordement (80 000 m³). Fin de la phase 1.',
     target: '[data-tut="chain-steps"]',
     forceTab: 'game',
     forceView: 1,
@@ -960,75 +944,99 @@ const TUTORIAL_STEPS = [
   },
   {
     id: 'epurateur-intro',
-    title: '🧪 Étape 1/3 — L\'Épurateur est disponible !',
-    body: 'Tu as accumulé 10 000 m³ ! L\'Épurateur purifie le biogaz (élimine H₂S, CO₂ et humidité) et débloque les biodéchets + boues de STEP. Premier verrou de la chaîne — fonce !',
+    title: '🧪 Étape 1/3 — Épurateur disponible !',
+    body: 'Tu as atteint 10 000 m³ ! Cet équipement purifie le biogaz et débloque les biodéchets + boues de STEP. Premier verrou de la chaîne.',
     target: '[data-tut="epurateur-btn"]',
     trigger: gs => !gs.seenTutos.has('epurateur-intro') && gs.canUnlockEpurateur,
   },
   {
     id: 'compresseur-intro',
-    title: '🔩 Étape 2/3 — Le Compresseur est accessible !',
-    body: 'Tu as accumulé 40 000 m³ ! Le Compresseur met le biogaz sous pression réseau (jusqu\'à 67 bar) et débloque les déchets industriels, les plus productifs du jeu.',
+    title: '🔩 Étape 2/3 — Compresseur accessible !',
+    body: 'Tu as atteint 40 000 m³ ! Cet équipement met le biogaz sous pression réseau et débloque les déchets industriels — les plus productifs du jeu.',
     target: '[data-tut="compresseur-btn"]',
     trigger: gs => !gs.seenTutos.has('compresseur-intro') && gs.canUnlockCompresseur,
   },
   {
     id: 'raccordement',
     title: '🏗️ Étape 3/3 — Raccorde-toi au réseau GRDF !',
-    body: 'C\'est LE moment ! Tu reçois une prime de 5 000 €. À partir de maintenant, GRDF rachète chaque m³ injecté au prix du marché — ta monnaie bascule vers l\'euro. Tu rejoins aussi le classement national !',
+    body: 'Tu reçois une prime de 5 000 €. GRDF rachète désormais chaque m³ injecté au prix du marché — tu rejoins aussi le classement national.',
     target: '[data-tut="raccordement-btn"]',
     trigger: gs => !gs.seenTutos.has('raccordement') && gs.canConnect,
   },
   {
     id: 'gnv-intro',
-    title: '⛽ Stations GNV débloquées !',
-    body: 'Raccordé ! Tu peux maintenant ouvrir des stations GNV (Gaz Naturel pour Véhicules). Chaque station vend ton biométhane comme carburant et génère des revenus en euros.',
+    title: '⛽ Stations GNV débloquées',
+    body: 'Raccordé ! Tu peux ouvrir des stations GNV (Gaz Naturel pour Véhicules). Chaque station vend ton biométhane comme carburant et génère des revenus en euros.',
     target: '[data-tut="gnv-section"]',
     trigger: gs => !gs.seenTutos.has('gnv-intro') && gs.injected && gs.seenTutos.has('raccordement'),
   },
   {
     id: 'tractor-fleet',
-    title: '🚜 Développe ta flotte de tracteurs !',
-    body: 'Tes tracteurs collectent les intrants. Achètes-en de nouveaux, ajoute des remorques, ou convertis-les au GNV pour +15 % de remplissage chacun. Plus de tracteurs = plus de biomasse collectée !',
+    title: '🚜 Développe ta flotte de tracteurs',
+    body: 'Achète de nouveaux tracteurs, ajoute des remorques, ou convertis-les au GNV pour +15 % de remplissage chacun. Plus de tracteurs = plus de biomasse collectée.',
     target: '[data-tut="tractor-fleet"]',
-    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('rewards-milestones'),
+    trigger: gs => !gs.seenTutos.has('tractor-fleet') && gs.injected && gs.seenTutos.has('gnv-intro'),
+  },
+  {
+    id: 'rewards-hint',
+    title: '🎖️ Onglet Récompenses',
+    body: 'Tes certificats officiels (GO, CPB, Qualimétha), milestones de production et badges sont tracés ici depuis le début du jeu. Explore-les !',
+    target: '[data-tut="rewards-certs"]',
+    forceTab: 'rewards',
+    trigger: gs => !gs.seenTutos.has('rewards-hint') && gs.seenTutos.has('tractor-fleet'),
+  },
+  {
+    id: 'rewards-milestones',
+    title: 'Milestones & badges',
+    body: 'Les milestones mesurent ton impact réel : foyers alimentés en gaz vert, MWh injectés, couverture régionale. Les badges récompensent ta diversité, progression et automatisation.',
+    target: '[data-tut="rewards-milestones"]',
+    forceTab: 'rewards',
+    trigger: gs => !gs.seenTutos.has('rewards-milestones') && gs.seenTutos.has('rewards-hint'),
   },
 ];
 
 // ─── TUTORIAL OVERLAY COMPONENT ──────────────────────────────────────────────
-function TutorialOverlay({ step, onNext, onSkip }) {
+function TutorialOverlay({ step, stepIndex, totalSteps, onNext, onSkip }) {
   const [rect, setRect] = useState(null);
   const [wh, setWh] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  const tooltipRef = useRef(null);
+  const [tooltipH, setTooltipH] = useState(260);
 
+  // Mesure réelle de la hauteur du tooltip via ResizeObserver
+  useEffect(() => {
+    if (!tooltipRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const h = (e.borderBoxSize?.[0]?.blockSize ?? (e.contentRect.height + 38)) + 24;
+        setTooltipH(h);
+      }
+    });
+    ro.observe(tooltipRef.current);
+    return () => ro.disconnect();
+  }, [step]);
+
+  // Mise à jour du spotlight
   useEffect(() => {
     if (!step) return;
-
-    // updateRect : recalcule la position de l'élément cible (appelé au scroll ET au resize)
     const updateRect = () => {
       setWh({ w: window.innerWidth, h: window.innerHeight });
       if (!step.target) { setRect(null); return; }
       const el = document.querySelector(step.target);
       if (el) {
         const r = el.getBoundingClientRect();
-        const pad = 10;
+        const pad = 12;
         setRect({ x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 });
-      } else {
-        setRect(null);
-      }
+      } else { setRect(null); }
     };
-
-    // Scroll initial vers la cible (une seule fois à l'activation du step)
-    const initialShow = () => {
+    const t = setTimeout(() => {
       updateRect();
       if (step.target) {
         const el = document.querySelector(step.target);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    };
-
-    const t = setTimeout(initialShow, 350);
+    }, 350);
     window.addEventListener('resize', updateRect);
-    // Suivre le scroll pour garder le spotlight aligné sur la cible
     window.addEventListener('scroll', updateRect, { passive: true });
     document.addEventListener('scroll', updateRect, { passive: true });
     return () => {
@@ -1039,132 +1047,190 @@ function TutorialOverlay({ step, onNext, onSkip }) {
     };
   }, [step]);
 
+  // Support clavier : Entrée/Espace → suivant, Échap → confirm skip
+  useEffect(() => {
+    if (!step) return;
+    const handleKey = e => {
+      if (confirmSkip) {
+        if (e.key === 'Enter') { e.preventDefault(); setConfirmSkip(false); onSkip(); }
+        if (e.key === 'Escape') { e.preventDefault(); setConfirmSkip(false); }
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNext(); }
+      if (e.key === 'Escape') { e.preventDefault(); setConfirmSkip(true); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [step, onNext, onSkip, confirmSkip]);
+
   if (!step) return null;
 
   const W = wh.w, H = wh.h;
+  const TW = Math.min(320, W - 32);
   const isCentered = !step.target || !rect;
 
-  // Calcul position tooltip
-  let tooltipStyle = {};
-  let arrowStyle = null;
+  // Calcul de la position du tooltip
+  let outerStyle = {};
+  let arrowDir = null; // 'up' | 'down'
 
   if (!isCentered && rect) {
-    const TW = Math.min(300, W - 32);
     const spaceBelow = H - (rect.y + rect.h);
     const spaceAbove = rect.y;
     const left = Math.max(16, Math.min(rect.x, W - TW - 16));
-    const TOOLTIP_H = 220; // hauteur estimée du tooltip (padding + titre + body + boutons)
-
-    if (spaceBelow >= TOOLTIP_H) {
-      // Sous la cible — clamp pour ne pas dépasser le bas de l'écran
-      const top = Math.min(rect.y + rect.h + 14, H - TOOLTIP_H - 8);
-      tooltipStyle = { position: 'fixed', top, left };
-      arrowStyle = {
-        position: 'absolute', top: -8, left: 24,
-        width: 0, height: 0,
-        borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
-        borderBottom: '8px solid rgba(var(--c-blue-rgb),.5)',
-      };
-    } else if (spaceAbove >= TOOLTIP_H) {
-      // Au-dessus de la cible
-      const bottom = Math.min(H - rect.y + 14, H - 8);
-      tooltipStyle = { position: 'fixed', bottom, left };
-      arrowStyle = {
-        position: 'absolute', bottom: -8, left: 24,
-        width: 0, height: 0,
-        borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
-        borderTop: '8px solid rgba(var(--c-blue-rgb),.5)',
-      };
+    if (spaceBelow >= tooltipH + 16) {
+      const top = Math.min(rect.y + rect.h + 14, H - tooltipH - 8);
+      outerStyle = { position: 'fixed', top, left };
+      arrowDir = 'up';
+    } else if (spaceAbove >= tooltipH + 16) {
+      const top = Math.max(8, rect.y - tooltipH - 14);
+      outerStyle = { position: 'fixed', top, left };
+      arrowDir = 'down';
     } else {
-      // Pas assez de place ni en haut ni en bas → ancré en bas de l'écran
-      tooltipStyle = { position: 'fixed', bottom: 12, left: Math.max(16, (W - TW) / 2) };
+      outerStyle = { position: 'fixed', bottom: 12, left: Math.max(16, (W - TW) / 2) };
     }
   } else {
-    tooltipStyle = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
+    outerStyle = { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' };
   }
+
+  const progress = totalSteps > 0 ? (stepIndex + 1) / totalSteps : 0;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9990, pointerEvents: 'all' }}>
-      {/* Overlay SVG avec trou de spotlight */}
+
+      {/* Overlay SVG avec spotlight */}
       {!isCentered && rect ? (
-        <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
           <defs>
             <mask id="tut-mask">
               <rect width="100%" height="100%" fill="white"/>
-              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx="10" fill="black"/>
+              <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx="12" fill="black"/>
             </mask>
           </defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,.72)" mask="url(#tut-mask)"/>
-          {/* anneau pulsant autour de la cible */}
-          <rect
-            x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx="10"
-            fill="none" stroke="var(--c-blue)" strokeWidth="2"
-            opacity="0.9"
-            style={{ animation: 'tutPulse 1.4s ease-in-out infinite' }}
+          <rect width="100%" height="100%" fill="rgba(0,14,40,.82)" mask="url(#tut-mask)"/>
+          <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx="12"
+            fill="none" stroke="#005EB8" strokeWidth="2.5"
+            style={{ animation: 'tutPulse 1.5s ease-in-out infinite' }}
           />
         </svg>
       ) : (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(3px)' }}/>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,14,40,.82)', backdropFilter: 'blur(4px)' }}/>
       )}
 
-      {/* Zone cliquable en dehors pour skip */}
-      <div style={{ position: 'absolute', inset: 0 }} onClick={onSkip}/>
+      {/* Zone cliquable neutre — pas de skip accidentel */}
+      <div style={{ position: 'absolute', inset: 0 }}/>
 
-      {/* Tooltip card */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          ...tooltipStyle,
-          width: Math.min(300, W - 32),
-          background: 'linear-gradient(145deg,#EEF4FB 0%,#E4EDF8 100%)',
-          border: '1.5px solid rgba(var(--c-blue-rgb),.45)',
-          borderRadius: 16,
-          padding: '18px 20px',
-          boxShadow: '0 12px 50px rgba(0,0,0,.75), 0 0 0 1px rgba(var(--c-blue-rgb),.12)',
-          zIndex: 9991,
-          pointerEvents: 'all',
-        }}
-      >
-        {arrowStyle && <div style={arrowStyle}/>}
-
-        {/* Badge */}
-        <div style={{ fontSize: '10px', color: 'rgba(var(--c-blue-rgb),.75)', marginBottom: '8px', fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' }}>
-          💡 Tutoriel
+      {/* Modale de confirmation skip */}
+      {confirmSkip && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: Math.min(290, W - 32), background: '#fff', borderRadius: 16,
+          padding: '22px 20px', boxShadow: '0 24px 80px rgba(0,20,60,.35)',
+          zIndex: 9993, animation: 'tutFadeIn .18s ease-out',
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1A2E4A', marginBottom: 8 }}>
+            Passer le tutoriel ?
+          </div>
+          <div style={{ fontSize: 13, color: '#5A7394', lineHeight: 1.55, marginBottom: 20 }}>
+            Tu peux le rejouer à tout moment depuis le menu du jeu.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setConfirmSkip(false)} style={{
+              padding: '8px 16px', borderRadius: 8, border: '1px solid #D8E8F8',
+              background: 'transparent', color: '#5A7394', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>Annuler</button>
+            <button onClick={() => { setConfirmSkip(false); onSkip(); }} style={{
+              padding: '8px 20px', borderRadius: 8, border: 'none',
+              background: '#005EB8', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>Oui, passer</button>
+          </div>
         </div>
+      )}
 
-        {/* Titre */}
-        <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text)', marginBottom: '8px', lineHeight: 1.3 }}>
-          {step.title}
-        </div>
+      {/* Tooltip principal */}
+      <div style={{ ...outerStyle, zIndex: 9991, width: TW }}>
 
-        {/* Corps */}
-        <div style={{ fontSize: '13px', color: 'rgba(26,46,74,.82)', lineHeight: 1.6, marginBottom: '16px' }}>
-          {step.body}
-        </div>
+        {/* Flèche haut (tooltip sous la cible) */}
+        {arrowDir === 'up' && <>
+          <div style={{ position: 'absolute', top: -9, left: 26, width: 0, height: 0,
+            borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderBottom: '9px solid #C8DCF2' }}/>
+          <div style={{ position: 'absolute', top: -7, left: 27, width: 0, height: 0,
+            borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '8px solid #fff' }}/>
+        </>}
 
-        {/* Boutons */}
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <button onClick={onSkip} style={{
-            padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(0,80,160,.14)',
-            background: 'transparent', color: 'rgba(26,46,74,.72)', fontSize: '12px',
-            cursor: 'pointer', fontWeight: 600,
-          }}>Passer tout</button>
-          <button onClick={onNext} style={{
-            padding: '8px 20px', borderRadius: 8, border: 'none',
-            background: 'linear-gradient(135deg,#2A6FAA,var(--c-blue))', color: 'white',
-            fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(var(--c-blue-rgb),.45)',
-          }}>Compris !</button>
+        {/* Flèche bas (tooltip au-dessus de la cible) */}
+        {arrowDir === 'down' && <>
+          <div style={{ position: 'absolute', bottom: -9, left: 26, width: 0, height: 0,
+            borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderTop: '9px solid #C8DCF2' }}/>
+          <div style={{ position: 'absolute', bottom: -7, left: 27, width: 0, height: 0,
+            borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #fff' }}/>
+        </>}
+
+        {/* Carte blanche */}
+        <div
+          ref={tooltipRef}
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'relative',
+            background: '#FFFFFF',
+            border: '1px solid #C8DCF2',
+            borderRadius: 16,
+            padding: '18px 20px 16px',
+            boxShadow: '0 24px 60px rgba(0,20,60,.24), 0 4px 16px rgba(0,40,120,.1)',
+            animation: 'tutFadeIn .22s ease-out',
+          }}
+        >
+          {/* Barre de progression */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#005EB8', letterSpacing: '.07em', textTransform: 'uppercase' }}>
+                Étape {stepIndex + 1} / {totalSteps}
+              </span>
+              <span style={{ fontSize: 10, color: '#8AACCF', fontWeight: 600 }}>
+                {Math.round(progress * 100)} %
+              </span>
+            </div>
+            <div style={{ height: 3, borderRadius: 2, background: '#E0EAF8', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${progress * 100}%`,
+                background: 'linear-gradient(90deg,#3A86D4,#005EB8)',
+                borderRadius: 2, transition: 'width .35s ease',
+              }}/>
+            </div>
+          </div>
+
+          {/* Titre */}
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#1A2E4A', marginBottom: 10, lineHeight: 1.35 }}>
+            {step.title}
+          </div>
+
+          {/* Corps */}
+          <div style={{ fontSize: 13, color: '#3A5270', lineHeight: 1.65, marginBottom: 18 }}>
+            {step.body}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setConfirmSkip(true)} style={{
+              padding: '7px 12px', borderRadius: 8, border: '1px solid #E0EAF4',
+              background: 'transparent', color: '#9BBBDF', fontSize: 12,
+              cursor: 'pointer', fontWeight: 500, flexShrink: 0,
+            }}>Passer le tuto</button>
+            <button onClick={onNext} style={{
+              padding: '9px 22px', borderRadius: 9, border: 'none',
+              background: '#005EB8', color: '#fff',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,94,184,.4)',
+              letterSpacing: '.01em', flexShrink: 0,
+            }}>
+              {stepIndex === totalSteps - 1 ? 'Terminer ✓' : 'Suivant →'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── ROOT ─────────────────────────────────────────────────────────────────────
 function App() {
   const savedLogin = (() => { try { const s = localStorage.getItem('mt_login_v2'); return s ? JSON.parse(s) : null; } catch { return null; } })();
   // "verifying" = on a un localStorage mais on doit valider en Supabase avant d'ouvrir le jeu
@@ -3726,6 +3792,7 @@ function Game({ username, region, maia }) {
         * { -webkit-font-smoothing: antialiased; }
         button { -webkit-tap-highlight-color: transparent; }
         @keyframes tutPulse{0%,100%{opacity:.9;stroke-width:2}50%{opacity:.4;stroke-width:3.5}}
+        @keyframes tutFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes digestPulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.04);filter:brightness(1.15)}}
         @keyframes userMenuIn{0%{opacity:0;transform:translateY(-4px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
         .scanline::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(var(--c-blue-rgb),.018) 2px,rgba(var(--c-blue-rgb),.018) 4px);pointer-events:none;border-radius:inherit;}
@@ -4655,6 +4722,8 @@ function Game({ username, region, maia }) {
       {/* ══ TUTORIEL SPOTLIGHT ══ */}
       <TutorialOverlay
         step={activeTuto}
+        stepIndex={activeTuto ? TUTORIAL_STEPS.findIndex(s => s.id === activeTuto.id) : 0}
+        totalSteps={TUTORIAL_STEPS.length}
         onNext={() => activeTuto && markTutoSeen(activeTuto.id)}
         onSkip={skipAllTutos}
       />
