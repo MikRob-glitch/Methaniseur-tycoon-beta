@@ -3951,64 +3951,97 @@ function Game({ username, region, maia }) {
       {cinematic && (() => {
         const SCENES = {
           raccordement: {
-            title: "RACCORDEMENT GRDF",
-            sub: "Premier biométhane injecté dans le réseau national",
-            desc: "Votre site est désormais officiellement raccordé. Chaque m³ produit alimente le réseau de distribution GRDF au tarif d'achat de 1 €/m³. Vous recevez une avance contractuelle de 5 000 € pour démarrer la phase commerciale.",
+            title: "ACCORD DE RACCORDEMENT",
+            sub: "L'accord est signé — bienvenue dans la phase commerciale",
+            desc: "GRDF rachète chaque m³ produit à 1 €/m³. Déverrouillez les stations GNV, accumulez les certifications (GO · CPB · Qualimétha) et grimpez au classement national. La prime de 5 000 € vous attend !",
             color: "var(--c-blue)",
             accent: "var(--c-green-dark)",
-            badge: "OBJECTIF ATTEINT",
-            cta: "Démarrer la production commerciale →",
+            badge: "CONTRAT SIGNÉ ✓",
+            cta: "Démarrer la phase commerciale →",
             svgScene: (
-              <svg viewBox="0 0 260 120" style={{width:"100%",maxWidth:"300px",height:"auto"}}>
-                {/* Fond */}
-                <rect width="260" height="120" fill="#EEF4FB" rx="10"/>
-                {/* Pipeline horizontal */}
-                <rect x="10" y="54" width="240" height="12" rx="6" fill="#D0E4F4"/>
-                <rect x="10" y="54" width="240" height="12" rx="6" fill="none" stroke="var(--c-blue)" strokeWidth=".8" opacity=".5"/>
-                {/* Gaz qui coule dans le tuyau */}
-                <rect x="10" y="56" width="240" height="8" rx="4" fill="url(#gf)" opacity=".6"/>
+              <svg viewBox="0 0 260 130" style={{width:"100%",maxWidth:"300px",height:"auto"}}>
                 <defs>
-                  <linearGradient id="gf" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="var(--c-green-dark)" stopOpacity="0"/>
-                    <stop offset="40%" stopColor="var(--c-blue)" stopOpacity=".9"/>
-                    <stop offset="100%" stopColor="var(--c-green-dark)" stopOpacity=".3"/>
-                  </linearGradient>
+                  <radialGradient id="raccGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#FFD700" stopOpacity=".7"/>
+                    <stop offset="100%" stopColor="#FFD700" stopOpacity="0"/>
+                  </radialGradient>
                 </defs>
-                {/* Tirets animés dans le tuyau */}
-                <line x1="10" y1="60" x2="250" y2="60" stroke="#7de8b0" strokeWidth="1.5" strokeDasharray="16 10" opacity=".5" style={{animation:"pipeFlow 1.8s linear infinite"}}/>
-                {/* Site biogaz (gauche) */}
-                <g transform="translate(14,20)">
-                  <ellipse cx="16" cy="22" rx="15" ry="5" fill="#1a3a2a" stroke="var(--c-green-dark)" strokeWidth="1"/>
-                  <rect x="1" y="8" width="30" height="15" rx="2" fill="#1a4a2a" stroke="var(--c-green-dark)" strokeWidth="1"/>
-                  <ellipse cx="16" cy="8" rx="15" ry="5" fill="var(--c-green-dark)" opacity=".7"/>
-                  <text x="16" y="29" textAnchor="middle" fontSize="5" fill="#7de8b0" fontWeight="700">SITE</text>
+                <style>{"@keyframes raccGlow{0%,100%{opacity:.35}50%{opacity:.85}} @keyframes raccFloat{0%,100%{opacity:.9}50%{opacity:.55}} @keyframes raccSpark{0%,100%{opacity:0}50%{opacity:1}}"}</style>
+                {/* Fond */}
+                <rect width="260" height="130" fill="#EEF4FB" rx="10"/>
+                {/* Sol */}
+                <rect x="0" y="108" width="260" height="22" fill="#D8EBF8"/>
+                <line x1="0" y1="108" x2="260" y2="108" stroke="rgba(0,94,184,.12)" strokeWidth="1"/>
+                {/* ── Contrat flottant (centre haut) ── */}
+                <g style={{animation:"raccFloat 3s ease infinite"}}>
+                  <rect x="95" y="6" width="70" height="42" rx="4" fill="white" stroke="#005EB8" strokeWidth="1" opacity=".9"/>
+                  <rect x="95" y="6" width="70" height="9" rx="4" fill="#005EB8" opacity=".18"/>
+                  <text x="130" y="13" textAnchor="middle" fontSize="5" fill="#005EB8" fontWeight="800" letterSpacing=".06em">CONTRAT GRDF</text>
+                  <line x1="103" y1="22" x2="157" y2="22" stroke="rgba(26,46,74,.15)" strokeWidth=".7"/>
+                  <line x1="103" y1="27" x2="157" y2="27" stroke="rgba(26,46,74,.15)" strokeWidth=".7"/>
+                  <line x1="103" y1="32" x2="148" y2="32" stroke="rgba(26,46,74,.15)" strokeWidth=".7"/>
+                  <line x1="103" y1="41" x2="121" y2="41" stroke="#005EB8" strokeWidth=".9"/>
+                  <line x1="139" y1="41" x2="157" y2="41" stroke="#00A850" strokeWidth=".9"/>
+                  <text x="112" y="40" textAnchor="middle" fontSize="7" fill="#005EB8">✍</text>
+                  <text x="148" y="40" textAnchor="middle" fontSize="7" fill="#00A850">✍</text>
                 </g>
-                {/* Compteur volumétrique */}
-                <g transform="translate(112,46)">
-                  <rect x="0" y="0" width="36" height="16" rx="3" fill="#EEF4FB" stroke="var(--c-blue)" strokeWidth="1"/>
-                  <text x="18" y="11" textAnchor="middle" fontSize="7" fill="var(--c-blue)" fontWeight="800">m³ CH₄</text>
-                </g>
-                {/* GRDF symbol (droite) */}
-                <g transform="translate(214,18)">
-                  <circle cx="18" cy="18" r="16" fill="#EEF4FB" stroke="var(--c-blue)" strokeWidth="1.5" style={{animation:"networkPulse 2s ease infinite"}}/>
-                  <text x="18" y="15" textAnchor="middle" fontSize="6" fill="var(--c-blue)" fontWeight="800">GRDF</text>
-                  <text x="18" y="24" textAnchor="middle" fontSize="5" fill="rgba(var(--c-blue-rgb),.6)">réseau</text>
-                </g>
-                {/* Bulles de gaz */}
-                <circle cx="60" cy="52" r="3" fill="var(--c-green-dark)" opacity=".6" style={{animation:"gasPulse 1.2s ease infinite"}}/>
-                <circle cx="110" cy="50" r="2" fill="var(--c-blue)" opacity=".7" style={{animation:"gasPulse 1.6s ease infinite .4s"}}/>
-                <circle cx="170" cy="52" r="3" fill="var(--c-green-dark)" opacity=".5" style={{animation:"gasPulse 1.1s ease infinite .8s"}}/>
-                {/* v25.1 — Pastille prime contractuelle (badge €) */}
-                <g transform="translate(130,90)">
-                  <rect x="-40" y="-9" width="80" height="18" rx="9" fill="rgba(39,168,90,.18)" stroke="var(--c-green-dark)" strokeWidth="1" style={{animation:"networkPulse 1.6s ease infinite"}}/>
-                  <text x="0" y="4" textAnchor="middle" fontSize="9" fill="#7de8b0" fontWeight="800">+5 000 € · avance GRDF</text>
-                </g>
+                {/* ── Personnage GRDF (gauche, uniforme bleu) ── */}
+                {/* Casque de chantier */}
+                <ellipse cx="47" cy="52" rx="14" ry="4" fill="#005EB8"/>
+                <rect x="34" y="52" width="26" height="4" rx="2" fill="#004090"/>
+                {/* Tête */}
+                <circle cx="47" cy="65" r="12" fill="#F5CFA0"/>
+                <circle cx="43" cy="63" r="1.5" fill="rgba(26,46,74,.7)"/>
+                <circle cx="51" cy="63" r="1.5" fill="rgba(26,46,74,.7)"/>
+                <path d="M43,68 Q47,72 51,68" stroke="rgba(26,46,74,.5)" strokeWidth="1" fill="none" strokeLinecap="round"/>
+                {/* Corps uniforme */}
+                <rect x="35" y="78" width="24" height="28" rx="4" fill="#005EB8"/>
+                <text x="47" y="94" textAnchor="middle" fontSize="5" fill="white" fontWeight="800" opacity=".85">GRDF</text>
+                {/* Bras gauche (pendant) */}
+                <line x1="35" y1="84" x2="22" y2="100" stroke="#005EB8" strokeWidth="6" strokeLinecap="round"/>
+                {/* Bras droit tendu vers la poignée */}
+                <line x1="59" y1="82" x2="117" y2="86" stroke="#005EB8" strokeWidth="6" strokeLinecap="round"/>
+                <circle cx="117" cy="86" r="6" fill="#F5CFA0"/>
+                {/* Jambes */}
+                <rect x="37" y="104" width="8" height="12" rx="3" fill="#003080"/>
+                <rect x="47" y="104" width="8" height="12" rx="3" fill="#003080"/>
+                {/* Label */}
+                <text x="47" y="127" textAnchor="middle" fontSize="6" fill="#005EB8" fontWeight="700">GRDF</text>
+                {/* ── Personnage Producteur (droite, tenue verte) ── */}
+                {/* Casquette */}
+                <ellipse cx="213" cy="52" rx="14" ry="4" fill="#006630"/>
+                <rect x="201" y="50" width="28" height="6" rx="1" fill="#004d22"/>
+                {/* Tête */}
+                <circle cx="213" cy="65" r="12" fill="#F5CFA0"/>
+                <circle cx="209" cy="63" r="1.5" fill="rgba(26,46,74,.7)"/>
+                <circle cx="217" cy="63" r="1.5" fill="rgba(26,46,74,.7)"/>
+                <path d="M209,68 Q213,72 217,68" stroke="rgba(26,46,74,.5)" strokeWidth="1" fill="none" strokeLinecap="round"/>
+                {/* Corps salopette */}
+                <rect x="201" y="78" width="24" height="28" rx="4" fill="#00A850"/>
+                <rect x="205" y="82" width="10" height="7" rx="2" fill="rgba(0,0,0,.1)"/>
+                {/* Bras droit (pendant) */}
+                <line x1="225" y1="84" x2="238" y2="100" stroke="#00A850" strokeWidth="6" strokeLinecap="round"/>
+                {/* Bras gauche tendu vers la poignée */}
+                <line x1="201" y1="82" x2="143" y2="86" stroke="#00A850" strokeWidth="6" strokeLinecap="round"/>
+                <circle cx="143" cy="86" r="6" fill="#F5CFA0"/>
+                {/* Jambes */}
+                <rect x="203" y="104" width="8" height="12" rx="3" fill="#004d22"/>
+                <rect x="213" y="104" width="8" height="12" rx="3" fill="#004d22"/>
+                {/* Label */}
+                <text x="213" y="127" textAnchor="middle" fontSize="6" fill="#006630" fontWeight="700">PRODUCTEUR</text>
+                {/* ── Zone poignée de main (centre) ── */}
+                <circle cx="130" cy="84" r="26" fill="url(#raccGlow)" style={{animation:"raccGlow 1.8s ease infinite"}}/>
+                <text x="130" y="94" textAnchor="middle" fontSize="24">🤝</text>
+                {/* Étincelles */}
+                <text x="99" y="74" fontSize="10" style={{animation:"raccSpark 1.4s ease infinite"}}>✨</text>
+                <text x="155" y="72" fontSize="8" style={{animation:"raccSpark 1.6s ease infinite .5s"}}>⭐</text>
+                <text x="128" y="62" fontSize="7" style={{animation:"raccSpark 1.2s ease infinite .9s"}}>✨</text>
               </svg>
             ),
             stats: [
-              { val: fmt(INJECTION_THRESHOLD), label: "m³ qualifiés" },
               { val: fmtEuro(RACCORDEMENT_BONUS), label: "prime contractuelle", color: "var(--c-green-dark)" },
-              { val: "1 €/m³", label: "tarif d'achat" },
+              { val: "1 €/m³", label: "tarif d'achat GRDF" },
+              { val: "GNV · GO · CPB", label: "à débloquer", color: "var(--c-blue)" },
             ],
           },
           go_mwh: {
