@@ -3344,6 +3344,7 @@ function Game({ username, region, maia }) {
   useEffect(() => {
     if (!injected || !cloudSynced) return;
     if (activeTuto) return; // ne pas interrompre un tuto actif — re-détecté à sa fermeture
+    if (cinematic) return;  // ne pas écraser une cinématique en cours — re-détecté à sa fermeture
     for (const r of REWARD_DEFS) {
       if (seenRewards.includes(r.id)) continue;
       if (!r.check()) continue;
@@ -3357,11 +3358,12 @@ function Game({ username, region, maia }) {
       setTimeout(() => showCinematic(r.id, {}), 400);
       break; // un seul à la fois
     }
-  }, [injected, totalScore, digesteurs, cloudSynced, seenRewards, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [injected, totalScore, digesteurs, cloudSynced, seenRewards, activeTuto, cinematic]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Moteur de déclenchement du tutoriel spotlight ─────────────────────────
   useEffect(() => {
     if (activeTuto) return; // ne pas interrompre un tuto actif
+    if (cinematic) return;  // ne pas déclencher pendant une cinématique
     const gs = {
       seenTutos,
       tab,
@@ -3385,7 +3387,7 @@ function Game({ username, region, maia }) {
       if (next.forceView !== undefined) setCityView(next.forceView); // ramener sur la bonne vue (digesteur=1 / gisements=2)
       setActiveTuto(next);
     }
-  }, [seenTutos, tab, stock, charge, bm, buffer, owned, injected, epurateurOk, compresseurOk, gnvStations, canUnlockEpurateur, canUnlockCompresseur, canConnect, activeTuto]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seenTutos, tab, stock, charge, bm, buffer, owned, injected, epurateurOk, compresseurOk, gnvStations, canUnlockEpurateur, canUnlockCompresseur, canConnect, activeTuto, cinematic]); // eslint-disable-line react-hooks/exhaustive-deps
   // ─────────────────────────────────────────────────────────────────────────
 
   // Mise à jour position locale dans le lb sans fetch réseau
