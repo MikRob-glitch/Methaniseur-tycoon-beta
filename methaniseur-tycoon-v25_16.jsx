@@ -5708,8 +5708,8 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
       {/* Badge GNV sur le capot */}
       {isGnv && (
         <g className="gnv-badge">
-          <rect x="15" y="19" width="14" height="6" rx="1.5" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
-          <text x="22" y="23.5" textAnchor="middle" fontSize="5" fontWeight="900" fill="white">GNV</text>
+          <rect x="35" y="19" width="11" height="6" rx="1.5" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
+          <text x="40.5" y="23.5" textAnchor="middle" fontSize="4.3" fontWeight="900" fill="white">GNV</text>
         </g>
       )}
       {/* Cabine */}
@@ -6342,9 +6342,9 @@ function updateTractorTransform(el, path, progress) {
     }
   }
   el.setAttribute('transform', transform);
-  // Counter-flip badge GNV quand sprite en miroir : centre badge x=28 → translate(56,0) scale(-1,1)
+  // Counter-flip badge GNV quand sprite en miroir : centre badge x=40.5 → translate(81,0) scale(-1,1)
   const badge = el.querySelector('.gnv-badge');
-  if (badge) badge.setAttribute('transform', flipped ? 'translate(56,0) scale(-1,1)' : '');
+  if (badge) badge.setAttribute('transform', flipped ? 'translate(81,0) scale(-1,1)' : '');
 }
 
 // ─── GAS METER ────────────────────────────────────────────────────────────────
