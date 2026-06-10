@@ -188,6 +188,31 @@ Mécanisme déclenché quand les pannes de gisements s'accumulent sans être ré
 - Les deux actions invalident le `session_token` → force re-login
 - `admin_reset_password` nécessite `ADMIN_SECRET_KEY` (jamais exposée côté client)
 
+## Sprite tracteur — redesign cartoon (v25.22)
+
+`TractorSvgInner` (~ligne 5678) redessiné façon tracteur cartoon (réf. image fournie par Mika) : carrosserie rouge `#E8412F` (diesel) / bleu marine `#003366` (GNV), grande roue arrière navy à motif boulons, petite roue avant, cabine fermée à vitre trapézoïdale, échelle d'accès, calandre avant.
+
+### Convention d'orientation (important — à respecter pour toute future modif)
+- **Avant du tracteur = calandre / petite roue = x élevé** (côté droit du sprite non-flippé)
+- **Arrière = cabine / grande roue / remorque = x faible** (côté gauche)
+- Convention confirmée par `MiniTractor` (commentaire `flipped=false → "face droite"`)
+
+### Remorque
+- Repositionnée côté **arrière** (grande roue), `transform-origin: 11px 38px`, plage x -32 à 12 (commit `ff167da`)
+- Attelage volontairement masqué sous le pneu arrière (z-order : roues dessinées par-dessus)
+
+### Badge GNV
+- Repositionné entre l'échelle et la calandre : `x=35 y=19 w=11 h=6`, texte `x=40.5` `fontSize=4.3` (commit `804fbae`)
+- Counter-flip dans `updateTractorTransform` : `translate(81,0) scale(-1,1)` où `81 = 2 × cx_badge (40.5)`. **Si la position du badge change, recalculer ce facteur.**
+
+### Fix orientation déplacement (commit `e096d23`)
+- Bug : les tracteurs roulaient "à l'envers" (calandre à l'opposé du sens de marche), sur les 4 directions
+- Cause : `updateTractorTransform` appliquait `scale(-1,1)` / `rotate(±90)` sur les mauvaises branches `dx`/`dy`
+- Fix : conditions inversées pour que la calandre (x élevé, non-flippé) pointe toujours dans le sens du déplacement
+
+### Z-order (commit `b61285e`)
+- Roues dessinées **après** carrosserie/cabine/échelle → grande roue arrière toujours au premier plan ; fender-arch séparé (path dédié) supprimé, devenu redondant
+
 ## État actuel
 
 - [x] Boucle de jeu fonctionnelle
@@ -199,33 +224,4 @@ Mécanisme déclenché quand les pannes de gisements s'accumulent sans être ré
 - [x] Onglet Récompenses (certificats GO/CPB/Qualimétha, milestones, badges)
 - [x] Classement national (Supabase Realtime)
 - [x] Thème Duel GRDF (fond blanc, bleu #005EB8, vert #00A850) — **terminé**
-- [x] Système urgence financière (pannes daily cost, malus prod, vente équipements, prêt) — **v25.17**
-- [x] Lisibilité badges RewardsTab — contraste corrigé (`31b8512`) — **v25.17+**
-- [x] Gestion MDP : changement profil joueur + reset admin (`35a87ee`) — **v25.18**
-- [x] Tutoriel refacto complet : UX, design, progression, contenu (`c3ffa05`) — **v25.19**
-- [x] Cinématique raccordement (poignée de main GRDF/producteur) + anti-conflit tuto/rewards + fix bouton CTA illisible (`526215f`, `46b8bbb`, `bde781f`) — **v25.20**
-- [x] Classement Maîtrise : pic hebdo (`best_yield`), reset lundi 00h UTC, popup top3 (`cf8a6a9`) — **v25.21**
-- [ ] Sons & feedback visuel
-- [ ] PWA / offline complet
-
-## Règles contraste RewardsTab (invariants post-fix `31b8512`)
-
-Pour maintenir la lisibilité sur fond clair (thème Duel), dans `RewardsTab` / `renderBadge` :
-- Noms de badges/milestones → toujours `color:"var(--c-text)"`, jamais `b.color` ou `c` (jaune/argent illisibles sur blanc)
-- Pilules "DÉBLOQUÉ" / "✅" → `background:b.color` (solide) + `color:"#fff"` — jamais `background:b.color+"18"` (9% opacité)
-- Étoiles maîtrise → `#B8860B` (or sombre, ~4.5:1) à la place de `var(--c-yellow)` (#F5BE50, ~2.5:1)
-- Textes secondaires non-débloqués → opacité ≥ `.65` sur blanc
-
-## Ce que Claude doit faire
-
-- Proposer du code **moderne et idiomatique** (ES2022+, React hooks)
-- **Pointer les erreurs** sans hésiter
-- **Pas de sur-ingénierie** : beta solo, garder simple, pas d'abstraction prématurée
-- Toujours expliquer **pourquoi** avant **comment**, brièvement
-
-## Ce que Claude doit éviter
-
-- Utiliser l'outil Edit sur `methaniseur-tycoon-v25_16.jsx` — trop grand, il tronque. Toujours Python + rsync.
-- Réécrire entièrement un fichier pour un petit changement
-- Code TypeScript (on est en JS/JSX)
-- Touches à `shell_header.html` / `shell_tail.html` sans raison explicite
+- [x] Système urgence financière (pannes daily cost, malus prod, vente équipeme
