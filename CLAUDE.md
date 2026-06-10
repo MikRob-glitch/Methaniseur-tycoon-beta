@@ -2,7 +2,7 @@
 
 Jeu de gestion / tycoon sur le thème de la méthanisation. Phase beta.
 
-## Stack réelle (v25.19)
+## Stack réelle (v25.21)
 
 - **Frontend** : React JSX monolithique — fichier unique `methaniseur-tycoon-v25_16.jsx` (~10 370 lignes)
 - **Build** : Babel CLI compile le JSX → `compiled.js`, assemblé dans `index.html` via `shell_header.html` + `shell_tail.html`
@@ -69,6 +69,48 @@ Séquence actuelle des steps (18 steps, ordre logique post-v25.19) :
 - Bouton "Suivant →" / "Terminer ✓" selon position (`stepIndex === totalSteps - 1`)
 - Positionnement dynamique via `ResizeObserver` sur le `tooltipRef` — plus de hauteur hardcodée
 - Animation `tutFadeIn` (fade + translateY) définie dans le `<style>` du render principal
+
+## Système de cinématiques (v25.20)
+
+Modal plein écran (`zIndex:1200`) déclenché via `showCinematic(key, data)`, state `cinematic` (`{key, data}`), scènes définies dans l'objet `SCENES`.
+
+### Anti-conflit avec tuto / rewards
+- `if (cinematic) return;` ajouté en garde dans le useEffect du moteur tuto **et** dans le useEffect de détection des rewards
+- `cinematic` ajouté aux deps des deux `useEffect` → dès que la cinématique se ferme, tuto/reward suivants se déclenchent normalement (séquentiel, plus de superposition)
+
+### Scène `raccordement` (commit `526215f`)
+- Animation accord GRDF (bleu, casque) ↔ producteur (vert, casquette) : poignée de main 🤝, contrat flottant avec signatures, glow doré
+- Texte explique la phase commerciale (rachat 1€/m³, GO/CPB/Qualimétha, classement, prime 5000€)
+
+### Invariant CSS critique : pas de suffixe sur `var()`
+`${s.color||"var(--c-blue)"}cc` (ou `45`, `25`, `12`…) est du **CSS invalide** — on ne peut pas concaténer un suffixe hex à un appel `var()`. Ça invalide toute la déclaration (`background`/`border`/`boxShadow`), qui retombe en transparent → texte blanc sur fond blanc (commit `bde781f`).
+- Pour une couleur + opacité dérivée d'une variable : utiliser `rgba(var(--c-x-rgb),.XX)`, jamais `var(--c-x)XX`
+- CTA cinématique : fond solide `s.color`, texte blanc sauf si `s.color === "var(--c-yellow)"` → `var(--c-text)`
+- Textes restants thème sombre (`rgba(160,200,240,...)`) dans le modal cinématique → remplacés par `rgba(26,46,74,...)` (cf. règles contraste RewardsTab)
+
+## Classement Maîtrise — pic hebdo (v25.21)
+
+Le classement "Maîtrise" trie par **`best_yield`** (pic de rendement m³ CH₄/t atteint dans la semaine), plus par `current_yield` (valeur live qui pouvait redescendre et faire perdre le classement).
+
+### Côté serveur (`players-api` Edge Function)
+- `best_yield` : colonne `players`, mise à jour dans `handleSave` → `Math.max(old.best_yield, current_yield)`, ne redescend jamais
+- `mastery_state` (table singleton `id=1`) : `week_started_at`, `last_week_started_at`, `last_top3` (JSONB)
+- `checkMasteryReset()` — **reset lazy sans cron** : appelé à chaque `leaderboard` (mode mastery) ou `mastery_report`
+  - si `now >= week_started_at + WEEK_MS` (7j) : capture le top3 par `best_yield`, avance `week_started_at` au lundi suivant (boucle `while` pour rattraper les semaines sans requête), remet `best_yield = 0` pour tous les joueurs
+  - sinon : retourne `last_week_started_at` / `last_top3` existants
+- Nouvelle action `mastery_report` → `{ week_started_at, top3 }`
+- `leaderboard` (mode `mastery`) renvoie en plus `weekly_report: { week_started_at, top3 }`
+
+### Côté client (JSX)
+- `fetchLeaderboardEdge` renvoie désormais `{ results, weeklyReport }` (et non plus un tableau brut)
+- `fetchMasteryReport()` — appelle `action: "mastery_report"`
+- `loadLeaderboardByMode("mastery", …)` alimente `lbMastery` (triés par `best_yield`)
+- Onglet classement Maîtrise : affiche `entry.best_yield` (libellé "m³ CH₄/t (pic)")
+- `MasteryWeeklyReportModal` : popup top3 de la semaine écoulée, déclenchée via `useEffect` sur `cloudSynced` → `fetchMasteryReport()`
+  - dédup 1×/semaine via `localStorage` (`mt_mastery_report_seen_v1` = `week_started_at`)
+
+### Migration
+`supabase/migrations/20260610_v25_21_mastery_weekly_reset.sql` — ajoute `players.best_yield`, crée `mastery_state` (RLS + SELECT public)
 
 ## Thème visuel — Duel GRDF (implémenté v25.16+)
 
@@ -161,6 +203,8 @@ Mécanisme déclenché quand les pannes de gisements s'accumulent sans être ré
 - [x] Lisibilité badges RewardsTab — contraste corrigé (`31b8512`) — **v25.17+**
 - [x] Gestion MDP : changement profil joueur + reset admin (`35a87ee`) — **v25.18**
 - [x] Tutoriel refacto complet : UX, design, progression, contenu (`c3ffa05`) — **v25.19**
+- [x] Cinématique raccordement (poignée de main GRDF/producteur) + anti-conflit tuto/rewards + fix bouton CTA illisible (`526215f`, `46b8bbb`, `bde781f`) — **v25.20**
+- [x] Classement Maîtrise : pic hebdo (`best_yield`), reset lundi 00h UTC, popup top3 (`cf8a6a9`) — **v25.21**
 - [ ] Sons & feedback visuel
 - [ ] PWA / offline complet
 
