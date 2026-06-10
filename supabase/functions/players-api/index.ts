@@ -1,13 +1,13 @@
-// v25.18 — Edge Function players-api
-// change_password    : user authentifié change son propre MDP (session_token + old/new hash)
-// admin_reset_password : admin réinitialise le MDP d'un user (ADMIN_SECRET_KEY + maia + new hash)
-//
+// v25.21 — Edge Function players-api
+// v25.21 — Classement Maîtrise : pic hebdo (best_yield), reset lazy lundi 00h UTC,
+//          capture top3 dans mastery_state, action "mastery_report"
+// v25.18 — change_password / admin_reset_password
 // v25.15.3 — FIX leaderboard "performance" fallback snapshot le plus ancien
 // v25.15.2 — protection euros anti-écrasement
 // v25.14   — leaderboards multi-axes + snapshots
 // v25.13.x — Edge Function initiale
 //
-// Déployée en prod via Supabase MCP deploy_edge_function (version 5).
+// Déployée en prod via Supabase MCP deploy_edge_function.
 // Voir le fichier ci-dessous pour l'implémentation complète — synchronisée avec ce qui tourne en prod.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -25,6 +25,7 @@ const PERF_WINDOW_DAYS  = 7;
 const GNV_BONUS         = 1.2;
 const EUROS_GUARD_THRESHOLD = 10_000;    // v25.15.2 — au-dessus on protège
 const EUROS_GUARD_RATIO     = 0.10;       // v25.15.2 — si new < 10% old → suspect
+const WEEK_MS           = 7 * 24 * 60 * 60 * 1000; // v25.21 — durée d'un cycle Maîtrise
 
 const MAIA_RX = /^[A-Z0-9_-]{2,32}$/;
 const HASH_RX = /^[0-9a-f]{64}$/;
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
       case "save":                   return await handleSave(body);
       case "logout":                 return await handleLogout(body);
       case "leaderboard":            return await handleLeaderboard(body);
+      case "mastery_report":         return await handleMasteryReport(body);
       case "change_password":        return await handleChangePassword(body);
       case "admin_reset_password":   return await handleAdminResetPassword(body);
       default:                       return j({ error: "unknown_action" }, 400);
@@ -105,7 +107,7 @@ async function handleRegister({ maia, password_hash, username, region }: any) {
     reliability: 100,
     session_token: token, session_expires_at: expires,
     season_started_at: nowIso, season_start_score_network: 0, season_start_score_gnv: 0,
-    current_yield: 0,
+    current_yield: 0, best_yield: 0,
     updated_at: nowIso, last_saved: nowIso,
   });
   if (error) return j({ error: "insert_failed", detail: error.message }, 500);
@@ -116,7 +118,7 @@ async function handleSave({ session_token, state }: any) {
   if (typeof session_token !== "string" || !UUID_RX.test(session_token)) return j({ error: "invalid_token" }, 401);
   if (!state || typeof state !== "object") return j({ error: "missing_state" }, 400);
   const { data: old } = await sb.from("players")
-    .select("maia, score_network, score_gnv, euros, digesteurs, gnv_stations, tractor_count, tractor_trailers, owned, tractor_gnv_arr, epurateur, compresseur, is_connected, tractor_speed_boost, tut_step, current_yield, session_expires_at, last_saved")
+    .select("maia, score_network, score_gnv, euros, digesteurs, gnv_stations, tractor_count, tractor_trailers, owned, tractor_gnv_arr, epurateur, compresseur, is_connected, tractor_speed_boost, tut_step, current_yield, best_yield, session_expires_at, last_saved")
     .eq("session_token", session_token).maybeSingle();
   if (!old) return j({ error: "invalid_token" }, 401);
   if (!old.session_expires_at || new Date(old.session_expires_at).getTime() < Date.now()) return j({ error: "session_expired" }, 401);
@@ -209,6 +211,9 @@ async function handleSave({ session_token, state }: any) {
   if ("stock_yield" in upd) {
     const sy = num(upd.stock_yield, 0);
     upd.current_yield = sy > 0 ? sy : (Number(old.current_yield || 0));
+    // v25.21 — best_yield : pic de la semaine en cours, ne redescend jamais
+    //   (le reset hebdo lazy le remet à 0 chaque lundi 00h UTC, voir checkMasteryReset)
+    upd.best_yield = Math.max(Number(old.best_yield || 0), Number(upd.current_yield));
   }
   upd.session_expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   upd.last_saved         = new Date().toISOString();
@@ -292,17 +297,64 @@ async function handleAdminResetPassword({ admin_key, maia, new_password_hash }: 
   return j({ ok: true, maia });
 }
 
+// ── v25.21 — Reset hebdo (lazy) du classement Maîtrise ─────────────────────
+// Déclenché au premier appel (leaderboard "mastery" ou "mastery_report") après
+// le lundi 00h UTC suivant le début du cycle en cours :
+//   1. capture le top3 par best_yield (= la semaine qui vient de se terminer)
+//   2. avance week_started_at au lundi courant (gère plusieurs semaines manquées)
+//   3. remet best_yield=0 pour tous les joueurs
+// Pas de cron nécessaire : un simple read de mastery_state suffit le reste du temps.
+async function checkMasteryReset(): Promise<{ last_week_started_at: string | null; last_top3: any[] }> {
+  const { data: state } = await sb.from("mastery_state").select("*").eq("id", 1).maybeSingle();
+  if (!state) return { last_week_started_at: null, last_top3: [] };
+
+  let nextMonday = new Date(state.week_started_at).getTime() + WEEK_MS;
+  if (Date.now() < nextMonday) {
+    return { last_week_started_at: state.last_week_started_at, last_top3: state.last_top3 || [] };
+  }
+
+  // Capture le top3 de la semaine qui vient de s'écouler
+  const { data: top } = await sb.from("players")
+    .select("maia, username, region, best_yield")
+    .order("best_yield", { ascending: false, nullsFirst: false })
+    .limit(3);
+
+  // Avance jusqu'à la semaine courante (rattrape les semaines manquées si le serveur
+  // n'a reçu aucune requête pendant >7j)
+  while (Date.now() >= nextMonday + WEEK_MS) nextMonday += WEEK_MS;
+
+  await sb.from("mastery_state").update({
+    week_started_at: new Date(nextMonday).toISOString(),
+    last_week_started_at: state.week_started_at,
+    last_top3: top || [],
+  }).eq("id", 1);
+
+  await sb.from("players").update({ best_yield: 0 }).not("maia", "is", null);
+
+  return { last_week_started_at: state.week_started_at, last_top3: top || [] };
+}
+
+// ── v25.21 — Rapport hebdo Maîtrise (popup client) ─────────────────────────
+async function handleMasteryReport(_body: any) {
+  const report = await checkMasteryReset();
+  return j({ ok: true, week_started_at: report.last_week_started_at, top3: report.last_top3 || [] });
+}
+
 async function handleLeaderboard({ mode, region, limit }: any) {
   const max = Math.min(num(limit, 50), 200);
   const validModes = new Set(["performance", "mastery", "cumulative_season", "cumulative_lifetime"]);
   if (!validModes.has(mode)) return j({ error: "unknown_mode" }, 400);
   const filterRegion = (typeof region === "string" && REGIONS.has(region)) ? region : null;
   if (mode === "mastery") {
-    let q = sb.from("players").select("maia, username, region, current_yield, score_network, score_gnv, is_connected, digesteurs, epurateur, compresseur, euros").order("current_yield", { ascending: false, nullsFirst: false }).limit(max);
+    const report = await checkMasteryReset();
+    let q = sb.from("players").select("maia, username, region, best_yield, current_yield, score_network, score_gnv, is_connected, digesteurs, epurateur, compresseur, euros").order("best_yield", { ascending: false, nullsFirst: false }).limit(max);
     if (filterRegion) q = q.eq("region", filterRegion);
     const { data, error } = await q;
     if (error) return j({ error: "query_failed", detail: error.message }, 500);
-    return j({ ok: true, mode, results: data || [] });
+    return j({
+      ok: true, mode, results: data || [],
+      weekly_report: { week_started_at: report.last_week_started_at, top3: report.last_top3 },
+    });
   }
   if (mode === "cumulative_lifetime") {
     let q = sb.from("players").select("maia, username, region, score_network, score_gnv, current_yield, is_connected, digesteurs, epurateur, compresseur, euros").order("score_network", { ascending: false }).limit(max);
@@ -317,4 +369,52 @@ async function handleLeaderboard({ mode, region, limit }: any) {
     const { data, error } = await q;
     if (error) return j({ error: "query_failed", detail: error.message }, 500);
     const scored = (data || []).map((r: any) => {
-      const seasonNet = Math.max(0, (Number(r.score_ne
+      const seasonNet = Math.max(0, (Number(r.score_network) || 0) - (Number(r.season_start_score_network) || 0));
+      const seasonGnv = Math.max(0, (Number(r.score_gnv)     || 0) - (Number(r.season_start_score_gnv)     || 0));
+      return { ...r, season_network: seasonNet, season_gnv: seasonGnv, season_score: seasonNet + seasonGnv * GNV_BONUS };
+    });
+    scored.sort((a, b) => b.season_score - a.season_score);
+    return j({ ok: true, mode, results: scored.slice(0, max) });
+  }
+  if (mode === "performance") {
+    const nowMs     = Date.now();
+    const dayMs     = 24 * 60 * 60 * 1000;
+    const targetIso = new Date(nowMs - PERF_WINDOW_DAYS * dayMs).toISOString();
+    let q = sb.from("players").select("maia, username, region, score_network, score_gnv, current_yield, is_connected, digesteurs, epurateur, compresseur, euros").limit(500);
+    if (filterRegion) q = q.eq("region", filterRegion);
+    const { data: players, error } = await q;
+    if (error) return j({ error: "query_failed", detail: error.message }, 500);
+    const results: any[] = [];
+    for (const p of (players || [])) {
+      // Baseline = snapshot le plus recent datant d'AU MOINS 7 jours.
+      let { data: snap } = await sb.from("players_snapshots")
+        .select("score_network, score_gnv, snapshot_at")
+        .eq("maia", p.maia).lte("snapshot_at", targetIso)
+        .order("snapshot_at", { ascending: false }).limit(1).maybeSingle();
+      // Fallback : aucun snapshot >=7j (1ere semaine, nouveau joueur) -> on prend
+      // le snapshot le PLUS ANCIEN dispo et on divise par les jours reels ecoules.
+      if (!snap) {
+        const { data: oldest } = await sb.from("players_snapshots")
+          .select("score_network, score_gnv, snapshot_at")
+          .eq("maia", p.maia)
+          .order("snapshot_at", { ascending: true }).limit(1).maybeSingle();
+        snap = oldest ?? null;
+      }
+      if (!snap) {
+        // Aucun historique -> progression non mesurable.
+        results.push({ ...p, perf_network_per_day: 0, perf_gnv_per_day: 0, perf_score: 0 });
+        continue;
+      }
+      const elapsedDays = (nowMs - new Date(snap.snapshot_at).getTime()) / dayMs;
+      const divisor     = Math.min(Math.max(elapsedDays, 1), PERF_WINDOW_DAYS);
+      const oldNet  = Number(snap.score_network ?? 0);
+      const oldGnv  = Number(snap.score_gnv     ?? 0);
+      const perfNet = Math.max(0, (Number(p.score_network) || 0) - oldNet) / divisor;
+      const perfGnv = Math.max(0, (Number(p.score_gnv)     || 0) - oldGnv) / divisor;
+      results.push({ ...p, perf_network_per_day: perfNet, perf_gnv_per_day: perfGnv, perf_score: perfNet + perfGnv * GNV_BONUS });
+    }
+    results.sort((a, b) => b.perf_score - a.perf_score);
+    return j({ ok: true, mode, results: results.slice(0, max) });
+  }
+  return j({ error: "unknown_mode" }, 400);
+}

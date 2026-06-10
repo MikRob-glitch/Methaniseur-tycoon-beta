@@ -160,7 +160,15 @@ const fetchLeaderboardEdge = async (mode, region) => {
   const payload = { action: "leaderboard", mode };
   if (region) payload.region = region;
   const r = await _callPlayersApi(payload);
-  return r.ok && Array.isArray(r.results) ? r.results : null;
+  if (!r.ok || !Array.isArray(r.results)) return null;
+  return { results: r.results, weeklyReport: r.weekly_report || null };
+};
+
+// v25.21 — Récupère le rapport hebdo Maîtrise (top3 de la semaine écoulée), pour le popup de connexion
+const fetchMasteryReport = async () => {
+  const r = await _callPlayersApi({ action: "mastery_report" });
+  if (!r.ok) return null;
+  return { week_started_at: r.week_started_at || null, top3: Array.isArray(r.top3) ? r.top3 : [] };
 };
 
 // Token de session local (renvoyé par /login et /register, utilisé par /save)
@@ -2181,6 +2189,8 @@ function Game({ username, region, maia }) {
   const [lbMastery, setLbMastery] = useState([]);
   const [lbSeason, setLbSeason] = useState([]);
   const [lbModeLoading, setLbModeLoading] = useState(false);
+  // v25.21 — Rapport hebdo Maîtrise (popup auto à la connexion)
+  const [masteryWeeklyPopup, setMasteryWeeklyPopup] = useState(null); // {week_started_at, top3}
   const [mo,      setMo]      = useState(saved?.mo      ?? 0);
   const [bm,      setBm]      = useState(() => {
     const base = saved?.bm ?? 0;
@@ -2544,6 +2554,20 @@ function Game({ username, region, maia }) {
       return deadlocked ? 1 : b;
     });
   }, [cloudSynced]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // v25.21 — Popup auto à la connexion : rapport hebdo Maîtrise (top3 semaine écoulée), 1x par semaine
+  useEffect(() => {
+    if (!cloudSynced) return;
+    fetchMasteryReport().then(report => {
+      if (!report || !report.week_started_at || report.top3.length === 0) return;
+      try {
+        const seenKey = "mt_mastery_report_seen_v1";
+        if (localStorage.getItem(seenKey) === report.week_started_at) return;
+        localStorage.setItem(seenKey, report.week_started_at);
+      } catch {}
+      setMasteryWeeklyPopup(report);
+    });
+  }, [cloudSynced]); // eslint-disable-line react-hooks/exhaustive-deps
   const [notif,       setNotif]     = useState(null);
   const [cinematic,   setCinematic] = useState(null); // { key, data }
   const [leaderboard, setLb]        = useState(MOCK_LB);
@@ -2607,11 +2631,11 @@ function Game({ username, region, maia }) {
   // v25.14 — Fetch des leaderboards multi-modes (perf / mastery / season) via Edge Function
   const loadLeaderboardByMode = useCallback(async (mode, regionFilter) => {
     setLbModeLoading(true);
-    const rows = await fetchLeaderboardEdge(mode, regionFilter);
-    if (Array.isArray(rows)) {
-      if (mode === "performance")        setLbPerf(rows);
-      else if (mode === "mastery")       setLbMastery(rows);
-      else if (mode === "cumulative_season") setLbSeason(rows);
+    const data = await fetchLeaderboardEdge(mode, regionFilter);
+    if (data) {
+      if (mode === "performance")        setLbPerf(data.results);
+      else if (mode === "mastery")       setLbMastery(data.results);
+      else if (mode === "cumulative_season") setLbSeason(data.results);
     }
     setLbModeLoading(false);
   }, []);
@@ -3783,6 +3807,54 @@ function Game({ username, region, maia }) {
     );
   };
 
+  // ── MODALE RAPPORT HEBDO MAÎTRISE (v25.21) ────────────────────────────────
+  const MasteryWeeklyReportModal = () => {
+    if (!masteryWeeklyPopup) return null;
+    const top3 = masteryWeeklyPopup.top3 || [];
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:"20px"}} onClick={()=>setMasteryWeeklyPopup(null)}>
+        <div style={{background:"#FFFFFF",border:"1px solid rgba(0,80,160,.15)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",animation:"riseIn .4s ease"}} onClick={e=>e.stopPropagation()}>
+          <div style={{textAlign:"center",marginBottom:"16px"}}>
+            <div style={{fontSize:"40px",marginBottom:"8px"}}>🏆</div>
+            <div style={{fontSize:"17px",fontWeight:800,color:"var(--c-text)"}}>Classement Maîtrise — semaine écoulée</div>
+            <div style={{fontSize:"11px",color:"rgba(26,46,74,.74)",marginTop:"4px"}}>Top 3 par pic de rendement m³ CH₄/t</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"18px"}}>
+            {top3.length === 0 ? (
+              <div style={{padding:"12px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>Aucune donnée pour la semaine écoulée.</div>
+            ) : top3.map((entry, i) => {
+              const isMe = entry.username === username;
+              return (
+                <div key={entry.maia || i} style={{
+                  display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px",borderRadius:"10px",
+                  background:isMe?"rgba(74,200,120,.12)":"rgba(0,80,160,.04)",
+                  border:`1px solid ${isMe?"rgba(74,200,120,.4)":"rgba(0,80,160,.08)"}`
+                }}>
+                  <div style={{width:"28px",fontSize:"15px",fontWeight:700}}>
+                    {["🥇","🥈","🥉"][i] || `#${i+1}`}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:"12px",fontWeight:isMe?800:600,color:isMe?"var(--c-green)":"var(--c-text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {entry.username}{isMe && <span style={{marginLeft:"6px",fontSize:"10px",color:"var(--c-blue-light)"}}>MOI</span>}
+                    </div>
+                    <div style={{fontSize:"9px",color:"rgba(26,46,74,.74)"}}>{entry.region}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-green)"}}>{Number(entry.best_yield || 0).toFixed(1)}</div>
+                    <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³ CH₄/t</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={()=>setMasteryWeeklyPopup(null)} style={{width:"100%",padding:"12px",borderRadius:"10px",border:"none",background:"var(--c-blue)",color:"#fff",fontSize:"13px",fontWeight:700,cursor:"pointer"}}>
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{minHeight:"100vh",maxWidth:"480px",margin:"0 auto",
@@ -3869,6 +3941,9 @@ function Game({ username, region, maia }) {
 
       {/* Modal urgence financière (v25.17) */}
       {emergencyModal && <EmergencyModal />}
+
+      {/* Modal rapport hebdo Maîtrise (v25.21) */}
+      {masteryWeeklyPopup && <MasteryWeeklyReportModal />}
 
       {/* Modal hors-ligne */}
       {offlineModal && displayedGains && (
@@ -9512,12 +9587,13 @@ function RankingTab({
         </div>
       )}
 
-      {/* ══ v25.14 — VUE MAÎTRISE (yield CH₄/t du stock actuel) ══ */}
+      {/* ══ v25.21 — VUE MAÎTRISE (pic hebdo de rendement m³ CH₄/t, reset chaque lundi) ══ */}
       {rankTab === "mine" && myRankMode === "mastery" && (
         <div style={{flex:1,padding:"12px 14px 30px"}}>
           <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)",marginBottom:"10px",lineHeight:1.5}}>
-            Classement par <b style={{color:"var(--c-green)"}}>rendement m³ CH₄/t</b> du mix d'intrants actuel.
+            Classement par <b style={{color:"var(--c-green)"}}>meilleur rendement m³ CH₄/t</b> atteint cette semaine.
             Indépendant de la taille de l'installation : un petit joueur avec une bonne recette peut dominer.
+            Remis à zéro chaque lundi — le top 3 de la semaine écoulée s'affiche en pop-up à la connexion.
           </div>
           {lbModeLoading ? (
             <div style={{padding:"20px",textAlign:"center",color:"rgba(26,46,74,.74)",fontSize:"11px"}}>⏳ Chargement…</div>
@@ -9527,7 +9603,7 @@ function RankingTab({
             <div style={{display:"flex",flexDirection:"column",gap:"4px"}}>
               {lbMastery.slice(0, 50).map((entry, i) => {
                 const isMe = entry.username === username;
-                const yieldVal = Number(entry.current_yield || 0);
+                const yieldVal = Number(entry.best_yield || 0);
                 return (
                   <div key={entry.maia || i} style={{
                     display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px",borderRadius:"10px",
@@ -9545,7 +9621,7 @@ function RankingTab({
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:"13px",fontWeight:900,color:"var(--c-green)"}}>{yieldVal.toFixed(1)}</div>
-                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³ CH₄/t</div>
+                      <div style={{fontSize:"10px",color:"rgba(26,46,74,.74)"}}>m³ CH₄/t (pic)</div>
                     </div>
                   </div>
                 );

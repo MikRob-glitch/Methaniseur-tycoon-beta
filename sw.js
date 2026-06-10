@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-45';   // v25.16 — Fix page blanche P1 (shell_header tronqué)
+const CACHE_NAME = 'methaniseur-tycoon-v25-46';   // v25.21 — Classement Maîtrise : pic hebdo (best_yield), reset lundi, popup top3
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
@@ -86,5 +86,4 @@ self.addEventListener('fetch', (event) => {
 
 // ─── MESSAGE (trigger manuel de rafraîchissement) ────────────────────────────
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
-});
+  if (event.data === 'SKIP_WAITING
