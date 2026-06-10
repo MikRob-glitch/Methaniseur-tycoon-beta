@@ -5688,15 +5688,15 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
   return (
     <g>
       {/* Remorque — pivote autour du pivot d'attelage pour l'effet basculement */}
-      <g style={{transformOrigin:"52px 38px",transform:`rotate(${trailerTilt}deg)`}}>
-        <rect x="46" y="28" width="10" height="2.5" rx="1.2" fill="#6b7280"/>
-        <circle cx="47" cy="29.2" r="2.2" fill="#9ca3af"/>
-        <rect x="55" y="18" width="34" height="20" rx="2.5" fill="#374151" stroke="#4b5563" strokeWidth="1"/>
-        <rect x="55" y="34" width="34" height="3" rx="1" fill="#1f2937"/>
-        {[68,78].map(lx=>(<line key={lx} x1={lx} y1="18" x2={lx} y2="38" stroke="#4b5563" strokeWidth=".8"/>))}
-        {isLoaded && <text x="72" y="33" textAnchor="middle" fontSize="14" style={{filter:"drop-shadow(0 1px 3px rgba(0,60,120,.22))"}}>{icon}</text>}
-        <circle cx="63" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="63" cy="41" r="2.5" fill="#F4F7FB"/>
-        <circle cx="80" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="80" cy="41" r="2.5" fill="#F4F7FB"/>
+      <g style={{transformOrigin:"11px 38px",transform:`rotate(${trailerTilt}deg)`}}>
+        <rect x="2" y="28" width="10" height="2.5" rx="1.2" fill="#6b7280"/>
+        <circle cx="11" cy="29.2" r="2.2" fill="#9ca3af"/>
+        <rect x="-32" y="18" width="34" height="20" rx="2.5" fill="#374151" stroke="#4b5563" strokeWidth="1"/>
+        <rect x="-32" y="34" width="34" height="3" rx="1" fill="#1f2937"/>
+        {[-19,-9].map(lx=>(<line key={lx} x1={lx} y1="18" x2={lx} y2="38" stroke="#4b5563" strokeWidth=".8"/>))}
+        {isLoaded && <text x="-15" y="33" textAnchor="middle" fontSize="14" style={{filter:"drop-shadow(0 1px 3px rgba(0,60,120,.22))"}}>{icon}</text>}
+        <circle cx="-24" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="-24" cy="41" r="2.5" fill="#F4F7FB"/>
+        <circle cx="-7" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="-7" cy="41" r="2.5" fill="#F4F7FB"/>
       </g>
       {/* Capot / châssis */}
       <rect x="12" y="16" width="42" height="14" rx="2" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
