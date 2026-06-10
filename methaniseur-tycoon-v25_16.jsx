@@ -5676,13 +5676,15 @@ function ShopTab({ wallet, owned, buyMulti, isUpgradeAvailable, bmPerHour, injec
 // Rendu en SVG natif (pas de <foreignObject>) pour perf optimale dans SVG monde
 // v25.3 : isGnv prop — diesel rouge, GNV bleu-vert + badge "GNV"
 function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
-  const bodyMain   = isGnv ? '#003366' : '#6B1010';
-  const bodyAcc    = isGnv ? '#005EB8' : '#CC2222';
-  const cabMain    = isGnv ? '#004A9A' : '#4A0A0A';
-  const winFill    = isGnv ? 'rgba(134,239,172,.22)' : 'rgba(255,140,140,.18)';
-  const winStroke  = isGnv ? 'rgba(134,239,172,.18)' : 'rgba(255,100,100,.18)';
-  const tireRimClr = isGnv ? '#005EB8' : '#993333';
-  const exhaust    = !isGnv;
+  const bodyMain  = isGnv ? '#003366' : '#C62E22';
+  const bodyDark  = isGnv ? '#001F40' : '#8A1B12';
+  const bodyAcc   = isGnv ? '#005EB8' : '#E8453A';
+  const cabMain   = isGnv ? '#004A9A' : '#A8281F';
+  const winFill   = isGnv ? 'rgba(134,239,172,.35)' : 'rgba(196,228,255,.65)';
+  const winFrame  = isGnv ? 'var(--c-green-dark)' : '#1A2433';
+  const rimClr    = '#E4E9EE';
+  const hubClr    = '#5A6B7A';
+  const exhaust   = !isGnv;
   return (
     <g>
       {/* Remorque — pivote autour du pivot d'attelage pour l'effet basculement */}
@@ -5696,47 +5698,45 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
         <circle cx="63" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="63" cy="41" r="2.5" fill="#F4F7FB"/>
         <circle cx="80" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="80" cy="41" r="2.5" fill="#F4F7FB"/>
       </g>
-      {/* Garde-boue arrière — silhouette agricole, arche au-dessus de la roue */}
-      <path d="M 13.5,38 A 12.5,12.5 0 0,1 38.5,38" fill="none" stroke={bodyAcc} strokeWidth="3.5" strokeLinecap="round" opacity=".6"/>
-      {/* Roue arrière tracteur — large, pneu agricole cranté */}
-      <circle cx="26" cy="38" r="11" fill="#0D1520" stroke="#1f2937" strokeWidth="1.5"/>
-      <circle cx="26" cy="38" r="11" fill="none" stroke="#1A2433" strokeWidth="2.6" strokeDasharray="2.6 2.2"/>
-      <circle cx="26" cy="38" r="6" fill="#EEF5EE"/>
-      <circle cx="26" cy="38" r="2.4" fill="#9aa5b1"/>
-      {[0,60,120,180,240,300].map(a=>{const r=Math.PI/180*a;return (<line key={a} x1={26+Math.cos(r)*2.4} y1={38+Math.sin(r)*2.4} x2={26+Math.cos(r)*6} y2={38+Math.sin(r)*6} stroke={tireRimClr} strokeWidth="1.1"/>);})}
-      {/* Corps tracteur (capot moteur) */}
-      <rect x="18" y="20" width="34" height="19" rx="3.5" fill={bodyMain} stroke={bodyAcc} strokeWidth="1"/>
-      <rect x="19" y="21" width="32" height="6" rx="2.5" fill="rgba(0,80,160,.09)"/>
-      {/* Bande capot — identité visuelle */}
-      <rect x="19" y="33.4" width="32" height="2.4" rx="1" fill={bodyAcc} opacity=".75"/>
-      <rect x="46" y="24" width="8" height="13" rx="2" fill={isGnv?"#004A9A":"#993333"} stroke={bodyAcc} strokeWidth=".8"/>
-      {[26,29,32,34].map(gy=>(<line key={gy} x1="47" y1={gy} x2="53" y2={gy} stroke={bodyAcc} strokeWidth=".6" opacity=".5"/>))}
+      {/* Garde-boue arrière */}
+      <path d="M 9,38 A 15.5,15.5 0 0,1 39,38" fill="none" stroke={bodyAcc} strokeWidth="3" strokeLinecap="round" opacity=".5"/>
+      {/* Roue arrière — grande, signature tracteur agricole */}
+      <circle cx="24" cy="38" r="13.5" fill="#1A2433" stroke="#0D1520" strokeWidth="1.5"/>
+      <circle cx="24" cy="38" r="13.5" fill="none" stroke="#0D1520" strokeWidth="3" strokeDasharray="3.2 2.6"/>
+      <circle cx="24" cy="38" r="8" fill={rimClr}/>
+      <circle cx="24" cy="38" r="2.6" fill={hubClr}/>
+      {[0,72,144,216,288].map(a=>{const r=Math.PI/180*a;return (<circle key={a} cx={24+Math.cos(r)*5} cy={38+Math.sin(r)*5} r="1" fill={hubClr}/>);})}
+      {/* Corps / capot moteur */}
+      <rect x="16" y="20" width="36" height="18" rx="3.5" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
+      {/* Bande basse foncée */}
+      <rect x="16" y="32" width="36" height="6" rx="2" fill={bodyDark}/>
+      {/* Calandre avant */}
+      <rect x="48" y="22" width="6" height="11" rx="1.5" fill={bodyDark} stroke={bodyAcc} strokeWidth=".6"/>
+      {[42,45,48].map(gx=>(<line key={gx} x1={gx} y1="23" x2={gx} y2="32" stroke={bodyDark} strokeWidth=".8" opacity=".55"/>))}
       {/* Badge GNV sur le capot */}
       {isGnv && (
         <g className="gnv-badge">
-          <rect x="20" y="24" width="16" height="7" rx="2" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
-          <text x="28" y="29.5" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="white">GNV</text>
+          <rect x="20" y="23" width="16" height="7" rx="2" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
+          <text x="28" y="28.5" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="white">GNV</text>
         </g>
       )}
       {/* Cabine */}
-      <rect x="18" y="7" width="21" height="16" rx="2.5" fill={cabMain}/>
-      <rect x="20" y="9" width="16" height="10" rx="1.5" fill={winFill} stroke={winStroke} strokeWidth=".5"/>
-      <polygon points="21,10 28,10 21,17" fill="rgba(0,80,160,.10)"/>
-      {/* Arceau de sécurité (ROPS) — silhouette caractéristique tracteur agricole, dépasse le toit */}
-      <rect x="19.3" y="-5" width="2.2" height="13" rx="1" fill="#33414F"/>
-      <rect x="36.3" y="-5" width="2.2" height="13" rx="1" fill="#33414F"/>
-      <rect x="19.3" y="-5" width="19.2" height="2.2" rx="1.1" fill={bodyAcc}/>
+      <rect x="16" y="5" width="22" height="16" rx="3" fill={cabMain} stroke={bodyDark} strokeWidth="1"/>
+      <rect x="18.5" y="7.5" width="17" height="10.5" rx="2" fill={winFill} stroke={winFrame} strokeWidth=".8"/>
+      <polygon points="20,8.5 27,8.5 20,15.5" fill="rgba(255,255,255,.18)"/>
+      {/* Gyrophare toit */}
+      <circle cx="27" cy="3.5" r="2.2" fill={isGnv?"#7CFFB2":"#FFD23F"} stroke={bodyDark} strokeWidth=".6"/>
       {/* Pot d'échappement (diesel uniquement) */}
       {exhaust && (<>
-        <rect x="41" y="-4" width="3.2" height="13" rx="1.6" fill="#374151"/>
-        <ellipse cx="42.6" cy="-4" rx="2" ry="1.1" fill="#1f2937"/>
+        <rect x="44" y="7" width="3.4" height="14" rx="1.7" fill="#374151"/>
+        <ellipse cx="45.7" cy="7" rx="2.3" ry="1.3" fill="#1f2937"/>
       </>)}
       {/* Phare avant */}
-      <circle cx="52.5" cy="25.5" r="1.6" fill="#FFFDE7" opacity=".95"/>
-      {/* Roue avant — petite, proportions tracteur agricole */}
-      <circle cx="48" cy="38" r="4.6" fill="#0D1520" stroke="#1f2937" strokeWidth="1.2"/>
-      <circle cx="48" cy="38" r="4.6" fill="none" stroke="#1A2433" strokeWidth="1.8" strokeDasharray="1.8 1.6"/>
-      <circle cx="48" cy="38" r="1.9" fill="#EEF5EE"/>
+      <circle cx="53" cy="24" r="1.5" fill="#FFFDE7" opacity=".95"/>
+      {/* Roue avant — petite, fort contraste avec la roue arrière */}
+      <circle cx="49" cy="39.5" r="4.5" fill="#1A2433" stroke="#0D1520" strokeWidth="1.2"/>
+      <circle cx="49" cy="39.5" r="4.5" fill="none" stroke="#0D1520" strokeWidth="1.8" strokeDasharray="1.8 1.6"/>
+      <circle cx="49" cy="39.5" r="2.2" fill={rimClr}/>
     </g>
   );
 }
