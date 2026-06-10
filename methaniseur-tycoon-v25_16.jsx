@@ -6325,20 +6325,23 @@ function updateTractorTransform(el, path, progress) {
     dx = p.x - pPrev.x; dy = p.y - pPrev.y;
   }
 
+  // v25.22 : sprite dessiné avec l'avant (calandre) à droite (x élevé) — convention
+  // confirmée par MiniTractor (flipped=false → "face droite"). On flip/rotate donc
+  // pour que l'avant pointe TOUJOURS dans le sens du déplacement (dx/dy).
   let transform;
   let flipped = false;
   if (Math.abs(dx) >= Math.abs(dy)) {
     if (dx >= 0) {
+      transform = `translate(${p.x} ${p.y})`;
+    } else {
       transform = `translate(${p.x} ${p.y}) scale(-1 1)`;
       flipped = true;
-    } else {
-      transform = `translate(${p.x} ${p.y})`;
     }
   } else {
     if (dy >= 0) {
-      transform = `translate(${p.x} ${p.y}) rotate(-90)`;
-    } else {
       transform = `translate(${p.x} ${p.y}) rotate(90)`;
+    } else {
+      transform = `translate(${p.x} ${p.y}) rotate(-90)`;
     }
   }
   el.setAttribute('transform', transform);
