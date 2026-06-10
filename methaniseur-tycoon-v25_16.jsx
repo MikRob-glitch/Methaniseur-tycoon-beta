@@ -4182,24 +4182,25 @@ function Game({ username, region, maia }) {
         };
         const s = SCENES[cinematic.key];
         if (!s) return null;
+        const ctaIsYellow = (s.color === "var(--c-yellow)");
         return (
           <div style={{position:"fixed",inset:0,background:"rgba(3,9,18,.92)",backdropFilter:"blur(6px)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setCinematic(null)}>
-            <div style={{background:"linear-gradient(160deg,#F4F8FE 0%,#EEF4FB 100%)",border:`1px solid ${s.color||"var(--c-blue)"}45`,borderRadius:"22px",padding:"28px 24px",maxWidth:"360px",width:"100%",animation:"cinematicIn .45s cubic-bezier(.22,.68,0,1.2)",boxShadow:`0 0 80px ${s.color||"var(--c-blue)"}30,0 24px 60px rgba(0,0,0,.7)`}} onClick={e=>e.stopPropagation()}>
+            <div style={{background:"linear-gradient(160deg,#F4F8FE 0%,#EEF4FB 100%)",border:"1px solid rgba(0,30,80,.10)",borderRadius:"22px",padding:"28px 24px",maxWidth:"360px",width:"100%",animation:"cinematicIn .45s cubic-bezier(.22,.68,0,1.2)",boxShadow:"0 12px 48px rgba(0,30,80,.18)"}} onClick={e=>e.stopPropagation()}>
               {/* Badge */}
               <div style={{display:"flex",justifyContent:"center",marginBottom:"18px"}}>
                 <span style={{background:`linear-gradient(90deg,${s.color||"var(--c-green-dark)"},${s.accent||s.color||"var(--c-blue)"})`,padding:"4px 14px",borderRadius:"30px",fontSize:"10px",fontWeight:800,letterSpacing:".12em",color:"white",textTransform:"uppercase"}}>{s.badge}</span>
               </div>
               {/* SVG scene */}
-              <div style={{borderRadius:"12px",overflow:"hidden",marginBottom:"20px",border:`1px solid ${s.color||"var(--c-blue)"}25`}}>
+              <div style={{borderRadius:"12px",overflow:"hidden",marginBottom:"20px",border:"1px solid rgba(0,30,80,.10)"}}>
                 {s.svgScene}
               </div>
               {/* Titre */}
               <div style={{textAlign:"center",marginBottom:"12px"}}>
                 <div style={{fontSize:"22px",fontWeight:900,color:"var(--c-text)",letterSpacing:".04em",lineHeight:1.1}}>{s.title}</div>
-                <div style={{fontSize:"13px",color:"rgba(160,200,240,.7)",marginTop:"6px",fontWeight:600}}>{s.sub}</div>
+                <div style={{fontSize:"13px",color:"rgba(26,46,74,.6)",marginTop:"6px",fontWeight:600}}>{s.sub}</div>
               </div>
               {/* Description */}
-              <div style={{background:`${s.color||"var(--c-blue)"}12`,border:`1px solid ${s.color||"var(--c-blue)"}20`,borderRadius:"10px",padding:"12px 14px",fontSize:"12px",color:"rgba(160,200,240,.75)",lineHeight:1.6,marginBottom:"20px",textAlign:"center"}}>{s.desc}</div>
+              <div style={{background:"rgba(0,30,80,.05)",border:"1px solid rgba(0,30,80,.10)",borderRadius:"10px",padding:"12px 14px",fontSize:"12px",color:"rgba(26,46,74,.78)",lineHeight:1.6,marginBottom:"20px",textAlign:"center"}}>{s.desc}</div>
               {/* Stats line */}
               {s.stats && (
                 <div style={{display:"flex",justifyContent:"center",gap:"24px",marginBottom:"20px"}}>
@@ -4208,14 +4209,14 @@ function Game({ username, region, maia }) {
                       {i > 0 && <div style={{width:"1px",background:"rgba(var(--c-blue-rgb),.18)"}}/>}
                       <div style={{textAlign:"center"}}>
                         <div style={{fontSize:"18px",fontWeight:900,color:st.color||s.color||"var(--c-blue)"}}>{st.val}</div>
-                        <div style={{fontSize:"10px",color:"rgba(160,200,240,.5)",textTransform:"uppercase",letterSpacing:".08em"}}>{st.label}</div>
+                        <div style={{fontSize:"10px",color:"rgba(26,46,74,.55)",textTransform:"uppercase",letterSpacing:".08em"}}>{st.label}</div>
                       </div>
                     </React.Fragment>
                   ))}
                 </div>
               )}
               {/* CTA */}
-              <button onClick={()=>setCinematic(null)} style={{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:`linear-gradient(135deg,${s.color||"#1a5c9e"}cc,${s.color||"var(--c-blue)"})`,color:"white",fontWeight:800,fontSize:"14px",cursor:"pointer",letterSpacing:".02em",boxShadow:`0 4px 18px ${s.color||"var(--c-blue)"}55`}}>{s.cta}</button>
+              <button onClick={()=>setCinematic(null)} style={{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:s.color||"var(--c-blue)",color:ctaIsYellow?"var(--c-text)":"white",fontWeight:800,fontSize:"14px",cursor:"pointer",letterSpacing:".02em",boxShadow:"0 4px 14px rgba(0,30,80,.22)"}}>{s.cta}</button>
             </div>
           </div>
         );
