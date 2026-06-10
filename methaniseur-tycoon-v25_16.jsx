@@ -5699,37 +5699,37 @@ function TractorSvgInner({ isLoaded, icon, trailerTilt, isGnv }) {
         <circle cx="80" cy="41" r="6" fill="#111827" stroke="#374151" strokeWidth="1.2"/><circle cx="80" cy="41" r="2.5" fill="#F4F7FB"/>
       </g>
       {/* Garde-boue arrière */}
-      <path d="M 4.5,38 A 15.5,15.5 0 0,1 35.5,38" fill="none" stroke={bodyAcc} strokeWidth="3" strokeLinecap="round" opacity=".55"/>
-      {/* Roue arrière — grande */}
-      <circle cx="20" cy="38" r="13.5" fill={tireClr} stroke={tireDark} strokeWidth="1.2"/>
-      <circle cx="20" cy="38" r="8.5" fill={rimClr}/>
-      <circle cx="20" cy="38" r="2.8" fill={hubClr}/>
-      {[0,45,90,135,180,225,270,315].map(a=>{const r=Math.PI/180*a;return (<circle key={a} cx={20+Math.cos(r)*5.5} cy={38+Math.sin(r)*5.5} r="0.9" fill={rimClr}/>);})}
+      <path d="M 4.5,33 A 15.5,15.5 0 0,1 35.5,33" fill="none" stroke={bodyAcc} strokeWidth="3" strokeLinecap="round" opacity=".55"/>
+      {/* Roue arrière — grande, génératrice basse commune avec la roue avant */}
+      <circle cx="20" cy="33" r="14" fill={tireClr} stroke={tireDark} strokeWidth="1.2"/>
+      <circle cx="20" cy="33" r="8.7" fill={rimClr}/>
+      <circle cx="20" cy="33" r="2.8" fill={hubClr}/>
+      {[0,45,90,135,180,225,270,315].map(a=>{const r=Math.PI/180*a;return (<circle key={a} cx={20+Math.cos(r)*5.6} cy={33+Math.sin(r)*5.6} r="0.9" fill={rimClr}/>);})}
       {/* Capot / châssis */}
-      <rect x="12" y="24" width="42" height="14" rx="2" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
+      <rect x="12" y="16" width="42" height="14" rx="2" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
       {/* Calandre avant */}
-      <rect x="46" y="27" width="8" height="10" rx="1" fill={bodyDark} stroke={bodyAcc} strokeWidth=".6"/>
-      {[48,50,52].map(gx=>(<line key={gx} x1={gx} y1="28" x2={gx} y2="36" stroke={rimClr} strokeWidth=".8" opacity=".7"/>))}
-      <rect x="52" y="37" width="4" height="2" rx=".5" fill={bodyDark}/>
-      <circle cx="53" cy="27" r="1.3" fill="#FFFDE7"/>
+      <rect x="46" y="19" width="8" height="10" rx="1" fill={bodyDark} stroke={bodyAcc} strokeWidth=".6"/>
+      {[48,50,52].map(gx=>(<line key={gx} x1={gx} y1="20" x2={gx} y2="28" stroke={rimClr} strokeWidth=".8" opacity=".7"/>))}
+      <rect x="52" y="29" width="4" height="2" rx=".5" fill={bodyDark}/>
+      <circle cx="53" cy="19" r="1.3" fill="#FFFDE7"/>
       {/* Badge GNV sur le capot */}
       {isGnv && (
         <g className="gnv-badge">
-          <rect x="15" y="27" width="14" height="6" rx="1.5" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
-          <text x="22" y="31.5" textAnchor="middle" fontSize="5" fontWeight="900" fill="white">GNV</text>
+          <rect x="15" y="19" width="14" height="6" rx="1.5" fill="rgba(34,168,106,.9)" stroke="var(--c-green-dark)" strokeWidth=".5"/>
+          <text x="22" y="23.5" textAnchor="middle" fontSize="5" fontWeight="900" fill="white">GNV</text>
         </g>
       )}
       {/* Cabine */}
-      <rect x="12" y="4" width="21" height="20" rx="2.5" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
-      <polygon points="14.5,8.5 27,6.5 31,11 31,18.5 14.5,18.5" fill={winFill} stroke={winFrame} strokeWidth="1.3" strokeLinejoin="round"/>
+      <rect x="12" y="-4" width="21" height="20" rx="2.5" fill={bodyMain} stroke={bodyDark} strokeWidth="1"/>
+      <polygon points="14.5,0.5 27,-1.5 31,3 31,10.5 14.5,10.5" fill={winFill} stroke={winFrame} strokeWidth="1.3" strokeLinejoin="round"/>
       {/* Échelle d'accès */}
-      <rect x="31" y="23" width="1.2" height="15" fill={bodyAcc}/>
-      <rect x="34.5" y="23" width="1.2" height="15" fill={bodyAcc}/>
-      {[27,31,35].map(gy=>(<rect key={gy} x="31" y={gy} width="4.7" height="1.2" fill={bodyAcc}/>))}
-      {/* Roue avant — petite */}
-      <circle cx="50" cy="40" r="5" fill={tireClr} stroke={tireDark} strokeWidth="1"/>
-      <circle cx="50" cy="40" r="3" fill={rimClr}/>
-      <circle cx="50" cy="40" r="1" fill={hubClr}/>
+      <rect x="31" y="15" width="1.2" height="15" fill={bodyAcc}/>
+      <rect x="34.5" y="15" width="1.2" height="15" fill={bodyAcc}/>
+      {[19,23,27].map(gy=>(<rect key={gy} x="31" y={gy} width="4.7" height="1.2" fill={bodyAcc}/>))}
+      {/* Roue avant — plus grande, même génératrice basse que la roue arrière */}
+      <circle cx="50" cy="39" r="8" fill={tireClr} stroke={tireDark} strokeWidth="1.2"/>
+      <circle cx="50" cy="39" r="4.8" fill={rimClr}/>
+      <circle cx="50" cy="39" r="1.8" fill={hubClr}/>
     </g>
   );
 }
