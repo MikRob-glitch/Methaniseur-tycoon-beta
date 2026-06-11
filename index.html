@@ -2082,9 +2082,10 @@ function Game({ username, region, maia }) {
       const cap   = UPGRADES[i].bagCap * ownedArr[i] * LOCAL_CAP_MULT;
       const baseI = fillFor(i, ownedArr[i]);
       const wasOffline = (Array.isArray(sv.zoneState) && sv.zoneState[i] === 'offline');
-      // Si la zone était offline ET que le timer n'est pas écoulé, on garde la panne
-      const offUntil = Array.isArray(sv.offlineUntil) ? sv.offlineUntil[i] : null;
-      if (wasOffline && offUntil && Date.now() < offUntil) {
+      // v25.23 — une panne reste active tant que le joueur n'a pas relancé
+      // manuellement (l'ancien timer offlineUntil ne déclenche plus d'auto-réparation)
+      if (wasOffline) {
+        const offUntil = Array.isArray(sv.offlineUntil) ? sv.offlineUntil[i] : null;
         newZoneState[i]    = 'offline';
         newOfflineUntil[i] = offUntil;
         newLocal[i]        = 0; // zone arrêtée
@@ -2946,12 +2947,8 @@ function Game({ username, region, maia }) {
         let zoneChanged = false;
         for (let i = 0; i < 7; i++) {
           if (ownedNow[i] === 0) { newLocal[i] = 0; continue; }
-          // Une zone offline reste offline tant que le timer n'est pas écoulé
+          // Une zone offline reste offline jusqu'à relance manuelle (v25.23)
           if (newZone[i] === 'offline') {
-            if (newOff[i] && now >= newOff[i]) {
-              newZone[i] = 'ok'; newOff[i] = null; newSat[i] = null;
-              zoneChanged = true;
-            }
             continue;
           }
           // Reset toute zone saturée vers 'ok' (politique idle-friendly)
@@ -3199,16 +3196,10 @@ function Game({ username, region, maia }) {
         const localCap  = UPGRADES[i].bagCap * ownedNow[i] * LOCAL_CAP_MULT;
         const fillRatio = localCap > 0 ? newLocal[i] / localCap : 0;
 
-        // Zone offline : vérifier expiration de la panne
+        // Zone offline : reste en panne tant que le joueur n'a pas relancé
+        // manuellement via handleRelaunchZone (v25.23 — fix : l'auto-réparation
+        // après PANNE_DURATION_MS contredisait la facturation journalière v25.17)
         if (cur === 'offline') {
-          if (offNow[i] && now >= offNow[i]) {
-            ensureCopy();
-            newZoneState[i]    = 'ok';
-            newSatSince[i]     = null;
-            newOfflineUntil[i] = null;
-            // Réinitialiser compteur journalier (v25.17)
-            setLastPanneCharge(prev => { const n=[...prev]; n[i]=null; return n; });
-          }
           continue;
         }
 
@@ -7849,17 +7840,6 @@ function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabe
                    : isWarn ? '#E07820'
                    : fillPct > 0.5 ? 'var(--c-orange)'
                    : 'var(--c-blue)';
-  // Countdown de panne (mm:ss restantes)
-  const [nowTs, setNowTs] = useState(Date.now());
-  useEffect(() => {
-    if (!isOffline) return;
-    const id = setInterval(() => setNowTs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [isOffline]);
-  const panneRemain = isOffline && offlineUntil ? Math.max(0, offlineUntil - nowTs) : 0;
-  const mm = Math.floor(panneRemain / 60000);
-  const ss = Math.floor((panneRemain % 60000) / 1000);
-  const panneTimeStr = `${mm}:${String(ss).padStart(2, '0')}`;
 
   return (
     <g>
@@ -7901,7 +7881,7 @@ function CityZone({ zone, owned, pinned, onTogglePin, upgradeUnlocked, priceLabe
             <rect x={-38} y={-26} width={76} height={52} rx={6}
               fill="rgba(244,247,251,.97)" stroke="var(--c-red)" strokeWidth="1.4"/>
             {/* Bandeau supérieur : "⚠ PANNE" + timer compact */}
-            <text y={-15} textAnchor="middle" fontSize="6.5" fill="var(--c-red)" fontWeight={800} letterSpacing=".4">⚠ PANNE · {panneTimeStr}</text>
+            <text y={-15} textAnchor="middle" fontSize="6.5" fill="var(--c-red)" fontWeight={800} letterSpacing=".4">⚠ PANNE · RELANCE REQUISE</text>
             {/* Coût : info principale, gros et clair */}
             <text y={2} textAnchor="middle" fontSize="11"
               fill={relaunchAffordable ? "var(--c-yellow)" : "rgba(26,46,74,.78)"}

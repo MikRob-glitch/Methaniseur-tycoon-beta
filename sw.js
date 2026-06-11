@@ -3,7 +3,7 @@
 // Stratégie : network-first pour index.html, cache-first pour le reste
 // Le bump de CACHE_NAME à chaque déploiement force le rafraîchissement.
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'methaniseur-tycoon-v25-46';   // v25.21 — Classement Maîtrise : pic hebdo (best_yield), reset lundi, popup top3
+const CACHE_NAME = 'methaniseur-tycoon-v25-47';   // v25.23 — Fix : panne gisement ne se réparait plus toute seule (relance manuelle obligatoire)
 
 // Ressources essentielles à pré-cacher au premier lancement
 const CORE_ASSETS = [
