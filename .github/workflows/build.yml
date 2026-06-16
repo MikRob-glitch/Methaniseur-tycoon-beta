@@ -37,7 +37,9 @@ jobs:
       - name: Installer Babel
         run: |
           npm init -y --silent
-          npm install --save-dev @babel/core @babel/cli @babel/preset-react --silent
+          # Pinning @babel/preset-react@^7 : force runtime "classic" (React.createElement)
+          # Babel 8 utilise "automatic" par défaut → ESM imports → SyntaxError dans <script>
+          npm install --save-dev @babel/core@^7 @babel/cli@^7 @babel/preset-react@^7 --silent
 
       - name: Detecter JSX source
         id: jsx
@@ -58,6 +60,11 @@ jobs:
           npx babel "${{ steps.jsx.outputs.file }}" \
             --presets @babel/preset-react \
             --out-file compiled.js
+          # Vérifier qu'il n'y a pas d'import ESM (signerait un problème de runtime)
+          if head -1 compiled.js | grep -q "^import"; then
+            echo "ERREUR: compiled.js contient des imports ESM — vérifier la config Babel"
+            exit 1
+          fi
           echo "Compilation OK ($(wc -l < compiled.js) lignes)"
 
       - name: Assembler index.html
