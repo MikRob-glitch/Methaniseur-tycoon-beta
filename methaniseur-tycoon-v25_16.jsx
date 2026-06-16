@@ -2160,8 +2160,9 @@ function Game({ username, region, maia }) {
   // Modal n'apparaît que pour les absences notables (>= 30s) pour éviter le spam
   const [offlineModal, setOfflineModal] = useState(!!offlineGains && offlineGains.elapsedSec >= 30);
   const [cloudOfflineGains, setCloudOfflineGains] = useState(null);
-  // Gains affichés dans le modal (prio localStorage, fallback cloud)
-  const displayedGains = offlineGains || cloudOfflineGains;
+  // Gains affichés dans le modal — figés en state pour éviter que saveGame()
+  // n'invalide offlineGains (calcOffline → null après lastSaved=now)
+  const [displayedGains, setDisplayedGains] = useState(() => (saved ? calcOffline(saved) : null));
 
   // ── v24.3 : MENU UTILISATEUR (déconnexion) ─────────────────────────────────
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -2522,6 +2523,7 @@ function Game({ username, region, maia }) {
         // afficher le modal avec les gains cloud (uniquement si absence notable)
         if (cg && !offlineGains) {
           setCloudOfflineGains(cg);
+          setDisplayedGains(prev => prev || cg); // figer pour le modal hors-ligne (cross-device)
           if (cg.elapsedSec >= 30) setOfflineModal(true);
         }
 
