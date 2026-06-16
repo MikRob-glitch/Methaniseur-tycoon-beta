@@ -746,7 +746,9 @@ const RELIABILITY_RECOVER_PER_SEC    = 0.1;  // +0,1 pt/s quand tout va bien
 const RELIABILITY_RESET_ON_RELAUNCH  = 50;   // après relance, fiabilité min. 50%
 
 // ── SYSTÈME URGENCE FINANCIÈRE (v25.17) ───────────────────────────────────
-const EUROS_FLOOR          = -500;             // plancher avant modale urgence
+const EUROS_FLOOR          = -500;             // plancher avant modale urgence (garder pour compat)
+const FINANCE_THRESHOLD    = 500_000;          // seuil financement : solde < 500k€ pendant 24h
+const FINANCE_DELAY_MS     = 24 * 3600 * 1000; // délai en ms avant popup financement (24h réelles)
 const PANNE_DAILY_MS       = 5 * 60 * 1000;   // 5 min réel = 1 "jour de panne"
 const PANNE_DAILY_RATE     = 0.20;             // 20% du coût relance par jour
 const LOAN_AMOUNT          = 1000;             // montant prêt bancaire
@@ -2399,6 +2401,7 @@ function Game({ username, region, maia }) {
       ? saved.lastPanneCharge
       : [null,null,null,null,null,null,null]);
   const [emergencyModal,   setEmergencyModal]   = useState(false);
+  const [lowBalanceSince,  setLowBalanceSince]  = useState(saved?.lowBalanceSince ?? null); // timestamp début de solde bas
   const [saturatedSince, setSaturatedSince] = useState(() => offlineGains?.resetSaturatedSince ?? (Array.isArray(saved?.saturatedSince) && saved.saturatedSince.length === 7 ? saved.saturatedSince : [null,null,null,null,null,null,null]));
   const [offlineUntil,   setOfflineUntil]   = useState(() => offlineGains?.resetOfflineUntil   ?? (Array.isArray(saved?.offlineUntil)   && saved.offlineUntil.length === 7   ? saved.offlineUntil   : [null,null,null,null,null,null,null]));
   // v25.1.25 — Animation au paiement de la relance (timestamp par zone, null si pas d'anim active)
@@ -2662,7 +2665,7 @@ function Game({ username, region, maia }) {
   // ── SAUVEGARDE AUTO ────────────────────────────────────────────────────────
   const stateRef = useRef({});
   useEffect(() => {
-    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,tractorGnvArr,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability,loanAmount,loanLastTaken,lastPanneCharge };
+    stateRef.current = { mo,bm,buffer,tutStep,owned,stock,charge,stockYield,chargeYield,stockComposition,chargeComposition,epurateurOk,compresseurOk,injected,gnvStations,gnvSplit,gnvBm,tractorGnv,digesteurs,euros,autoDump,autoDumpThreshold,seenRewards,tractorCount,tractorSpeedBoost,tractorTrailers,tractorGnvArr,pinnedZones,localStock,zoneState,saturatedSince,offlineUntil,reliability,loanAmount,loanLastTaken,lastPanneCharge,lowBalanceSince };
   });
   const saveGame = useCallback(() => {
     const payload = {
@@ -2732,6 +2735,7 @@ function Game({ username, region, maia }) {
       loanAmount:          stateRef.current.loanAmount,
       loanLastTaken:       stateRef.current.loanLastTaken,
       lastPanneCharge:     stateRef.current.lastPanneCharge,
+      lowBalanceSince:     stateRef.current.lowBalanceSince,
       // v25.0 — yield engine (mix pondéré stock/charge en m³ CH₄/t)
       stock_yield:         stateRef.current.stockYield,
       charge_yield:        stateRef.current.chargeYield,
@@ -2839,6 +2843,7 @@ function Game({ username, region, maia }) {
   const eurosRef           = useRef(euros);           useEffect(()=>{eurosRef.current=euros;},[euros]);
   const loanAmountRef      = useRef(loanAmount);      useEffect(()=>{loanAmountRef.current=loanAmount;},[loanAmount]);
   const lastPanneChargeRef = useRef(lastPanneCharge); useEffect(()=>{lastPanneChargeRef.current=lastPanneCharge;},[lastPanneCharge]);
+  const lowBalanceSinceRef = useRef(lowBalanceSince); useEffect(()=>{lowBalanceSinceRef.current=lowBalanceSince;},[lowBalanceSince]);
   const satSinceRef        = useRef(saturatedSince);  useEffect(()=>{satSinceRef.current=saturatedSince;},[saturatedSince]);
   const offlineUntilRef    = useRef(offlineUntil);    useEffect(()=>{offlineUntilRef.current=offlineUntil;},[offlineUntil]);
   // Les refs gnvBonusRefV24 / injectedRefV24 sont déclarées APRÈS gnvBonus/injected (plus bas) pour éviter le TDZ.
@@ -3207,7 +3212,6 @@ function Game({ username, region, maia }) {
               const dailyCost = getRelaunchCost(i, qty) * PANNE_DAILY_RATE;
               setEuros(e => {
                 const next = e - dailyCost;
-                if (next < EUROS_FLOOR) setEmergencyModal(true);
                 return next;
               });
               newLpc[i] = nowTs2;
@@ -3744,11 +3748,11 @@ function Game({ username, region, maia }) {
           <div style={{textAlign:'center', marginBottom:'16px'}}>
             <div style={{fontSize:'32px', marginBottom:'8px'}}>🚨</div>
             <div style={{fontSize:'18px', fontWeight:800, color:'#e53e3e'}}>
-              Situation financière critique
+              Proposition de financement
             </div>
             <div style={{fontSize:'13px', color:'rgba(26,46,74,.65)', marginTop:'6px'}}>
               Solde : <strong style={{color:'#e53e3e'}}>{fmtEuro(euros)}</strong>
-              {' '}— Les pannes accumulent des frais journaliers.
+              {' '}— Votre trésorerie est basse depuis 24h.
             </div>
           </div>
 
@@ -3799,6 +3803,23 @@ function Game({ username, region, maia }) {
   };
 
   // ── MODALE RAPPORT HEBDO MAÎTRISE (v25.21) ────────────────────────────────
+  // ── FINANCEMENT : surveille euros < FINANCE_THRESHOLD pendant 24h réelles ─
+  // Si le joueur reste sous 500k€ pendant 24h, le popup financement s'ouvre.
+  // Reset si euros remonte au-dessus du seuil ou si le modal est fermé manuellement.
+  useEffect(() => {
+    const now = Date.now();
+    if (euros < FINANCE_THRESHOLD) {
+      if (lowBalanceSince === null) {
+        setLowBalanceSince(now);
+      } else if (now - lowBalanceSince >= FINANCE_DELAY_MS && !emergencyModal) {
+        setEmergencyModal(true);
+      }
+    } else {
+      // Solde remonté au-dessus du seuil → reset le compteur
+      if (lowBalanceSince !== null) setLowBalanceSince(null);
+    }
+  }, [euros, lowBalanceSince, emergencyModal]);
+
   const MasteryWeeklyReportModal = () => {
     if (!masteryWeeklyPopup) return null;
     const top3 = masteryWeeklyPopup.top3 || [];
@@ -3931,7 +3952,7 @@ function Game({ username, region, maia }) {
       `}</style>
 
       {/* Modal urgence financière (v25.17) */}
-      {emergencyModal && <EmergencyModal />}
+      {emergencyModal && EmergencyModal()}
 
       {/* Modal rapport hebdo Maîtrise (v25.21) */}
       {masteryWeeklyPopup && <MasteryWeeklyReportModal />}
