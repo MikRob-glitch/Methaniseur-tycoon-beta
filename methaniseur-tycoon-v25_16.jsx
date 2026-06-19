@@ -747,11 +747,11 @@ const RELIABILITY_RESET_ON_RELAUNCH  = 50;   // après relance, fiabilité min. 
 
 // ── SYSTÈME URGENCE FINANCIÈRE (v25.17) ───────────────────────────────────
 const EUROS_FLOOR          = -500;             // plancher avant modale urgence (garder pour compat)
-const FINANCE_THRESHOLD    = 500_000;          // seuil financement : solde < 500k€ pendant 24h
+const FINANCE_THRESHOLD    = 100_000;          // seuil financement : solde < 100k€ pendant 24h
 const FINANCE_DELAY_MS     = 24 * 3600 * 1000; // délai en ms avant popup financement (24h réelles)
 const PANNE_DAILY_MS       = 5 * 60 * 1000;   // 5 min réel = 1 "jour de panne"
 const PANNE_DAILY_RATE     = 0.20;             // 20% du coût relance par jour
-const LOAN_BUFFER          = 500;              // marge ajoutée au déficit pour pouvoir réparer un gisement (v25.23 — remplace l'ancien LOAN_AMOUNT fixe, incohérent avec FINANCE_THRESHOLD=500k)
+const LOAN_BUFFER          = 500;              // marge ajoutée au déficit pour pouvoir réparer un gisement (v25.23 — remplace l'ancien LOAN_AMOUNT fixe, incohérent avec FINANCE_THRESHOLD)
 const LOAN_REPAY_RATE      = 0.10;             // 10% gains euros → remboursement auto
 const LOAN_COOLDOWN_MS     = 30 * 60 * 1000;  // 1 prêt max toutes les 30 min
 const SCORE_LOAN_MALUS     = 0.10;             // -10% score visible si prêt actif
@@ -3683,7 +3683,7 @@ function Game({ username, region, maia }) {
       return;
     }
     // v25.23 : montant proportionnel au déficit (ramène le solde à +LOAN_BUFFER), plus cohérent
-    // que l'ancien montant fixe 1000€ devenu dérisoire face à FINANCE_THRESHOLD=500k
+    // que l'ancien montant fixe 1000€ devenu dérisoire face à FINANCE_THRESHOLD
     const loanAmt = (euros < 0 ? -euros : 0) + LOAN_BUFFER;
     setEuros(e => e + loanAmt);
     setLoanAmount(l => l + loanAmt);
@@ -3810,7 +3810,7 @@ function Game({ username, region, maia }) {
 
   // ── MODALE RAPPORT HEBDO MAÎTRISE (v25.21) ────────────────────────────────
   // ── FINANCEMENT : surveille euros < FINANCE_THRESHOLD pendant 24h réelles ─
-  // Si le joueur reste sous 500k€ pendant 24h, le popup financement s'ouvre.
+  // Si le joueur reste sous 100k€ pendant 24h, le popup financement s'ouvre.
   // Reset si euros remonte au-dessus du seuil ou si le modal est fermé manuellement.
   useEffect(() => {
     const now = Date.now();
