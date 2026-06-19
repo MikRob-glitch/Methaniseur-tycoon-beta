@@ -751,7 +751,7 @@ const FINANCE_THRESHOLD    = 500_000;          // seuil financement : solde < 50
 const FINANCE_DELAY_MS     = 24 * 3600 * 1000; // délai en ms avant popup financement (24h réelles)
 const PANNE_DAILY_MS       = 5 * 60 * 1000;   // 5 min réel = 1 "jour de panne"
 const PANNE_DAILY_RATE     = 0.20;             // 20% du coût relance par jour
-const LOAN_AMOUNT          = 1000;             // montant prêt bancaire
+const LOAN_BUFFER          = 500;              // marge ajoutée au déficit pour pouvoir réparer un gisement (v25.23 — remplace l'ancien LOAN_AMOUNT fixe, incohérent avec FINANCE_THRESHOLD=500k)
 const LOAN_REPAY_RATE      = 0.10;             // 10% gains euros → remboursement auto
 const LOAN_COOLDOWN_MS     = 30 * 60 * 1000;  // 1 prêt max toutes les 30 min
 const SCORE_LOAN_MALUS     = 0.10;             // -10% score visible si prêt actif
@@ -3682,10 +3682,13 @@ function Game({ username, region, maia }) {
       showNotif('Prêt refusé', 'warning', `Un seul prêt par période — réessaie dans ${minLeft} min`);
       return;
     }
-    setEuros(e => e + LOAN_AMOUNT);
-    setLoanAmount(l => l + LOAN_AMOUNT);
+    // v25.23 : montant proportionnel au déficit (ramène le solde à +LOAN_BUFFER), plus cohérent
+    // que l'ancien montant fixe 1000€ devenu dérisoire face à FINANCE_THRESHOLD=500k
+    const loanAmt = (euros < 0 ? -euros : 0) + LOAN_BUFFER;
+    setEuros(e => e + loanAmt);
+    setLoanAmount(l => l + loanAmt);
     setLoanLastTaken(now);
-    showNotif('🏦 Prêt accordé', 'success', `+${fmtEuro(LOAN_AMOUNT)} · Remboursement auto 10 % des gains`);
+    showNotif('🏦 Prêt accordé', 'success', `+${fmtEuro(loanAmt)} · Remboursement auto 10 % des gains`);
   };
 
   // ── ACHATS ─────────────────────────────────────────────────────────────────
@@ -3724,6 +3727,7 @@ function Game({ username, region, maia }) {
     const canSellGnv        = gnvStations  > 0;
     const canSellDigesteur  = digesteurs   > 1;
     const loanOnCooldown    = Date.now() - loanLastTaken < LOAN_COOLDOWN_MS;
+    const loanPreview       = (euros < 0 ? -euros : 0) + LOAN_BUFFER;
     const refundTractor     = canSellTractor   ? Math.round(TRACTOR_UPGRADES[tractorCount===3?'count3':'count2'].cost * SELL_REFUND_RATE) : 0;
     const refundGnv         = canSellGnv       ? Math.round(GNV_STATION_COSTS[gnvStations-1] * SELL_REFUND_RATE) : 0;
     const refundDigesteur   = canSellDigesteur ? Math.round(DIGESTEUR_COSTS[digesteurs-2]    * SELL_REFUND_RATE) : 0;
@@ -3791,7 +3795,7 @@ function Game({ username, region, maia }) {
               <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: !loanOnCooldown ? .8 : 1}}>
                 {loanOnCooldown
                   ? `Disponible dans ${Math.ceil((LOAN_COOLDOWN_MS-(Date.now()-loanLastTaken))/60000)} min`
-                  : `+${fmtEuro(LOAN_AMOUNT)} · Remboursement 10% des gains`}
+                  : `+${fmtEuro(loanPreview)} · Remboursement 10% des gains`}
               </span>
             </button>
           </div>
