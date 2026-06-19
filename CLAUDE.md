@@ -2,13 +2,16 @@
 
 Jeu de gestion / tycoon sur le thème de la méthanisation. Phase beta.
 
-## Stack réelle (v25.21)
+## Stack réelle (v25.23+)
 
-- **Frontend** : React JSX monolithique — fichier unique `methaniseur-tycoon-v25_16.jsx` (~10 370 lignes)
+- **Frontend** : React JSX monolithique — fichier unique `methaniseur-tycoon-v25_16.jsx` (~10 400 lignes)
 - **Build** : Babel CLI compile le JSX → `compiled.js`, assemblé dans `index.html` via `shell_header.html` + `shell_tail.html`
 - **CI/CD** : GitHub Actions sur push `main` → compile + déploie sur **GitHub Pages** (confirmé)
 - **Backend** : Supabase — projet `psgbbvskbmdgmeafpezn`, région `eu-west-3`, ACTIVE_HEALTHY
 - **Pas de bundler** (Vite envisagé plus tard si besoin)
+
+### Babel — pin obligatoire en v7 (commit `dab34a7`)
+`@babel/preset-react@8.0.0` change le runtime par défaut `classic` (`React.createElement`) → `automatic` (génère `import{jsx}from"react/jsx-runtime"`). Cet import ESM est un `SyntaxError` dans `<script type="text/javascript">` → **écran blanc**. `.github/workflows/build.yml` pin `@babel/core@^7 @babel/cli@^7 @babel/preset-react@^7` + garde-fou qui fait échouer le build si `compiled.js` commence par `import`. **Ne jamais retirer ce pin sans revalider le runtime classic.**
 
 ## Architecture réelle
 
@@ -135,10 +138,10 @@ Palette : fond blanc `#FFFFFF`, bleu `#005EB8`, vert `#00A850`. Tokens CSS dans 
 Mécanisme déclenché quand les pannes de gisements s'accumulent sans être réparées.
 
 ### Constantes clés
-- `EUROS_FLOOR = -500` — seuil déclencheur de la modale urgence
+- `EUROS_FLOOR = -500` — ancien seuil déclencheur (gardé pour compat, plus utilisé pour le trigger — voir `FINANCE_THRESHOLD`)
 - `PANNE_DAILY_MS = 5 * 60 * 1000` — 1 "jour de panne" = 5 min réel
 - `PANNE_DAILY_RATE = 0.20` — 20% du coût de relance facturé par jour
-- `LOAN_AMOUNT = 1000` — montant du prêt bancaire d'urgence
+- `LOAN_BUFFER = 500` — marge ajoutée au déficit pour le calcul du prêt (v25.23, voir ci-dessous)
 - `LOAN_REPAY_RATE = 0.10` — 10% des gains euros → remboursement auto
 - `LOAN_COOLDOWN_MS = 30 * 60 * 1000` — 1 prêt max toutes les 30 min
 - `SCORE_LOAN_MALUS = 0.10` — -10% score visible dans le classement si prêt actif
@@ -147,14 +150,21 @@ Mécanisme déclenché quand les pannes de gisements s'accumulent sans être ré
 ### Fonctionnement
 1. **Facturation journalière** : à chaque "jour", chaque zone `offline` déduit `relaunchCost × 0.20` des euros (uniquement en mode `injected`). Remplace l'ancien coût one-shot au trigger.
 2. **Malus production** : si `euros < 0` → production réduite de `min(50%, abs(euros)/5000)`. Gradué, jamais bloquant total.
-3. **Modale urgence** (`EmergencyModal`) : s'ouvre automatiquement à `euros < EUROS_FLOOR`. Bloquante. Propose :
+3. **Modale urgence** (`EmergencyModal`) : s'ouvre automatiquement via le suivi `FINANCE_THRESHOLD`/`lowBalanceSince` (voir section Popup financement). Bloquante. Propose :
    - Vendre un tracteur (si `tractorCount > 1`)
    - Vendre une station GNV (si `gnvStations > 0`)
    - Vendre un digesteur (si `digesteurs > 1`)
-   - Prêt bancaire 1000€ (cooldown 30 min)
+   - Prêt bancaire **proportionnel au déficit** (cooldown 30 min) — voir v25.23
    - La chaîne d'injection est **intouchable** (pas de vente possible)
 4. **Remboursement auto** : 10% de chaque gain euros rembourse le prêt en cours.
 5. **Classement** : score affiché `-10%` tant que `loanAmount > 0`.
+
+### Prêt proportionnel au déficit (v25.23, commit `d34c13c`)
+`LOAN_AMOUNT` fixe (1000€) était une relique de l'ancien `EUROS_FLOOR=-500` : devenu dérisoire face à un solde pouvant être à -100k€ ou plus. Remplacé par un calcul dynamique dans `handleTakeLoan` :
+```js
+const loanAmt = (euros < 0 ? -euros : 0) + LOAN_BUFFER;
+```
+Ramène le solde à `+LOAN_BUFFER` (500€, de quoi réparer un gisement) si négatif ; sinon prêt minimal de 500€. Le preview du bouton dans `EmergencyModal` (`loanPreview`) utilise le même calcul pour afficher le bon montant avant clic.
 
 ### State ajouté
 - `loanAmount` (float) — dette bancaire en cours, persistée en localStorage
@@ -224,4 +234,64 @@ Mécanisme déclenché quand les pannes de gisements s'accumulent sans être ré
 - [x] Onglet Récompenses (certificats GO/CPB/Qualimétha, milestones, badges)
 - [x] Classement national (Supabase Realtime)
 - [x] Thème Duel GRDF (fond blanc, bleu #005EB8, vert #00A850) — **terminé**
-- [x] Système urgence financière (pannes daily cost, malus prod, vente équipeme
+- [x] Système urgence financière (pannes daily cost, malus prod, vente équipements, prêt) — **v25.17**
+- [x] Lisibilité badges RewardsTab — contraste corrigé (`31b8512`) — **v25.17+**
+- [x] Gestion MDP : changement profil joueur + reset admin (`35a87ee`) — **v25.18**
+- [x] Tutoriel refacto complet : UX, design, progression, contenu (`c3ffa05`) — **v25.19**
+- [x] Cinématique raccordement (poignée de main GRDF/producteur) + anti-conflit tuto/rewards + fix bouton CTA illisible (`526215f`, `46b8bbb`, `bde781f`) — **v25.20**
+- [x] Classement Maîtrise : pic hebdo (`best_yield`), reset lundi 00h UTC, popup top3 (`cf8a6a9`) — **v25.21**
+- [x] Sprite tracteur cartoon redessiné (carrosserie, remorque arrière, badge GNV) + fix orientation déplacement (`fac3357`…`e096d23`) — **v25.22**
+- [x] Popup financement : fix clignotement (`EmergencyModal()` au lieu de `<EmergencyModal />`) + condition déclenchement 24h réelles (`5da84a8`) — **v25.22+**
+- [x] Fix écran blanc CI : pin `@babel/preset-react@^7` (runtime classic) + garde-fou anti-ESM (`dab34a7`) — **v25.22+**
+- [x] Fix clignotement modal hors-ligne : `displayedGains` figé en `useState` (`6664d6c`) — **v25.23**
+- [x] Prêt bancaire proportionnel au déficit + `LOAN_BUFFER` (`d34c13c`) — **v25.23**
+- [x] `FINANCE_THRESHOLD` abaissé à 100k€ (`9a09a67`) — **v25.23**
+- [ ] Sons & feedback visuel
+- [ ] PWA / offline complet
+
+## Popup financement (v25.23)
+
+Proposition de financement déclenchée quand le solde euros est bas de façon prolongée.
+
+### Constantes
+- `FINANCE_THRESHOLD = 100_000` — seuil : solde < 100k€ pour déclencher le suivi (abaissé depuis 500k€, commit `9a09a67`)
+- `FINANCE_DELAY_MS = 24 * 3600 * 1000` — délai avant popup : 24h en temps réel
+- `LOAN_BUFFER = 500` — voir section Système urgence financière, prêt proportionnel
+
+### State
+- `lowBalanceSince` (timestamp ou null) — persisté dans le save localStorage/Supabase. Démarre quand euros < FINANCE_THRESHOLD, reset si euros remonte au-dessus.
+
+### Logique
+`useEffect` surveille `euros` + `lowBalanceSince` :
+1. Si `euros < FINANCE_THRESHOLD` et `lowBalanceSince === null` → démarre le compteur
+2. Si compteur actif depuis ≥ 24h et `!emergencyModal` → `setEmergencyModal(true)`
+3. Si `euros >= FINANCE_THRESHOLD` → reset `lowBalanceSince = null`
+
+### Fix clignotement EmergencyModal (commit `5da84a8`)
+`EmergencyModal` était défini comme composant à l'intérieur de `App` → React le démontait/remontait à chaque re-render (nouveau type de fonction). Fix : l'invoquer comme fonction `{EmergencyModal()}` dans le return, pas comme JSX `<EmergencyModal />`. **Règle à respecter pour tout futur composant inline similaire.**
+
+### Fix clignotement modal hors-ligne (commit `6664d6c`, v25.23)
+Cause différente : `displayedGains = offlineGains || cloudOfflineGains` était une **variable dérivée recalculée à chaque render**. `offlineGains = saved ? calcOffline(saved) : null` dépend de `loadLocalSave()` — dès que `saveGame()` réécrit le localStorage avec `lastSaved = now`, `calcOffline` renvoie `null` (`elapsedSec < 5`), donc `displayedGains` devient `null` et `{offlineModal && displayedGains && (...)}` fait disparaître la modale.
+Fix : `displayedGains` est maintenant un `useState` figé à l'init (`() => saved ? calcOffline(saved) : null`), alimenté pour le cas cross-device cloud via `setDisplayedGains(prev => prev || cg)`. **Règle : toute valeur affichée dans une modale ne doit jamais dépendre d'un calcul qui se invalide après coup (ex: dérivé de localStorage post-save) — la figer en state au moment du déclenchement.**
+
+## Règles contraste RewardsTab (invariants post-fix `31b8512`)
+
+Pour maintenir la lisibilité sur fond clair (thème Duel), dans `RewardsTab` / `renderBadge` :
+- Noms de badges/milestones → toujours `color:"var(--c-text)"`, jamais `b.color` ou `c` (jaune/argent illisibles sur blanc)
+- Pilules "DÉBLOQUÉ" / "✅" → `background:b.color` (solide) + `color:"#fff"` — jamais `background:b.color+"18"` (9% opacité)
+- Étoiles maîtrise → `#B8860B` (or sombre, ~4.5:1) à la place de `var(--c-yellow)` (#F5BE50, ~2.5:1)
+- Textes secondaires non-débloqués → opacité ≥ `.65` sur blanc
+
+## Ce que Claude doit faire
+
+- Proposer du code **moderne et idiomatique** (ES2022+, React hooks)
+- **Pointer les erreurs** sans hésiter
+- **Pas de sur-ingénierie** : beta solo, garder simple, pas d'abstraction prématurée
+- Toujours expliquer **pourquoi** avant **comment**, brièvement
+
+## Ce que Claude doit éviter
+
+- Utiliser l'outil Edit sur `methaniseur-tycoon-v25_16.jsx` — trop grand, il tronque. Toujours Python + rsync.
+- Réécrire entièrement un fichier pour un petit changement
+- Code TypeScript (on est en JS/JSX)
+- Touches à `shell_header.html` / `shell_tail.html` sans raison explicite
