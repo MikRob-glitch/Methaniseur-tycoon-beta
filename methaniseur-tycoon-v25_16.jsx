@@ -3961,7 +3961,7 @@ function Game({ username, region, maia }) {
       {emergencyModal && EmergencyModal()}
 
       {/* Modal rapport hebdo Maîtrise (v25.21) */}
-      {masteryWeeklyPopup && <MasteryWeeklyReportModal />}
+      {masteryWeeklyPopup && MasteryWeeklyReportModal()}
 
       {/* Modal hors-ligne */}
       {offlineModal && displayedGains && (
