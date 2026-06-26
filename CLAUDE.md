@@ -267,6 +267,10 @@ Proposition de financement déclenchée quand le solde euros est bas de façon p
 2. Si compteur actif depuis ≥ 24h et `!emergencyModal` → `setEmergencyModal(true)`
 3. Si `euros >= FINANCE_THRESHOLD` → reset `lowBalanceSince = null`
 
+### Fix déclenchement en boucle EmergencyModal (commit `a1337e9`, v25.24)
+Le modal se rouvrait instantanément après chaque action. Les 4 boutons (vendre tracteur/GNV/digesteur, prêt) faisaient `setEmergencyModal(false)` **sans réarmer `lowBalanceSince`**. Le `useEffect` (deps `emergencyModal`) se redéclenchait, voyait `euros < FINANCE_THRESHOLD` + `lowBalanceSince` toujours vieux de > 24h → `setEmergencyModal(true)` aussitôt = boucle. Un prêt ramène le solde à `+LOAN_BUFFER` (500€, toujours < 100k€) donc ne brisait pas la boucle. De plus, sans équipement vendable (1 tracteur, 0 GNV, 1 digesteur) **et** prêt en cooldown → aucune sortie (pas de bouton fermer, clic hors-modal inactif) = soft-lock.
+Fix : helper `const closeEmergency = () => { setEmergencyModal(false); setLowBalanceSince(Date.now()); }` qui ferme **et** réarme le compteur 24h ; branché sur les 4 actions + un bouton **« Plus tard »** garantissant une sortie. Le modal ne peut donc rouvrir qu'après 24h réelles de solde bas. Conforme au commentaire du `useEffect` qui promettait déjà le reset « si le modal est fermé manuellement ». **Règle : tout modal déclenché par un compteur temporel doit réarmer ce compteur à la fermeture, sinon il rouvre en boucle.**
+
 ### Fix clignotement EmergencyModal (commit `5da84a8`)
 `EmergencyModal` était défini comme composant à l'intérieur de `App` → React le démontait/remontait à chaque re-render (nouveau type de fonction). Fix : l'invoquer comme fonction `{EmergencyModal()}` dans le return, pas comme JSX `<EmergencyModal />`. **Règle à respecter pour tout futur composant inline similaire.**
 
@@ -275,26 +279,4 @@ Même cause que `EmergencyModal` : `MasteryWeeklyReportModal` (rapport hebdo top
 
 ### Fix clignotement modal hors-ligne (commit `6664d6c`, v25.23)
 Cause différente : `displayedGains = offlineGains || cloudOfflineGains` était une **variable dérivée recalculée à chaque render**. `offlineGains = saved ? calcOffline(saved) : null` dépend de `loadLocalSave()` — dès que `saveGame()` réécrit le localStorage avec `lastSaved = now`, `calcOffline` renvoie `null` (`elapsedSec < 5`), donc `displayedGains` devient `null` et `{offlineModal && displayedGains && (...)}` fait disparaître la modale.
-Fix : `displayedGains` est maintenant un `useState` figé à l'init (`() => saved ? calcOffline(saved) : null`), alimenté pour le cas cross-device cloud via `setDisplayedGains(prev => prev || cg)`. **Règle : toute valeur affichée dans une modale ne doit jamais dépendre d'un calcul qui se invalide après coup (ex: dérivé de localStorage post-save) — la figer en state au moment du déclenchement.**
-
-## Règles contraste RewardsTab (invariants post-fix `31b8512`)
-
-Pour maintenir la lisibilité sur fond clair (thème Duel), dans `RewardsTab` / `renderBadge` :
-- Noms de badges/milestones → toujours `color:"var(--c-text)"`, jamais `b.color` ou `c` (jaune/argent illisibles sur blanc)
-- Pilules "DÉBLOQUÉ" / "✅" → `background:b.color` (solide) + `color:"#fff"` — jamais `background:b.color+"18"` (9% opacité)
-- Étoiles maîtrise → `#B8860B` (or sombre, ~4.5:1) à la place de `var(--c-yellow)` (#F5BE50, ~2.5:1)
-- Textes secondaires non-débloqués → opacité ≥ `.65` sur blanc
-
-## Ce que Claude doit faire
-
-- Proposer du code **moderne et idiomatique** (ES2022+, React hooks)
-- **Pointer les erreurs** sans hésiter
-- **Pas de sur-ingénierie** : beta solo, garder simple, pas d'abstraction prématurée
-- Toujours expliquer **pourquoi** avant **comment**, brièvement
-
-## Ce que Claude doit éviter
-
-- Utiliser l'outil Edit sur `methaniseur-tycoon-v25_16.jsx` — trop grand, il tronque. Toujours Python + rsync.
-- Réécrire entièrement un fichier pour un petit changement
-- Code TypeScript (on est en JS/JSX)
-- Touches à `shell_header.html` / `shell_tail.html` sans raison explicite
+Fix : `displayedGains` est maintenant un `useState` figé à l'init (`() => saved ? calcOffline(saved) : null`), alimenté pour le cas cross-device cloud via `setDisplayedGains(prev => prev || cg)`. **Règle : toute valeur affichée dans une modale ne doit jamais dépendre d'un calcul qui se invalide après coup (ex: dérivé de localStorage pos
