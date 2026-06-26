@@ -3731,6 +3731,8 @@ function Game({ username, region, maia }) {
     const refundTractor     = canSellTractor   ? Math.round(TRACTOR_UPGRADES[tractorCount===3?'count3':'count2'].cost * SELL_REFUND_RATE) : 0;
     const refundGnv         = canSellGnv       ? Math.round(GNV_STATION_COSTS[gnvStations-1] * SELL_REFUND_RATE) : 0;
     const refundDigesteur   = canSellDigesteur ? Math.round(DIGESTEUR_COSTS[digesteurs-2]    * SELL_REFUND_RATE) : 0;
+    // v25.24 : ferme ET réarme le compteur 24h, sinon le useEffect rouvre le modal aussitôt (lowBalanceSince toujours vieux)
+    const closeEmergency = () => { setEmergencyModal(false); setLowBalanceSince(Date.now()); };
 
     const btnStyle = (enabled) => ({
       padding:'12px 16px', borderRadius:'10px', border:'none', cursor: enabled ? 'pointer' : 'not-allowed',
@@ -3767,21 +3769,21 @@ function Game({ username, region, maia }) {
           </div>
 
           <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-            <button style={btnStyle(canSellTractor)} onClick={() => { if(canSellTractor){ handleSellTractor(); setEmergencyModal(false); }}}>
+            <button style={btnStyle(canSellTractor)} onClick={() => { if(canSellTractor){ handleSellTractor(); closeEmergency(); }}}>
               🚜 Vendre un tracteur
               <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellTractor ? .8 : 1}}>
                 {canSellTractor ? `+${fmtEuro(refundTractor)} récupérés (50% valeur)` : '1 seul tracteur — indisponible'}
               </span>
             </button>
 
-            <button style={btnStyle(canSellGnv)} onClick={() => { if(canSellGnv){ handleSellGnvStation(); setEmergencyModal(false); }}}>
+            <button style={btnStyle(canSellGnv)} onClick={() => { if(canSellGnv){ handleSellGnvStation(); closeEmergency(); }}}>
               ⛽ Vendre une station GNV
               <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellGnv ? .8 : 1}}>
                 {canSellGnv ? `+${fmtEuro(refundGnv)} récupérés (50% valeur)` : 'Aucune station — indisponible'}
               </span>
             </button>
 
-            <button style={btnStyle(canSellDigesteur)} onClick={() => { if(canSellDigesteur){ handleSellDigesteur(); setEmergencyModal(false); }}}>
+            <button style={btnStyle(canSellDigesteur)} onClick={() => { if(canSellDigesteur){ handleSellDigesteur(); closeEmergency(); }}}>
               🏭 Vendre un digesteur
               <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: canSellDigesteur ? .8 : 1}}>
                 {canSellDigesteur ? `+${fmtEuro(refundDigesteur)} récupérés (50% valeur)` : '1 seul digesteur — indisponible'}
@@ -3790,7 +3792,7 @@ function Game({ username, region, maia }) {
 
             <button
               style={{...btnStyle(!loanOnCooldown), background: !loanOnCooldown ? '#00A850' : 'rgba(26,46,74,.15)'}}
-              onClick={() => { if(!loanOnCooldown){ handleTakeLoan(); setEmergencyModal(false); }}}>
+              onClick={() => { if(!loanOnCooldown){ handleTakeLoan(); closeEmergency(); }}}>
               🏦 Prêt bancaire d'urgence
               <span style={{display:'block', fontSize:'11px', fontWeight:400, opacity: !loanOnCooldown ? .8 : 1}}>
                 {loanOnCooldown
@@ -3799,6 +3801,10 @@ function Game({ username, region, maia }) {
               </span>
             </button>
           </div>
+
+          <button onClick={closeEmergency} style={{marginTop:'12px', width:'100%', padding:'10px', borderRadius:'10px', border:'1px solid rgba(26,46,74,.15)', background:'transparent', color:'rgba(26,46,74,.6)', fontSize:'12px', fontWeight:600, cursor:'pointer'}}>
+            Plus tard
+          </button>
 
           <div style={{marginTop:'16px', fontSize:'11px', color:'rgba(26,46,74,.45)', textAlign:'center'}}>
             Répare tes gisements en panne pour stopper la facturation.
