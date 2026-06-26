@@ -270,6 +270,9 @@ Proposition de financement déclenchée quand le solde euros est bas de façon p
 ### Fix clignotement EmergencyModal (commit `5da84a8`)
 `EmergencyModal` était défini comme composant à l'intérieur de `App` → React le démontait/remontait à chaque re-render (nouveau type de fonction). Fix : l'invoquer comme fonction `{EmergencyModal()}` dans le return, pas comme JSX `<EmergencyModal />`. **Règle à respecter pour tout futur composant inline similaire.**
 
+### Fix clignotement popup Maîtrise (commit `c7a3f28`, v25.23+)
+Même cause que `EmergencyModal` : `MasteryWeeklyReportModal` (rapport hebdo top3) était définie dans `App` et rendue en JSX `{masteryWeeklyPopup && <MasteryWeeklyReportModal />}` → remontée à chaque re-render → l'animation `riseIn` rejouée en boucle = clignotement intense. Le composant n'utilise aucun hook, donc fix identique : `{masteryWeeklyPopup && MasteryWeeklyReportModal()}`. **Tout composant modal défini inline dans `App` doit être appelé en fonction, jamais en JSX.**
+
 ### Fix clignotement modal hors-ligne (commit `6664d6c`, v25.23)
 Cause différente : `displayedGains = offlineGains || cloudOfflineGains` était une **variable dérivée recalculée à chaque render**. `offlineGains = saved ? calcOffline(saved) : null` dépend de `loadLocalSave()` — dès que `saveGame()` réécrit le localStorage avec `lastSaved = now`, `calcOffline` renvoie `null` (`elapsedSec < 5`), donc `displayedGains` devient `null` et `{offlineModal && displayedGains && (...)}` fait disparaître la modale.
 Fix : `displayedGains` est maintenant un `useState` figé à l'init (`() => saved ? calcOffline(saved) : null`), alimenté pour le cas cross-device cloud via `setDisplayedGains(prev => prev || cg)`. **Règle : toute valeur affichée dans une modale ne doit jamais dépendre d'un calcul qui se invalide après coup (ex: dérivé de localStorage post-save) — la figer en state au moment du déclenchement.**
