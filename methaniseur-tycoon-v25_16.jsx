@@ -573,7 +573,7 @@ const UPGRADES = [
     baseCost:200000,baseFill:1.00,   bagCap:90,        unlocksAt:"injected",   // v25.1 : 40000→20000
     realYield:280,   cn:25,
     realYieldLabel:"~280 m³ CH₄ / tonne  ·  C/N≈25 (équilibré)",
-    pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 10 % de gaz vert en 2030.",
+    pedagoTip:"La synergie de plusieurs intrants complémentaires (\"effet cocktail\") maximise le rendement global. C'est le modèle des méga-sites biométhane qui se développent en France pour atteindre l'objectif de 100 % de gaz vert en 2050.",
   },
 ];
 
@@ -862,7 +862,7 @@ const TUTORIAL_STEPS = [
   {
     id: 'welcome',
     title: 'Bienvenue dans Méthaniseur Tycoon',
-    body: 'Construis une unité de méthanisation, produis du biométhane et injecte-le dans le réseau GRDF. La France vise 10 % de gaz vert en 2030 — tu vas y contribuer.',
+    body: 'Construis une unité de méthanisation, produis du biométhane et injecte-le dans le réseau GRDF. La France vise 100 % de gaz vert en 2050 — tu vas y contribuer.',
     target: null,
     trigger: gs => !gs.seenTutos.has('welcome'),
   },
@@ -10111,7 +10111,7 @@ function RankingTab({
             fontSize:"10px",color:"rgba(26,46,74,.78)",lineHeight:1.6
           }}>
             💡 En France, GRDF opère 6 grandes directions régionales. Chaque site raccordé contribue au volume total de sa région.
-            L'objectif national est d'atteindre 10% de gaz renouvelable dans le réseau d'ici 2030.
+            L'objectif national est d'atteindre 100% de gaz renouvelable dans le réseau d'ici 2050.
           </div>
         </div>
       )}
